@@ -4,36 +4,37 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=9" />
   <style>
+
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
-      height: 100%;
-      background: #0e1116;
-      color: #edf2f7;
+      min-height: 100%;
+      background: #0d1117;
+      color: #eff4fb;
       font-family: "Segoe UI", "Trebuchet MS", sans-serif;
     }
 
     body {
       background:
-        radial-gradient(circle at top left, rgba(188, 68, 37, 0.28), transparent 28%),
-        radial-gradient(circle at top right, rgba(205, 164, 84, 0.18), transparent 24%),
-        linear-gradient(180deg, #12161d 0%, #0b0e13 100%);
+        radial-gradient(circle at top left, rgba(196, 73, 37, 0.26), transparent 26%),
+        radial-gradient(circle at top right, rgba(229, 180, 90, 0.16), transparent 24%),
+        linear-gradient(180deg, #12161d 0%, #0c1015 100%);
       overflow-x: hidden;
       overflow-y: auto;
+      font-size: 20px;
+      line-height: 1.5;
     }
 
     * {
       box-sizing: border-box;
     }
 
-    .shell {
+    .shell,
+    .battle-shell {
       width: 100%;
       min-height: 100vh;
       padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
     }
 
     .topbar,
@@ -41,541 +42,526 @@
     .log-panel,
     .hero,
     .card,
-    .create-card {
+    .create-card,
+    .battle-topbar,
+    .battle-stage,
+    .battle-bottom,
+    .battle-result {
       border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(17, 22, 29, 0.88);
+      background: rgba(17, 22, 29, 0.92);
       box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      border-radius: 20px;
     }
 
-    .topbar {
-      border-radius: 16px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background:
-        linear-gradient(135deg, rgba(157, 43, 26, 0.78), rgba(28, 34, 44, 0.94)),
-        rgba(17, 22, 29, 0.88);
+    .topbar,
+    .panel,
+    .log-panel,
+    .hero,
+    .battle-topbar,
+    .battle-stage,
+    .battle-bottom,
+    .battle-result {
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+
+    .card,
+    .create-card {
+      padding: 16px;
+      margin-bottom: 10px;
+      border-radius: 18px;
+    }
+
+    .hero {
+      min-height: calc(100vh - 24px);
+    }
+
+    .tab-screen {
+      min-height: calc(100vh - 176px);
+    }
+
+    .tab-screen > .panel:first-child,
+    .tab-screen > .hero:first-child {
+      min-height: calc(100vh - 176px);
+    }
+
+    .hero .footer-actions {
+      margin-top: auto;
+      padding-top: 6px;
+    }
+
+    .page-stack {
+      min-height: calc(100vh - 176px);
+    }
+
+    .fill-panel {
+      min-height: calc(100vh - 210px);
+    }
+
+    .inset-panel {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: none;
+    }
+
+    .page-home .panel:first-child {
+      min-height: 50vh;
+    }
+
+    .page-home .panel:last-child,
+    .page-careerLog .panel:first-child,
+    .page-skills .panel:first-child,
+    .page-retire .panel:first-child {
+      min-height: 34vh;
+    }
+
+    .page-careerLog .log-list {
+      min-height: 52vh;
     }
 
     .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: block;
+      margin-bottom: 12px;
     }
 
     .eyebrow {
-      font-size: 13px;
-      letter-spacing: 0.18em;
+      color: #f5c86f;
+      font-size: 14px;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: #f4c56b;
+      margin-bottom: 6px;
     }
 
     .title {
-      font-size: 30px;
+      font-size: 42px;
+      line-height: 1.15;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      margin: 0;
     }
 
-    .subtitle {
-      font-size: 15px;
-      color: #c7d0dc;
-      max-width: 680px;
-      line-height: 1.4;
+    .subtitle,
+    .muted,
+    .empty-state,
+    .card p,
+    .create-card p {
+      color: #ced8e4;
+      font-size: 20px;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .week-chip,
+    .chip {
+      display: inline-block;
+      padding: 11px 15px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #eff4fb;
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 8px 8px 0;
+      vertical-align: top;
     }
 
     .week-chip {
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.09);
-      font-size: 16px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffe7a8;
+    }
+
+    .chip.gold {
+      background: linear-gradient(135deg, #f4c56b, #dba647);
+      color: #10151b;
+    }
+
+    .chip.red {
+      background: linear-gradient(135deg, #d1583d, #a33227);
+      color: #fff4ef;
+    }
+
+    .panel-title {
+      margin: 0 0 14px 0;
+      font-size: 34px;
+      line-height: 1.2;
+    }
+
+    .fighter-name {
+      font-size: 46px;
+      line-height: 1.15;
       font-weight: 700;
-      color: #ffe19b;
+      margin: 0 0 12px 0;
     }
 
-    .layout {
-      min-height: 0;
-      flex: 1;
+    .fighter-class {
+      color: #f5c86f;
+      font-size: 14px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .nameplate {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.06);
+      margin-bottom: 12px;
+    }
+
+    .nav-tabs,
+    .footer-actions,
+    .record-row,
+    .battle-tabs,
+    .battle-chip-line,
+    .split-row {
       display: block;
-      overflow: visible;
     }
 
-    .layout:after {
+    .nav-tabs:after,
+    .footer-actions:after,
+    .record-row:after,
+    .battle-tabs:after,
+    .battle-chip-line:after,
+    .split-row:after,
+    .topbar:after,
+    .battle-topbar:after,
+    .battle-bottom:after {
       content: "";
       display: block;
       clear: both;
     }
 
-    .sidebar,
-    .main-panel {
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .sidebar {
-      float: left;
-      width: 28%;
-      margin-right: 1.5%;
-    }
-
-    .main-panel {
-      float: left;
-      width: 42%;
-      margin-right: 1.5%;
-    }
-
-    .layout .log-panel {
-      float: right;
-      width: 27%;
-    }
-
-    .panel,
-    .log-panel {
-      border-radius: 18px;
-      padding: 14px;
-      overflow: visible;
-    }
-
-    .panel-title {
-      margin: 0 0 10px 0;
-      font-size: 24px;
-      font-weight: 700;
-    }
-
-    .muted {
-      color: #a9b4c2;
-      line-height: 1.55;
-    }
-
-    .hero {
-      border-radius: 24px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow: auto;
-      background:
-        radial-gradient(circle at top right, rgba(220, 133, 44, 0.18), transparent 32%),
-        linear-gradient(155deg, rgba(25, 31, 41, 0.96), rgba(13, 17, 23, 0.94));
-    }
-
     .create-grid,
     .card-grid,
-    .action-grid,
-    .stat-grid,
     .skill-grid,
     .choice-grid,
+    .action-grid,
+    .stat-grid,
     .fight-grid {
-      display: grid;
-      gap: 10px;
-    }
-
-    .create-grid,
-    .card-grid,
-    .skill-grid,
-    .choice-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .action-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .stat-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .fight-grid {
-      grid-template-columns: 1.1fr 0.9fr;
-    }
-
-    .card,
-    .create-card {
-      border-radius: 16px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .card.selected,
-    .create-card.selected {
-      border-color: rgba(244, 197, 107, 0.58);
-      box-shadow: 0 0 0 1px rgba(244, 197, 107, 0.22), 0 18px 38px rgba(0, 0, 0, 0.28);
-      background: rgba(27, 33, 43, 0.98);
-    }
-
-    .card h3,
-    .create-card h3 {
-      margin: 0;
-      font-size: 21px;
-    }
-
-    .card .meta,
-    .create-card .meta {
-      color: #f4c56b;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .card p,
-    .create-card p {
-      margin: 0;
-      color: #cad4e0;
-      line-height: 1.35;
-      font-size: 16px;
+      display: block;
+      margin-top: 14px;
     }
 
     .button,
     .ghost,
     .danger {
+      display: block;
+      width: 100%;
+      min-height: 64px;
       border: none;
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 17px;
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin: 0 0 10px 0;
+      font-size: 21px;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
-    }
-
-    .button:hover,
-    .ghost:hover,
-    .danger:hover {
-      transform: translateY(-1px);
+      text-align: center;
     }
 
     .button {
-      background-color: #f4c56b;
-      background-image: linear-gradient(135deg, #f4c56b, #dd9e39);
-      color: #11161d;
+      background: linear-gradient(135deg, #f4c56b, #dba647);
+      color: #10151b;
     }
 
     .ghost {
-      background-color: #eef2f6;
-      color: #11161d;
+      background: #eef2f7;
+      color: #10151b;
     }
 
     .danger {
-      background: rgba(174, 41, 41, 0.92);
-      color: #fff1f1;
+      background: linear-gradient(135deg, #d1583d, #a33227);
+      color: #fff4ef;
     }
 
-    .button:disabled,
-    .ghost:disabled,
-    .danger:disabled {
-      cursor: not-allowed;
-      opacity: 0.38;
-      transform: none;
+    .button[disabled],
+    .ghost[disabled],
+    .danger[disabled] {
+      opacity: 0.4;
+      cursor: default;
     }
 
-    .nameplate {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 12px 14px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.06);
+    .card h3,
+    .create-card h3 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      line-height: 1.25;
     }
 
-    .fighter-name {
-      font-size: 34px;
-      font-weight: 800;
-      line-height: 1.1;
-    }
-
-    .fighter-class {
-      font-size: 15px;
+    .meta {
+      color: #f5c86f;
+      font-size: 14px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #f4c56b;
+      margin-bottom: 10px;
+    }
+
+    .create-card.selected {
+      border-color: rgba(244, 197, 107, 0.88);
+      box-shadow: 0 0 0 1px rgba(244, 197, 107, 0.32), 0 18px 40px rgba(0, 0, 0, 0.28);
     }
 
     .meter-block {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      margin-top: 12px;
     }
 
     .meter-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 16px;
-      color: #dfe7f1;
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .meter-row span {
+      color: #d7e0ea;
+    }
+
+    .meter-row strong {
+      float: right;
+      color: #ffffff;
     }
 
     .meter {
       width: 100%;
-      height: 10px;
+      height: 16px;
       border-radius: 999px;
-      overflow: hidden;
       background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
     }
 
     .meter span {
       display: block;
       height: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, #cf5030, #f1c25b);
-    }
-
-    .mini-list {
-      margin: 0;
-      padding-left: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      color: #c8d2df;
-      line-height: 1.45;
-    }
-
-    .record-row,
-    .stats-row,
-    .fight-row,
-    .split-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .chip {
-      padding: 8px 10px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.07);
-      color: #edf2f7;
-      font-size: 15px;
-      font-weight: 700;
-    }
-
-    .chip.gold {
-      color: #1b1407;
-      background: #f4c56b;
-    }
-
-    .chip.red {
-      background: rgba(172, 55, 42, 0.9);
-    }
-
-    .log-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .log-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .log-entry {
-      border-radius: 14px;
-      padding: 12px 14px;
-      background: rgba(255, 255, 255, 0.05);
-      color: #d9e1ea;
-      line-height: 1.45;
-      font-size: 16px;
-    }
-
-    .log-entry.good {
-      border-left: 3px solid #66c08c;
-    }
-
-    .log-entry.bad {
-      border-left: 3px solid #d15a4f;
-    }
-
-    .log-entry.warn {
-      border-left: 3px solid #f4c56b;
-    }
-
-    .summary-box {
-      border-radius: 16px;
-      padding: 16px;
-      background: rgba(255, 255, 255, 0.05);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .summary-box strong {
-      color: #fff;
-    }
-
-    .footer-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .result-banner {
-      border-radius: 18px;
-      padding: 18px;
-      background:
-        linear-gradient(135deg, rgba(182, 66, 37, 0.94), rgba(29, 36, 46, 0.92));
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      background: linear-gradient(135deg, #f4c56b, #dba647);
     }
 
     .stat-line {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
       background: rgba(255, 255, 255, 0.05);
-      color: #d9e1eb;
-      font-size: 16px;
+      margin-bottom: 10px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .stat-line span {
+      color: #dbe4ef;
+    }
+
+    .stat-line strong {
+      float: right;
+      color: #ffffff;
     }
 
     .empty-state {
       padding: 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .log-list {
+      margin-top: 12px;
+    }
+
+    .log-entry {
+      padding: 14px 16px;
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.05);
-      color: #c8d2df;
-      line-height: 1.65;
-      font-size: 16px;
+      margin-bottom: 10px;
+      font-size: 20px;
+      line-height: 1.5;
+    }
+
+    .log-entry.good {
+      border-left: 4px solid #61d59a;
+    }
+
+    .log-entry.warn {
+      border-left: 4px solid #f5c86f;
+    }
+
+    .log-entry.bad {
+      border-left: 4px solid #d1583d;
+    }
+
+    .battle-shell {
+      padding: 12px;
+    }
+
+    .battle-topbar,
+    .battle-stage,
+    .battle-bottom {
+      width: 100%;
+    }
+
+    .battle-stage {
+      min-height: 58vh;
+    }
+
+    .battle-result {
+      min-height: calc(100vh - 24px);
+    }
+
+    .battle-health-card {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .battle-health-card:last-child,
+    .battle-column:last-child,
+    .battle-panel:last-child,
+    .panel:last-child,
+    .card:last-child,
+    .create-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .battle-column,
+    .summary-box {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .battle-panel {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .battle-panel strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .battle-log {
+      max-height: none;
+      overflow: visible;
+    }
+
+    .battle-tabs .button,
+    .battle-tabs .ghost {
+      display: inline-block;
+      width: 32%;
+      margin-right: 1%;
+      min-width: 0;
+      min-height: 54px;
+      padding: 12px 8px;
+      font-size: 20px;
+    }
+
+    .battle-tabs .button:last-child,
+    .battle-tabs .ghost:last-child {
+      margin-right: 0;
+    }
+
+    .battle-actions-row .button,
+    .battle-actions-row .ghost,
+    .battle-actions-row .danger {
+      width: 100%;
     }
 
     .ring-board {
       display: block;
-      margin-top: 12px;
-      width: 74%;
-      max-width: 920px;
-      min-width: 560px;
-      height: 420px;
-      padding: 46px 62px 66px 62px;
-      margin-left: auto;
-      margin-right: auto;
-      background-color: #d8dde6;
+      width: 100%;
+      max-width: none;
+      height: 92vw;
+      min-height: 360px;
+      max-height: 520px;
+      margin: 16px auto 0 auto;
+      padding: 44px 8px 48px 8px;
+      background-color: #d9dee6;
       background-image: url('ring_top_view.png');
       background-repeat: no-repeat;
-      background-position: center 44%;
-      background-size: 100% 108%;
-      font-size: 0;
+      background-position: center 33%;
+      background-size: 132% 130%;
       text-align: center;
+      font-size: 0;
     }
 
     .ring-row {
       display: block;
       white-space: nowrap;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .ring-cell {
       width: 18%;
-      height: 58px;
+      height: 16vw;
+      min-height: 54px;
+      max-height: 76px;
       margin: 0 1% 0 1%;
       display: inline-block;
       vertical-align: top;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
-        rgba(15, 20, 28, 0.18);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(15, 20, 28, 0.12);
       position: relative;
       text-align: center;
     }
 
-    .ring-cell::after {
+    .ring-cell:after {
       content: attr(data-cell);
       position: absolute;
-      right: 8px;
-      bottom: 6px;
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.26);
+      right: 5px;
+      bottom: 4px;
+      color: rgba(255, 255, 255, 0.28);
+      font-size: 11px;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
     }
 
     .token {
-      width: 38px;
-      height: 38px;
+      width: 42px;
+      height: 42px;
       border-radius: 999px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
+      display: inline-block;
+      margin: 6px auto 0 auto;
+      line-height: 42px;
+      text-align: center;
+      font-size: 13px;
       font-weight: 700;
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-      margin: 10px auto 0 auto;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+      position: relative;
     }
 
     .token.player {
       background: linear-gradient(135deg, #f4c56b, #dd9e39);
-      color: #11161d;
+      color: #10151b;
     }
 
     .token.opponent {
       background: linear-gradient(135deg, #d35433, #9b2d24);
-      color: #fff3ef;
+      color: #fff4ef;
     }
 
-    .token.attack-right {
-      animation: tokenAttackRight 1s ease-in-out;
-    }
-
-    .token.attack-left {
-      animation: tokenAttackLeft 1s ease-in-out;
-    }
-
-    .token.attack-up {
-      animation: tokenAttackUp 1s ease-in-out;
-    }
-
-    .token.attack-down {
-      animation: tokenAttackDown 1s ease-in-out;
-    }
-
-    .token.hit-react {
-      animation: tokenHitReact 0.34s linear 2;
-    }
-
-    .token.dodge-right {
-      animation: tokenDodgeRight 1s ease-in-out;
-    }
-
-    .token.dodge-left {
-      animation: tokenDodgeLeft 1s ease-in-out;
-    }
-
-    .token.dodge-up {
-      animation: tokenDodgeUp 1s ease-in-out;
-    }
-
-    .token.dodge-down {
-      animation: tokenDodgeDown 1s ease-in-out;
-    }
+    .token.attack-right { animation: tokenAttackRight 1s ease-in-out; }
+    .token.attack-left { animation: tokenAttackLeft 1s ease-in-out; }
+    .token.attack-up { animation: tokenAttackUp 1s ease-in-out; }
+    .token.attack-down { animation: tokenAttackDown 1s ease-in-out; }
+    .token.hit-react { animation: tokenHitReact 0.34s linear 2; }
+    .token.dodge-right { animation: tokenDodgeRight 1s ease-in-out; }
+    .token.dodge-left { animation: tokenDodgeLeft 1s ease-in-out; }
+    .token.dodge-up { animation: tokenDodgeUp 1s ease-in-out; }
+    .token.dodge-down { animation: tokenDodgeDown 1s ease-in-out; }
 
     @keyframes tokenAttackRight {
       0% { transform: translateX(0); }
-      35% { transform: translateX(18px); }
+      35% { transform: translateX(16px); }
       100% { transform: translateX(0); }
     }
 
     @keyframes tokenAttackLeft {
       0% { transform: translateX(0); }
-      35% { transform: translateX(-18px); }
+      35% { transform: translateX(-16px); }
       100% { transform: translateX(0); }
     }
 
     @keyframes tokenAttackUp {
       0% { transform: translateY(0); }
-      35% { transform: translateY(-18px); }
+      35% { transform: translateY(-16px); }
       100% { transform: translateY(0); }
     }
 
     @keyframes tokenAttackDown {
       0% { transform: translateY(0); }
-      35% { transform: translateY(18px); }
+      35% { transform: translateY(16px); }
       100% { transform: translateY(0); }
     }
 
@@ -589,542 +575,29 @@
 
     @keyframes tokenDodgeRight {
       0% { transform: translateX(0) translateY(0); }
-      35% { transform: translateX(16px) translateY(-10px); }
+      35% { transform: translateX(14px) translateY(-10px); }
       100% { transform: translateX(0) translateY(0); }
     }
 
     @keyframes tokenDodgeLeft {
       0% { transform: translateX(0) translateY(0); }
-      35% { transform: translateX(-16px) translateY(-10px); }
+      35% { transform: translateX(-14px) translateY(-10px); }
       100% { transform: translateX(0) translateY(0); }
     }
 
     @keyframes tokenDodgeUp {
       0% { transform: translateX(0) translateY(0); }
-      35% { transform: translateX(12px) translateY(-16px); }
+      35% { transform: translateX(10px) translateY(-14px); }
       100% { transform: translateX(0) translateY(0); }
     }
 
     @keyframes tokenDodgeDown {
       0% { transform: translateX(0) translateY(0); }
-      35% { transform: translateX(12px) translateY(16px); }
+      35% { transform: translateX(10px) translateY(14px); }
       100% { transform: translateX(0) translateY(0); }
     }
-
-    .fight-dashboard {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .fight-actions {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .fight-actions .button,
-    .fight-actions .ghost,
-    .fight-actions .danger {
-      min-height: 42px;
-      padding: 10px 12px;
-      font-size: 16px;
-    }
-
-    .ring-note {
-      font-size: 15px;
-      color: #aeb8c5;
-      line-height: 1.5;
-    }
-
-    .battle-shell {
-      width: 100%;
-      min-height: 100vh;
-      padding: 12px;
-    }
-
-    .tab-screen {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      min-height: calc(100vh - 168px);
-    }
-
-    .battle-topbar,
-    .battle-stage,
-    .battle-bottom,
-    .battle-result {
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(17, 22, 29, 0.9);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-      border-radius: 18px;
-    }
-
-    .battle-topbar {
-      padding: 12px 16px;
-      margin-bottom: 12px;
-      background:
-        linear-gradient(135deg, rgba(157, 43, 26, 0.78), rgba(28, 34, 44, 0.94)),
-        rgba(17, 22, 29, 0.88);
-    }
-
-    .battle-topbar:after,
-    .battle-stage:after,
-    .battle-bottom:after {
-      content: "";
-      display: block;
-      clear: both;
-    }
-
-    .battle-health-card {
-      width: 49%;
-      float: left;
-      padding: 0 0 0 0;
-    }
-
-    .battle-health-card.right {
-      float: right;
-    }
-
-    .battle-stage {
-      padding: 10px 12px 8px 12px;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-
-    .battle-bottom {
-      padding: 10px;
-    }
-
-    .battle-tabs {
-      margin-bottom: 8px;
-    }
-
-    .battle-tabs .button,
-    .battle-tabs .ghost {
-      margin: 0 8px 8px 0;
-      min-width: 160px;
-    }
-
-    .battle-column {
-      width: 50%;
-      float: left;
-    }
-
-    .battle-column.right {
-      float: right;
-    }
-
-    .battle-panel {
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 10px;
-      margin-bottom: 8px;
-    }
-
-    .battle-panel:last-child {
-      margin-bottom: 0;
-    }
-
-    .battle-panel strong {
-      display: block;
-      margin-bottom: 8px;
-    }
-
-    .battle-actions-row {
-      margin-top: 8px;
-      text-align: left;
-    }
-
-    .battle-actions-row .button,
-    .battle-actions-row .ghost,
-    .battle-actions-row .danger {
-      display: inline-block;
-      width: 31%;
-      margin: 0 1% 8px 1%;
-      min-height: 42px;
-      font-size: 16px;
-      vertical-align: top;
-    }
-
-    .battle-actions-row.compact .ghost {
-      width: 23%;
-    }
-
-    .battle-stats-line {
-      margin-top: 8px;
-    }
-
-    .battle-chip-line {
-      margin-top: 8px;
-    }
-
-    .battle-chip-line .chip {
-      margin: 0 8px 8px 0;
-    }
-
-    .battle-log {
-      max-height: 140px;
-      overflow-y: auto;
-    }
-
-    .battle-result {
-      padding: 16px;
-    }
-
-    @media screen and (max-height: 1080px) {
-      .sidebar {
-        width: 27%;
-      }
-
-      .main-panel {
-        width: 43%;
-      }
-
-      .layout .log-panel {
-        width: 27%;
-      }
-
-      .ring-board {
-        width: 72%;
-        height: 360px;
-        padding: 38px 50px 56px 50px;
-      }
-
-      .ring-cell {
-        height: 50px;
-      }
-    }
-
-    @media screen and (max-width: 980px) {
-      .shell {
-        padding: 10px;
-        gap: 10px;
-      }
-
-      .topbar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
-
-      .create-grid,
-      .card-grid,
-      .skill-grid,
-      .choice-grid,
-      .action-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .sidebar,
-      .main-panel,
-      .log-panel {
-        float: none;
-        width: 100%;
-        margin-right: 0;
-        overflow: visible;
-      }
-
-      .week-chip {
-        align-self: flex-start;
-      }
-
-      .ring-board {
-        width: 92%;
-        min-width: 0;
-        height: 300px;
-        padding: 32px 30px 46px 30px;
-      }
-
-      .ring-cell {
-        height: 40px;
-      }
-
-      .token {
-        width: 30px;
-        height: 30px;
-        font-size: 10px;
-        margin-top: 4px;
-      }
-
-      .battle-health-card,
-      .battle-health-card.right,
-      .battle-column,
-      .battle-column.right {
-        float: none;
-        width: 100%;
-      }
-
-      .battle-actions-row .button,
-      .battle-actions-row .ghost,
-      .battle-actions-row .danger,
-      .battle-actions-row.compact .ghost {
-        width: 48%;
-        margin: 0 1% 8px 1%;
-      }
-    }
-
-    body.scale-compact .title,
-    body.scale-tight .title {
-      font-size: 25px;
-    }
-
-    body.scale-compact .subtitle,
-    body.scale-tight .subtitle {
-      font-size: 14px;
-    }
-
-    body.scale-compact .sidebar {
-      width: 26%;
-    }
-
-    body.scale-compact .main-panel {
-      width: 44%;
-    }
-
-    body.scale-compact .layout .log-panel {
-      width: 27%;
-    }
-
-    body.scale-compact .panel,
-    body.scale-compact .log-panel,
-    body.scale-compact .hero,
-    body.scale-tight .panel,
-    body.scale-tight .log-panel,
-    body.scale-tight .hero {
-      padding: 18px;
-    }
-
-    body.scale-tight .button,
-    body.scale-tight .ghost,
-    body.scale-tight .danger {
-      min-height: 56px;
-      padding: 14px 18px;
-      font-size: 19px;
-    }
-
-    body.scale-tight .panel-title {
-      font-size: 30px;
-    }
-
-    body.scale-tight .fighter-name {
-      font-size: 42px;
-    }
-
-    body.scale-tight .card h3,
-    body.scale-tight .create-card h3 {
-      font-size: 24px;
-    }
-
-    body.scale-tight .card p,
-    body.scale-tight .create-card p,
-    body.scale-tight .muted,
-    body.scale-tight .empty-state {
-      font-size: 18px;
-      line-height: 1.5;
-    }
-
-    body.scale-compact .ring-board {
-      width: 78%;
-      max-width: 840px;
-      min-width: 480px;
-      height: 340px;
-      padding: 36px 48px 52px 48px;
-    }
-
-    body.scale-compact .ring-cell {
-      height: 46px;
-    }
-
-    body.scale-tight .sidebar,
-    body.scale-tight .main-panel,
-    body.scale-tight .layout .log-panel {
-      float: none;
-      width: 100%;
-      margin-right: 0;
-    }
-
-    body.scale-tight .shell {
-      padding: 10px;
-      gap: 10px;
-    }
-
-    body.scale-tight .topbar {
-      padding: 10px 14px;
-    }
-
-    body.scale-tight .create-grid,
-    body.scale-tight .card-grid,
-    body.scale-tight .skill-grid,
-    body.scale-tight .choice-grid,
-    body.scale-tight .action-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    body.scale-tight .ring-board {
-      width: 96%;
-      min-width: 0;
-      max-width: none;
-      height: 280px;
-      padding: 26px 24px 36px 24px;
-    }
-
-    body.scale-tight .ring-cell {
-      height: 34px;
-    }
-
-    body.scale-tight .battle-health-card,
-    body.scale-tight .battle-health-card.right,
-    body.scale-tight .battle-column,
-    body.scale-tight .battle-column.right {
-      float: none;
-      width: 100%;
-    }
-
-    body.scale-tight .battle-actions-row .button,
-    body.scale-tight .battle-actions-row .ghost,
-    body.scale-tight .battle-actions-row .danger,
-    body.scale-tight .battle-actions-row.compact .ghost {
-      width: 48%;
-      margin: 0 1% 8px 1%;
-    }
-
-    @media screen and (max-width: 680px) {
-      .shell {
-        padding: 12px;
-        gap: 12px;
-      }
-
-      .panel,
-      .hero,
-      .log-panel {
-        padding: 20px;
-      }
-
-      .title {
-        font-size: 38px;
-      }
-
-      .subtitle,
-      .muted,
-      .empty-state,
-      .card p,
-      .create-card p {
-        font-size: 19px;
-        line-height: 1.5;
-      }
-
-      .panel-title {
-        font-size: 32px;
-      }
-
-      .fighter-name {
-        font-size: 44px;
-      }
-
-      .week-chip {
-        font-size: 18px;
-        padding: 10px 14px;
-      }
-
-      .chip {
-        font-size: 17px;
-        padding: 10px 14px;
-      }
-
-      .meter-row {
-        font-size: 18px;
-      }
-
-      .meter {
-        height: 16px;
-      }
-
-      .tab-screen {
-        min-height: calc(100vh - 176px);
-      }
-
-      .create-grid,
-      .card-grid,
-      .skill-grid,
-      .choice-grid,
-      .action-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .ring-board {
-        width: 100%;
-        min-width: 0;
-        height: 360px;
-        padding: 24px 10px 30px 10px;
-        background-position: center 42%;
-        background-size: 116% 120%;
-      }
-
-      .ring-cell {
-        height: 42px;
-      }
-
-      .token {
-        width: 32px;
-        height: 32px;
-        font-size: 12px;
-      }
-
-      .battle-shell {
-        padding: 12px;
-      }
-
-      .battle-stage,
-      .battle-bottom,
-      .battle-topbar,
-      .battle-result {
-        border-radius: 14px;
-      }
-
-      .battle-topbar {
-        padding: 14px 16px;
-      }
-
-      .battle-stage {
-        padding: 14px 10px 12px 10px;
-      }
-
-      .battle-bottom {
-        padding: 14px;
-      }
-
-      .battle-panel {
-        padding: 14px;
-      }
-
-      .battle-tabs .button,
-      .battle-tabs .ghost {
-        display: block;
-        width: 100%;
-        margin: 0 0 8px 0;
-        min-width: 0;
-        font-size: 20px;
-      }
-
-      .button,
-      .ghost,
-      .danger {
-        min-height: 60px;
-        padding: 16px 20px;
-        font-size: 20px;
-      }
-
-      .battle-actions-row .button,
-      .battle-actions-row .ghost,
-      .battle-actions-row .danger,
-      .battle-actions-row.compact .ghost {
-        width: 100%;
-        margin: 0 0 8px 0;
-      }
-    }
   </style>
+
   <script type="text/javascript" src="country_data.js"></script>
   <script type="text/javascript">
     var DATA = {
@@ -1135,63 +608,7 @@
         technique: "Техника",
         heart: "Характер",
         charisma: "Харизма"
-      },
-      tactics: {
-        pressure: { name: "Прессинг", accuracy: -4, damage: 3, defense: -8, stamina: 16 },
-        precision: { name: "Точный бокс", accuracy: 7, damage: 1, defense: 0, stamina: 12 },
-        counter: { name: "Контратака", accuracy: 2, damage: 2, defense: 8, stamina: 10 },
-        recover: { name: "Собрать дыхание", accuracy: -14, damage: -4, defense: 12, stamina: -14 }
-      },
-      styles: {
-        slugger: { name: "Панчер", mods: { power: 2, technique: -1, heart: 1 } },
-        technician: { name: "Технарь", mods: { technique: 2, speed: 1, power: -1 } },
-        survivor: { name: "Выживальщик", mods: { endurance: 2, heart: 1 } },
-        stalker: { name: "Преследователь", mods: { speed: 1, power: 1, endurance: 1 } }
-      },
-      archetypes: [
-        {
-          key: "yard_slugger",
-          name: "Дворовый панчер",
-          description: "Давит силой, любит рубку и быстро ломает дистанцию.",
-          mods: { power: 2, heart: 1, speed: -1 },
-          money: 110,
-          morale: 60
-        },
-        {
-          key: "smart_tech",
-          name: "Хитрый технарь",
-          description: "Побеждает таймингом, чтением соперника и чистыми попаданиями.",
-          mods: { technique: 2, speed: 1, power: -1 },
-          money: 130,
-          morale: 55
-        },
-        {
-          key: "iron_veteran",
-          name: "Неубиваемый ветеран",
-          description: "Живет на характере, терпит урон и навязывает тяжелый темп.",
-          mods: { endurance: 2, heart: 2, charisma: -1 },
-          money: 95,
-          morale: 58
-        },
-        {
-          key: "showman",
-          name: "Шоумен района",
-          description: "Быстрый, яркий, умеет продавать себя и строить легенду.",
-          mods: { speed: 1, technique: 1, charisma: 2, heart: -1 },
-          money: 150,
-          morale: 62
-        }
-      ],
-      skills: [
-        { key: "pressure_master", name: "Хищный прессинг", description: "Прессинг наносит больше урона и чаще забирает раунд силой.", cost: 2 },
-        { key: "iron_chin", name: "Железный подбородок", description: "Легче переживать нокдауны и ниже риск летального исхода.", cost: 2 },
-        { key: "bodywork", name: "Работа по корпусу", description: "Точные удары и прессинг сильнее выжигают выносливость соперника.", cost: 2 },
-        { key: "step_back", name: "Шаг назад", description: "Контратака получает бонус против агрессоров.", cost: 2 },
-        { key: "cold_mind", name: "Холодная голова", description: "Стресс растет медленнее, а мораль меньше ломает тебя в бою.", cost: 2 },
-        { key: "finisher", name: "Финишер", description: "Легче добивать потрясенного соперника и оформлять досрочки.", cost: 2 },
-        { key: "idol", name: "Народный любимец", description: "Фанаты приносят больше славы, а отношения качаются проще.", cost: 2 },
-        { key: "street_grit", name: "Уличная хватка", description: "Каждый размен становится жестче, но оставляет след на психике.", cost: 3 }
-      ]
+      }
     };
 
     var state = {
@@ -1221,68 +638,8 @@
       return list[rand(0, list.length - 1)];
     }
 
-    function findByKey(list, key) {
-      var i;
-      for (i = 0; i < list.length; i += 1) {
-        if (list[i].key === key) {
-          return list[i];
-        }
-      }
-      return null;
-    }
-
-    function hasSkill(skills, key) {
-      return skills.indexOf(key) !== -1;
-    }
-
-    function getCountryInfo(countryKey) {
-      var i;
-      for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
-        if (COUNTRY_DATA.countries[i].key === countryKey) {
-          return COUNTRY_DATA.countries[i];
-        }
-      }
-      return null;
-    }
-
     function getCountryPool(countryKey) {
       return COUNTRY_DATA.pools[countryKey];
-    }
-
-    function makeIdentity(countryKey) {
-      var pool = getCountryPool(countryKey);
-      var seed = COUNTRY_DATA.seeds[countryKey];
-      var surnameParts;
-      var firstName;
-      var lastName;
-      var nickname;
-      if (!pool) {
-        return null;
-      }
-      if (seed && seed.firstJoin === "join") {
-        firstName = choice(pool.firstNames);
-      } else if (countryKey === "russia") {
-        firstName = choice(seed.firstLeft);
-      } else {
-        firstName = choice(seed.firstLeft.concat(seed.firstRight));
-      }
-      surnameParts = seed && seed.lastJoin === "join" ? pool.lastNames.slice(0) : seed.lastLeft.concat(seed.lastRight);
-      lastName = choice(surnameParts);
-      if (chance(5) && surnameParts.length > 1) {
-        var secondSurname = choice(surnameParts);
-        var separator = (countryKey === "mexico" || countryKey === "cuba" || countryKey === "philippines") ? " " : "-";
-        while (secondSurname === lastName) {
-          secondSurname = choice(surnameParts);
-        }
-        lastName = lastName + separator + secondSurname;
-      }
-      nickname = choice(pool.nicknames);
-      return {
-        firstName: firstName,
-        lastName: lastName,
-        nickname: nickname,
-        fullName: firstName + ' "' + nickname + '" ' + lastName
-      };
     }
 
     function flightCost(fromKey, toKey) {
@@ -1331,7 +688,6 @@
       fighter.relationship = clamp(fighter.relationship, 0, 100);
       fighter.morale = clamp(fighter.morale, 0, 100);
       fighter.fame = Math.max(0, fighter.fame);
-      fighter.skillPoints = Math.max(0, fighter.skillPoints);
     }
 
     function recordText(fighter) {
@@ -1350,11 +706,11 @@
       move_left: { type: "move", label: "Шаг влево", dx: -1, dy: 0 },
       move_right: { type: "move", label: "Шаг вправо", dx: 1, dy: 0 },
       move_down: { type: "move", label: "Шаг вниз", dx: 0, dy: 1 },
-      jab: { type: "attack", label: "Джеб", reach: "line", range: 2, accuracy: 66, damage: 8, stamina: 5, trauma: 1, body: false },
-      cross: { type: "attack", label: "Кросс", reach: "line", range: 2, accuracy: 61, damage: 11, stamina: 7, trauma: 2, body: false },
-      hook: { type: "attack", label: "Хук", reach: "close", range: 1, accuracy: 58, damage: 12, stamina: 8, trauma: 2, body: false },
-      uppercut: { type: "attack", label: "Апперкот", reach: "close", range: 1, accuracy: 54, damage: 14, stamina: 9, trauma: 3, body: false },
-      body: { type: "attack", label: "Удар в корпус", reach: "line", range: 2, accuracy: 63, damage: 9, stamina: 6, trauma: 1, body: true }
+      jab: { type: "attack", label: "Джеб", reach: "line", range: 2, accuracy: 66, damage: 8, stamina: 5, body: false },
+      cross: { type: "attack", label: "Кросс", reach: "line", range: 2, accuracy: 61, damage: 11, stamina: 7, body: false },
+      hook: { type: "attack", label: "Хук", reach: "close", range: 1, accuracy: 58, damage: 12, stamina: 8, body: false },
+      uppercut: { type: "attack", label: "Апперкот", reach: "close", range: 1, accuracy: 54, damage: 14, stamina: 9, body: false },
+      body: { type: "attack", label: "Удар в корпус", reach: "line", range: 2, accuracy: 63, damage: 9, stamina: 6, body: true }
     };
 
     function buildFightState(stats, condition, position) {
@@ -1365,7 +721,6 @@
         hp: maxHp,
         maxHp: maxHp,
         stamina: stamina,
-        trauma: 0,
         knockdowns: 0,
         score: 0,
         damageTaken: 0,
@@ -1376,10 +731,6 @@
 
     function startRingPosition(side) {
       return side === "player" ? { x: 0, y: 2 } : { x: 4, y: 2 };
-    }
-
-    function ringDistance(a, b) {
-      return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
     }
 
     function insideRing(x, y) {
@@ -1396,9 +747,7 @@
       state.panel = "home";
       state.create = {
         country: null,
-        identity: null,
-        archetype: null,
-        skills: []
+        identity: null
       };
       state.fighter = null;
       state.opponents = [];
@@ -1417,7 +766,6 @@
       state.fighter = {
         name: state.create.identity.fullName,
         identity: state.create.identity,
-        archetype: "Архетипы скоро вернутся",
         stats: stats,
         skills: [],
         money: 120,
@@ -1427,7 +775,6 @@
         stress: 18,
         relationship: 28,
         fame: 0,
-        skillPoints: 0,
         wins: 0,
         losses: 0,
         kos: 0,
@@ -1444,21 +791,6 @@
         text: state.fighter.name + " стартует в " + getCountryInfo(state.fighter.homeCountry).name + ". Боевая система собрана заново вокруг тактического ринга 5x5.",
         tone: "good"
       });
-      render();
-    }
-
-    function toggleCreateSkill(skillKey) {
-      var idx = state.create.skills.indexOf(skillKey);
-      if (idx !== -1) {
-        state.create.skills.splice(idx, 1);
-      } else if (state.create.skills.length < 2) {
-        state.create.skills.push(skillKey);
-      }
-      render();
-    }
-
-    function setCreateArchetype(key) {
-      state.create.archetype = key;
       render();
     }
 
@@ -1492,17 +824,10 @@
     }
 
     function renderSkillList(skills) {
-      var html = [];
-      var i;
       if (!skills.length) {
         return "<div class='empty-state'>Навыки и архетипы временно отключены. Сейчас карьера держится на статах, перемещении по рингу и выборе ударов по клеткам.</div>";
       }
-      html.push("<ul class='mini-list'>");
-      for (i = 0; i < skills.length; i += 1) {
-        html.push("<li><strong>" + findByKey(DATA.skills, skills[i]).name + "</strong></li>");
-      }
-      html.push("</ul>");
-      return html.join("");
+      return "<div class='empty-state'>Текущая версия хранит слот навыков, но активная система сборки ещё не включена.</div>";
     }
 
     function renderStatLines(stats) {
@@ -1742,7 +1067,7 @@
         pushLog("Грязная работа закрыта. Денег больше, но совесть и близкие в минусе.", "bad");
       } else {
         fighter.money += rand(20, 35) + Math.max(0, fighter.stats.charisma - 4) * 4;
-        fighter.fame += 4 + (hasSkill(fighter.skills, "idol") ? 3 : 0);
+        fighter.fame += 4;
         fighter.stress += 2;
         pushLog("Видео со спарринга залетело. Имя крутится по району все чаще.", "good");
       }
@@ -1759,7 +1084,7 @@
           return;
         }
         fighter.money -= 10;
-        fighter.relationship += 8 + (hasSkill(fighter.skills, "idol") ? 4 : 0);
+        fighter.relationship += 8;
         fighter.stress -= 12;
         fighter.morale += 6;
         pushLog("Нормальный человеческий вечер напомнил, ради чего ты вообще лезешь в драки.", "good");
@@ -1770,7 +1095,7 @@
           return;
         }
         fighter.money -= 25;
-        fighter.relationship += 12 + (hasSkill(fighter.skills, "idol") ? 4 : 0);
+        fighter.relationship += 12;
         fighter.morale += 8;
         fighter.stress -= 6;
         pushLog("Ты вложился в отношения и почувствовал, что жизнь не сводится к рингу.", "good");
@@ -1790,681 +1115,6 @@
       }
       applyBounds(fighter);
       spendWeek();
-    }
-
-    function generateOpponent(tier) {
-      var fighter = state.fighter;
-      var country = getCountryInfo(fighter.currentCountry);
-      var pool = getCountryPool(fighter.currentCountry);
-      var identity = makeIdentity(fighter.currentCountry);
-      var bonus = currentTravelBonus(fighter);
-      var tierBonus = tier === "safe" ? -1 : (tier === "even" ? 0 : 2);
-      var styleKey = choice(["slugger", "technician", "survivor", "stalker"]);
-      var style = DATA.styles[styleKey];
-      var base = Math.round(combatRating(fighter)) + tierBonus + rand(-1, 1);
-      var stats;
-      var key;
-      base = clamp(base, 4, 11);
-      stats = {
-        power: base + rand(-1, 1),
-        speed: base + rand(-1, 1),
-        endurance: base + rand(-1, 1),
-        technique: base + rand(-1, 1),
-        heart: base + rand(-1, 1),
-        charisma: rand(3, 8)
-      };
-      for (key in style.mods) {
-        if (style.mods.hasOwnProperty(key)) {
-          stats[key] += style.mods[key];
-        }
-      }
-      for (key in stats) {
-        if (stats.hasOwnProperty(key)) {
-          stats[key] = clamp(stats[key], 3, 14);
-        }
-      }
-      return {
-        firstName: identity ? identity.firstName : choice(pool.firstNames),
-        lastName: identity ? identity.lastName : choice(pool.lastNames),
-        nickname: identity ? identity.nickname : choice(pool.nicknames),
-        fullName: identity ? identity.fullName : "",
-        countryKey: fighter.currentCountry,
-        styleKey: styleKey,
-        stats: stats,
-        purse: Math.round(((tier === "safe" ? 60 : (tier === "even" ? 90 : 140)) + base * 7 + rand(0, 20)) * bonus.money),
-        fameReward: Math.round(((tier === "safe" ? 6 : (tier === "even" ? 10 : 16)) + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
-        condition: rand(70, 100),
-        rounds: tier === "danger" ? choice([6, 7, 8]) : choice([5, 6, 7]),
-        danger: tier === "safe" ? "Ниже по риску" : (tier === "even" ? "Ровный бой" : "Очень опасен"),
-        venue: country ? country.city : ""
-      };
-    }
-
-    function fullOpponentName(opponent) {
-      return opponent.fullName || (opponent.firstName + ' "' + opponent.nickname + '" ' + opponent.lastName);
-    }
-
-    function openFightSelect() {
-      state.opponents = [generateOpponent("safe"), generateOpponent("even"), generateOpponent("danger")];
-      state.panel = "fightSelect";
-      render();
-    }
-
-    function aiTactic(opponent, ownState, enemyState) {
-      if (ownState.hp < ownState.maxHp * 0.28 || ownState.stamina < 28) {
-        return choice(["recover", "recover", "recover", "counter", "counter", "precision"]);
-      }
-      if (enemyState.hp < enemyState.maxHp * 0.3) {
-        if (opponent.styleKey === "technician") {
-          return choice(["precision", "precision", "counter", "pressure"]);
-        }
-        return choice(["pressure", "pressure", "precision", "counter"]);
-      }
-      if (opponent.styleKey === "slugger") {
-        return choice(["pressure", "pressure", "pressure", "precision", "recover"]);
-      }
-      if (opponent.styleKey === "technician") {
-        return choice(["precision", "precision", "counter", "counter", "recover"]);
-      }
-      if (opponent.styleKey === "survivor") {
-        return choice(["counter", "recover", "recover", "pressure", "precision"]);
-      }
-      return choice(["pressure", "pressure", "precision", "counter", "recover"]);
-    }
-
-    function attackExchange(attackerName, attackerStats, attackerTactic, attackerState, defenderName, defenderStats, defenderTactic, defenderState, attackerSkills, defenderSkills, morale, stress) {
-      var attackData = DATA.tactics[attackerTactic];
-      var defendData = DATA.tactics[defenderTactic];
-      var regained;
-      var accuracy;
-      var defense;
-      var hitChance;
-      var staminaCost;
-      var damage;
-      var critical;
-      var traumaGain;
-
-      if (attackerTactic === "recover") {
-        regained = 12 + Math.floor(attackerStats.endurance / 2);
-        if (hasSkill(attackerSkills, "cold_mind")) {
-          regained += 4;
-        }
-        attackerState.stamina = clamp(attackerState.stamina + regained, 0, 100);
-        return { line: attackerName + " собирает дыхание и возвращает контроль.", critical: false };
-      }
-
-      accuracy = 41 + attackerStats.speed * 2 + attackerStats.technique * 1.7 + attackData.accuracy;
-      accuracy += (morale - 50) / 5;
-      accuracy -= hasSkill(attackerSkills, "cold_mind") ? 0 : Math.max(0, stress - 55) / 6;
-      accuracy -= Math.max(0, 35 - attackerState.stamina) / 2;
-
-      defense = 23 + defenderStats.speed * 1.4 + defenderStats.technique * 1.2 + defenderStats.heart * 1.2 + defendData.defense;
-      if (defenderTactic === "counter" && hasSkill(defenderSkills, "step_back")) {
-        defense += 5;
-      }
-      if (defenderTactic === "recover" && hasSkill(defenderSkills, "cold_mind")) {
-        defense += 3;
-      }
-
-      hitChance = clamp(Math.round(accuracy - defense + 35), 18, 84);
-      staminaCost = Math.max(4, attackData.stamina - attackerStats.endurance);
-      attackerState.stamina = clamp(attackerState.stamina - staminaCost, 0, 100);
-
-      if (!chance(hitChance)) {
-        return { line: choice([
-          attackerName + " не достает до цели.",
-          defenderName + " читает атаку и уходит от удара.",
-          attackerName + " мажет, и момент уходит."
-        ]), critical: false };
-      }
-
-      damage = 2 + attackerStats.power * 0.75 + attackerStats.technique * 0.35 - defenderStats.endurance * 0.35 - defenderStats.heart * 0.12 + attackData.damage + attackerState.stamina / 40;
-      if (attackerTactic === "counter" && defenderTactic === "pressure") {
-        damage += 2;
-      }
-      if (hasSkill(attackerSkills, "pressure_master") && attackerTactic === "pressure") {
-        damage += 2.5;
-      }
-      if (hasSkill(attackerSkills, "bodywork") && (attackerTactic === "pressure" || attackerTactic === "precision")) {
-        defenderState.stamina = clamp(defenderState.stamina - rand(4, 7), 0, 100);
-      }
-      if (hasSkill(attackerSkills, "step_back") && attackerTactic === "counter" && defenderTactic === "pressure") {
-        damage += 2.5;
-      }
-      if (hasSkill(attackerSkills, "street_grit")) {
-        damage += 1.5;
-      }
-      if (hasSkill(defenderSkills, "iron_chin")) {
-        damage -= 1.2;
-      }
-      critical = damage >= (12 + (hasSkill(attackerSkills, "finisher") ? 2 : 0)) || chance(8);
-      damage = Math.max(2, Math.round(damage + rand(-2, 2)));
-      if (critical) {
-        damage += rand(2, 5);
-      }
-      defenderState.hp -= damage;
-      defenderState.damageTaken += damage;
-      defenderState.score -= Math.max(1, Math.floor(damage / 2));
-      attackerState.score += damage;
-      traumaGain = damage >= 11 ? 1 : 0;
-      traumaGain += critical && damage >= 14 ? 1 : 0;
-      defenderState.trauma += traumaGain;
-      if (critical) {
-        return { line: attackerName + " ловит момент и тяжело попадает по " + defenderName + " на " + damage + " урона.", critical: true };
-      }
-      return { line: attackerName + " доносит серию и снимает " + damage + " очков прочности.", critical: false };
-    }
-
-    function knockdownOrFinish(targetName, targetState, targetStats, targetSkills) {
-      var riseChance;
-      if (targetState.hp > 0) {
-        return { over: false, line: "" };
-      }
-      riseChance = 42 + targetStats.heart * 5 - targetState.trauma * 11 - targetState.knockdowns * 12;
-      if (hasSkill(targetSkills, "iron_chin")) {
-        riseChance += 18;
-      }
-      riseChance = clamp(riseChance, 6, 92);
-      if (chance(riseChance) && targetState.knockdowns < 2) {
-        targetState.knockdowns += 1;
-        targetState.hp = 8 + targetStats.heart;
-        targetState.trauma += 1;
-        return { over: false, line: targetName + " падает, но поднимается и продолжает бой." };
-      }
-      return { over: true, line: targetName + " больше не может продолжать бой." };
-    }
-
-    function fatalityRoll(loserState, loserCondition, winnerSkills, loserSkills) {
-      var risk = Math.max(0, loserState.trauma - 2) * 6 + Math.max(0, -loserState.hp) * 2 + Math.max(0, 45 - loserCondition) / 3;
-      if (hasSkill(winnerSkills, "street_grit")) {
-        risk += 6;
-      }
-      if (hasSkill(loserSkills, "iron_chin")) {
-        risk -= 8;
-      }
-      return chance(Math.max(0, Math.round(risk)));
-    }
-
-    function startFight(index) {
-      var opponent = state.opponents[index];
-      state.fight = {
-        opponent: opponent,
-        round: 1,
-        playerState: buildFightState(state.fighter.stats, state.fighter.health),
-        opponentState: buildFightState(opponent.stats, opponent.condition),
-        lines: [
-          "Бой против " + fullOpponentName(opponent) + " начинается. Раундов: " + opponent.rounds + "."
-        ],
-        result: null,
-        method: null,
-        fatality: "",
-        roundsCompleted: 0
-      };
-      state.panel = "fightLive";
-      render();
-    }
-
-    function playFightRound(playerTactic) {
-      var fight = state.fight;
-      var fighter = state.fighter;
-      var opponent = fight.opponent;
-      var playerSkills = fighter.skills.slice(0);
-      var opponentSkills = [];
-      var opponentTactic = aiTactic(opponent, fight.opponentState, fight.playerState);
-      var exchanges = [];
-      var lines = [];
-      var i;
-
-      if (!fight || fight.result) {
-        return;
-      }
-
-      lines.push("Раунд " + fight.round + ": ты выбираешь '" + DATA.tactics[playerTactic].name + "', соперник отвечает '" + DATA.tactics[opponentTactic].name + "'.");
-
-      exchanges = [
-        {
-          attackerName: fighter.name,
-          attackerStats: fighter.stats,
-          attackerTactic: playerTactic,
-          attackerState: fight.playerState,
-          defenderName: fullOpponentName(opponent),
-          defenderStats: opponent.stats,
-          defenderTactic: opponentTactic,
-          defenderState: fight.opponentState,
-          attackerSkills: playerSkills,
-          defenderSkills: opponentSkills,
-          morale: fighter.morale,
-          stress: fighter.stress
-        },
-        {
-          attackerName: fullOpponentName(opponent),
-          attackerStats: opponent.stats,
-          attackerTactic: opponentTactic,
-          attackerState: fight.opponentState,
-          defenderName: fighter.name,
-          defenderStats: fighter.stats,
-          defenderTactic: playerTactic,
-          defenderState: fight.playerState,
-          attackerSkills: opponentSkills,
-          defenderSkills: playerSkills,
-          morale: 55,
-          stress: 20
-        }
-      ];
-
-      if (playerTactic === "counter" && opponentTactic === "pressure") {
-        exchanges.reverse();
-      } else if (opponentTactic === "counter" && playerTactic === "pressure") {
-        exchanges = [exchanges[1], exchanges[0]];
-      }
-
-      for (i = 0; i < exchanges.length; i += 1) {
-        var ex = exchanges[i];
-        var hit = attackExchange(ex.attackerName, ex.attackerStats, ex.attackerTactic, ex.attackerState, ex.defenderName, ex.defenderStats, ex.defenderTactic, ex.defenderState, ex.attackerSkills, ex.defenderSkills, ex.morale, ex.stress);
-        var kd = knockdownOrFinish(ex.defenderName, ex.defenderState, ex.defenderStats, ex.defenderSkills);
-        lines.push(hit.line);
-        if (kd.line) {
-          lines.push(kd.line);
-          if (kd.line.indexOf("падает") !== -1) {
-            if (ex.attackerName === fighter.name) {
-              fight.playerState.score += 8;
-            } else {
-              fight.opponentState.score += 8;
-            }
-          }
-        }
-        if (kd.over) {
-          if (ex.defenderName === fighter.name) {
-            finalizeFight("loss", "KO/TKO", lines, fatalityRoll(fight.playerState, fighter.health, opponentSkills, playerSkills) ? "player" : "");
-          } else {
-            finalizeFight("win", "KO/TKO", lines, fatalityRoll(fight.opponentState, opponent.condition, playerSkills, opponentSkills) ? "opponent" : "");
-          }
-          return;
-        }
-      }
-
-      if (fight.playerState.trauma >= 6 && fight.playerState.hp < fight.playerState.maxHp * 0.25) {
-        lines.push("Доктор останавливает бой. Продолжать слишком опасно.");
-        finalizeFight("loss", "Остановлен врачом", lines, fatalityRoll(fight.playerState, fighter.health, opponentSkills, playerSkills) ? "player" : "");
-        return;
-      }
-
-      if (fight.opponentState.trauma >= 6 && fight.opponentState.hp < fight.opponentState.maxHp * 0.25) {
-        lines.push("Врач соперника машет рукой: продолжать нельзя.");
-        finalizeFight("win", "Остановлен врачом", lines, fatalityRoll(fight.opponentState, opponent.condition, playerSkills, opponentSkills) ? "opponent" : "");
-        return;
-      }
-
-      if (fight.round >= opponent.rounds) {
-        if (fight.playerState.score >= fight.opponentState.score + 6) {
-          finalizeFight("win", "Решение судей", lines, "");
-        } else if (fight.opponentState.score >= fight.playerState.score + 6) {
-          finalizeFight("loss", "Решение судей", lines, "");
-        } else {
-          finalizeFight("draw", "Ничья", lines, "");
-        }
-        return;
-      }
-
-      fight.round += 1;
-      fight.lines = lines.concat(fight.lines);
-      pushLog("Раунд " + (fight.round - 1) + " завершен. Ты " + fight.playerState.hp + "/" + fight.playerState.maxHp + " HP, соперник " + fight.opponentState.hp + "/" + fight.opponentState.maxHp + ".", "warn");
-      render();
-    }
-
-    function finalizeFight(result, method, lines, fatality) {
-      var fight = state.fight;
-      fight.result = result;
-      fight.method = method;
-      fight.fatality = fatality;
-      fight.roundsCompleted = fight.round;
-      fight.lines = lines.concat(fight.lines);
-      applyFightResults();
-      if (evaluateEndState()) {
-        return;
-      }
-      advanceWeek();
-      if (evaluateEndState()) {
-        return;
-      }
-      state.panel = "fightResult";
-      render();
-    }
-
-    function applyFightResults() {
-      var fight = state.fight;
-      var fighter = state.fighter;
-      var opponent = fight.opponent;
-      var injury = Math.floor(fight.playerState.damageTaken * 0.45 + fight.playerState.trauma * 5 + fight.playerState.knockdowns * 7);
-      var fameGain;
-      fighter.health -= injury;
-      fighter.stress += 8 + fight.playerState.trauma * 4;
-      if (fight.result === "win") {
-        fighter.wins += 1;
-        fighter.money += opponent.purse;
-        fameGain = opponent.fameReward + (hasSkill(fighter.skills, "idol") ? 4 : 0);
-        fighter.fame += fameGain;
-        fighter.morale += 10;
-        fighter.skillPoints += 2;
-        if (fight.method === "KO/TKO") {
-          fighter.kos += 1;
-          if (hasSkill(fighter.skills, "street_grit")) {
-            fighter.stress += 5;
-          }
-        }
-        pushLog("Победа. Ты забираешь $" + opponent.purse + " и +" + fameGain + " к славе.", "good");
-      } else if (fight.result === "loss") {
-        fighter.losses += 1;
-        fighter.money += Math.floor(opponent.purse * 0.35);
-        fameGain = Math.max(2, Math.floor(opponent.fameReward / 3));
-        fighter.fame += fameGain;
-        fighter.morale -= 12;
-        fighter.skillPoints += 1;
-        fighter.stress += 6;
-        pushLog("Поражение. Но даже за него приходит часть денег и немного шума вокруг имени.", "bad");
-      } else {
-        fighter.money += Math.floor(opponent.purse * 0.55);
-        fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
-        fighter.fame += fameGain;
-        fighter.morale += 1;
-        fighter.skillPoints += 1;
-        pushLog("Ничья. Ты остался на ногах и ушел с деньгами и славой.", "warn");
-      }
-      if (fight.fatality === "opponent") {
-        fighter.deathsCaused += 1;
-        fighter.fame += 12;
-        fighter.relationship -= 10;
-        fighter.stress += 18;
-        pushLog("Бой закончился трагедией. Район загудел, а жить с этим придется тебе.", "bad");
-      } else if (fight.fatality === "player") {
-        fighter.alive = false;
-        pushLog("Повреждения оказываются критическими. Этот бой становится последним.", "bad");
-      }
-      applyBounds(fighter);
-    }
-
-    function startFight(index) {
-      var opponent = state.opponents[index];
-      state.fight = {
-        opponent: opponent,
-        round: 1,
-        turn: 1,
-        turnsPerRound: 15,
-        uiTab: "controls",
-        actionGroup: "move",
-        actionLock: false,
-        playerActionsLeft: 1,
-        aiActionsLeft: 1,
-        playerState: buildFightState(state.fighter.stats, state.fighter.health, startRingPosition("player")),
-        opponentState: buildFightState(opponent.stats, opponent.condition, startRingPosition("opponent")),
-        lines: [
-          "Бой против " + fullOpponentName(opponent) + " начинается. Ринг 5x5, в каждом раунде 15 ходов."
-        ],
-        result: null,
-        method: null,
-        fatality: "",
-        roundsCompleted: 0,
-        judges: { player: 0, opponent: 0 },
-        roundPoints: { player: 0, opponent: 0 },
-        roundCards: [],
-        breakSummary: null
-      };
-      state.panel = "fightLive";
-      render();
-    }
-
-    function renderFightActionButton(actionKey, className) {
-      var fight = state.fight;
-      var disabled = !fight || fight.result || fight.actionLock || !canUseFightAction(fight, "player", actionKey);
-      return "<button class='" + className + "' " + (disabled ? "disabled='disabled'" : "") + " onclick='fightAction(\"" + actionKey + "\")'>" + FIGHT_ACTIONS[actionKey].label + "</button>";
-    }
-
-    function finishFightRound() {
-      var fight = state.fight;
-      var playerCard = 10;
-      var opponentCard = 10;
-      var delta = fight.roundPoints.player - fight.roundPoints.opponent;
-      var playerHeal;
-      var opponentHeal;
-      var playerStaminaGain;
-      var opponentStaminaGain;
-      if (delta >= 14) {
-        opponentCard = 8;
-      } else if (delta > 0) {
-        opponentCard = 9;
-      } else if (delta <= -14) {
-        playerCard = 8;
-      } else if (delta < 0) {
-        playerCard = 9;
-      }
-      fight.judges.player += playerCard;
-      fight.judges.opponent += opponentCard;
-      fight.roundCards.unshift("Раунд " + fight.round + ": " + playerCard + "-" + opponentCard);
-      fight.roundsCompleted = fight.round;
-      pushFightLine(fight, "Раунд " + fight.round + " завершен: " + playerCard + "-" + opponentCard + ".");
-      pushLog("Раунд " + fight.round + " завершен. Карточка судей: " + playerCard + "-" + opponentCard + ".", "warn");
-      if (fight.round >= fight.opponent.rounds) {
-        finalizeFight(
-          fight.judges.player > fight.judges.opponent ? "win" : (fight.judges.player < fight.judges.opponent ? "loss" : "draw"),
-          "Решение судей " + fight.judges.player + ":" + fight.judges.opponent,
-          ["Судейские записки: " + fight.roundCards.slice(0).reverse().join(", ") + "."],
-          ""
-        );
-        return;
-      }
-      playerHeal = Math.min(fight.playerState.maxHp - fight.playerState.hp, 10 + Math.floor(state.fighter.stats.endurance / 2));
-      opponentHeal = Math.min(fight.opponentState.maxHp - fight.opponentState.hp, 10 + Math.floor(fight.opponent.stats.endurance / 2));
-      playerStaminaGain = 24 + Math.floor(state.fighter.stats.endurance / 2);
-      opponentStaminaGain = 24 + Math.floor(fight.opponent.stats.endurance / 2);
-      fight.playerState.hp = clamp(fight.playerState.hp + playerHeal, 0, fight.playerState.maxHp);
-      fight.opponentState.hp = clamp(fight.opponentState.hp + opponentHeal, 0, fight.opponentState.maxHp);
-      fight.playerState.stamina = clamp(fight.playerState.stamina + playerStaminaGain, 0, 100);
-      fight.opponentState.stamina = clamp(fight.opponentState.stamina + opponentStaminaGain, 0, 100);
-      fight.breakSummary = {
-        nextRound: fight.round + 1,
-        playerHeal: playerHeal,
-        opponentHeal: opponentHeal,
-        playerStamina: playerStaminaGain,
-        opponentStamina: opponentStaminaGain
-      };
-      fight.actionLock = false;
-      state.panel = "fightBreak";
-      render();
-    }
-
-    function completeFightTurn() {
-      var fight = state.fight;
-      if (!fight || fight.result) {
-        return;
-      }
-      pushFightLine(fight, "Ход " + fight.turn + " завершен.");
-      if (fight.turn >= fight.turnsPerRound) {
-        finishFightRound();
-        return;
-      }
-      fight.turn += 1;
-      fight.playerActionsLeft = 1;
-      fight.aiActionsLeft = 1;
-      fight.playerState.stamina = clamp(fight.playerState.stamina + 2, 0, 100);
-      fight.opponentState.stamina = clamp(fight.opponentState.stamina + 2, 0, 100);
-      fight.actionLock = false;
-      render();
-    }
-
-    function startNextRound() {
-      var fight = state.fight;
-      if (!fight || fight.result) {
-        return;
-      }
-      fight.round += 1;
-      fight.turn = 1;
-      fight.playerActionsLeft = 1;
-      fight.aiActionsLeft = 1;
-      fight.roundPoints = { player: 0, opponent: 0 };
-      fight.breakSummary = null;
-      fight.actionLock = false;
-      resetRingPositions(fight);
-      pushFightLine(fight, "Начинается раунд " + fight.round + ". После перерыва бойцы снова сходятся в центре.");
-      state.panel = "fightLive";
-      render();
-    }
-
-    function renderFightBreakPanel() {
-      var fight = state.fight;
-      var summary = fight.breakSummary;
-      return "" +
-        "<div class='battle-shell'><div class='battle-result'>" +
-          "<div class='result-banner'><div class='eyebrow'>Перерыв</div><div class='title' style='font-size:24px'>Раунд " + fight.round + " завершен</div>" +
-          "<div class='subtitle'>Дальше начнется раунд " + summary.nextRound + ".</div></div>" +
-          "<div class='battle-bottom' style='margin-top:12px'>" +
-            "<div class='battle-column'><div class='battle-panel'><strong>Твой угол</strong>" +
-              "<div class='battle-chip-line'><div class='chip gold'>Здоровье +" + summary.playerHeal + "</div><div class='chip'>Стамина +" + summary.playerStamina + "</div></div>" +
-              meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) +
-              meter("Стамина", Math.round(fight.playerState.stamina)) +
-            "</div></div>" +
-            "<div class='battle-column right'><div class='battle-panel'><strong>Его угол</strong>" +
-              "<div class='battle-chip-line'><div class='chip red'>Здоровье +" + summary.opponentHeal + "</div><div class='chip'>Стамина +" + summary.opponentStamina + "</div></div>" +
-              meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) +
-              meter("Стамина", Math.round(fight.opponentState.stamina)) +
-            "</div></div>" +
-          "</div>" +
-          "<div class='footer-actions'><button class='button' onclick='startNextRound()'>Начать следующий раунд</button></div>" +
-        "</div></div>";
-    }
-
-    function runAiAfterPlayer() {
-      var fight = state.fight;
-      var aiActionKey;
-      if (!fight || fight.result) {
-        return;
-      }
-      if (fight.aiActionsLeft <= 0) {
-        completeFightTurn();
-        return;
-      }
-      aiActionKey = pickAiAction(fight);
-      if (!aiActionKey) {
-        fight.aiActionsLeft = 0;
-        pushFightLine(fight, fullOpponentName(fight.opponent) + " теряет темп и пропускает действие.");
-        completeFightTurn();
-        return;
-      }
-      if (FIGHT_ACTIONS[aiActionKey].type === "move") {
-        moveActor(fight, "opponent", aiActionKey);
-        fight.aiActionsLeft = 0;
-        render();
-        setTimeout(function () {
-          completeFightTurn();
-        }, 1000);
-        return;
-      }
-      strikeActor(fight, "opponent", aiActionKey);
-      fight.aiActionsLeft = 0;
-      render();
-      setTimeout(function () {
-        applyFightAnimationResult();
-        if (fight.result) {
-          return;
-        }
-        completeFightTurn();
-      }, 1000);
-    }
-
-    function fightAction(actionKey) {
-      var fight = state.fight;
-      var action = FIGHT_ACTIONS[actionKey];
-      if (!fight || fight.result || !action || fight.actionLock) {
-        return;
-      }
-      if (!canUseFightAction(fight, "player", actionKey)) {
-        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
-        render();
-        return;
-      }
-      fight.actionLock = true;
-      fight.playerActionsLeft = 0;
-      if (action.type === "move") {
-        moveActor(fight, "player", actionKey);
-        render();
-        setTimeout(function () {
-          runAiAfterPlayer();
-        }, 1000);
-        return;
-      }
-      strikeActor(fight, "player", actionKey);
-      render();
-      setTimeout(function () {
-        applyFightAnimationResult();
-        if (fight.result) {
-          return;
-        }
-        runAiAfterPlayer();
-      }, 1000);
-    }
-
-    function renderFightStatsPanel(fight) {
-      return "<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip'>Ход " + fight.turn + " / " + fight.turnsPerRound + "</div><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
-    }
-
-    function renderFightLivePanel() {
-      var fight = state.fight;
-      var html = [];
-      var x;
-      var y;
-      var i;
-      var playerCell;
-      var opponentCell;
-      var activeTab = fight.uiTab || "controls";
-      html.push("<div class='battle-shell'>");
-      html.push("<div class='battle-topbar'>");
-      html.push("<div class='battle-health-card'>");
-      html.push("<div class='chip gold'>Ты</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("<div class='battle-health-card right'>");
-      html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-stage'>");
-      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Ход " + fight.turn + " / " + fight.turnsPerRound + "</div>");
-      html.push("<div class='title' style='font-size:28px'>Ринг 5x5</div>");
-      html.push("<div class='ring-board'>");
-      for (y = 0; y < RING_SIZE; y += 1) {
-        html.push("<div class='ring-row'>");
-        for (x = 0; x < RING_SIZE; x += 1) {
-          playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
-          opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='" + tokenClassFor("player") + "'>Ты</div>" : (opponentCell ? "<div class='" + tokenClassFor("opponent") + "'>Он</div>" : "")) + "</div>");
-        }
-        html.push("</div>");
-      }
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-bottom'>");
-      html.push("<div class='battle-tabs'>");
-      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>");
-      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>");
-      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>");
-      html.push("</div>");
-      if (activeTab === "stats") {
-        html.push(renderFightStatsPanel(fight));
-        if (fight.roundCards.length) {
-          html.push("<div class='battle-panel'><strong>Карточки</strong>");
-          for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
-            html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
-          }
-          html.push("</div>");
-        }
-      } else if (activeTab === "log") {
-        html.push(renderFightLogPanel(fight));
-      } else {
-        html.push(renderFightControlsPanel(fight));
-      }
-      html.push("</div></div>");
-      return html.join("");
     }
 
     var COUNTRY_DISPLAY = {
@@ -2548,143 +1198,6 @@
       }());
     }
 
-    function renderTrainPanel() {
-      var html = [];
-      var key;
-      html.push("<div class='panel'><h2 class='panel-title'>Тренировка</h2><div class='muted'>Выбери характеристику, которую хочешь подтянуть на этой неделе.</div><div class='choice-grid' style='margin-top:16px'>");
-      for (key in DATA.statLabels) {
-        if (DATA.statLabels.hasOwnProperty(key)) {
-          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>Текущий показатель: " + state.fighter.stats[key] + "</p><button class='button' onclick='actionTrain(\"" + key + "\")'>Качать</button></div>");
-        }
-      }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
-      return html.join("");
-    }
-
-    function renderRecoverPanel() {
-      return "" +
-        "<div class='panel'>" +
-          "<h2 class='panel-title'>Восстановление</h2>" +
-          "<div class='choice-grid'>" +
-            "<div class='card'><h3>Отлежаться дома</h3><p>Бесплатно. Чинишь здоровье, сбиваешь стресс, возвращаешь мораль.</p><button class='button' onclick='actionRecover(\"home\")'>Выбрать</button></div>" +
-            "<div class='card'><h3>Спортивный врач</h3><p>$60. Самое сильное восстановление тела.</p><button class='button' onclick='actionRecover(\"doctor\")'>Выбрать</button></div>" +
-            "<div class='card'><h3>Терапия и массаж</h3><p>$35. Баланс между телом и головой.</p><button class='button' onclick='actionRecover(\"therapy\")'>Выбрать</button></div>" +
-          "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
-        "</div>";
-    }
-
-    function renderWorkPanel() {
-      return "" +
-        "<div class='panel'>" +
-          "<h2 class='panel-title'>Заработок</h2>" +
-          "<div class='choice-grid'>" +
-            "<div class='card'><h3>Охрана клуба</h3><p>Стабильные деньги и легкий стресс.</p><button class='button' onclick='actionWork(\"guard\")'>Выйти на смену</button></div>" +
-            "<div class='card'><h3>Сбор долгов</h3><p>Больше денег, но выше риск для здоровья и отношений.</p><button class='danger' onclick='actionWork(\"collector\")'>Вписаться</button></div>" +
-            "<div class='card'><h3>Снять спарринг</h3><p>Легкий заработок, шум вокруг имени и немного славы.</p><button class='button' onclick='actionWork(\"media\")'>Записать ролик</button></div>" +
-          "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
-        "</div>";
-    }
-
-    function renderLifePanel() {
-      return "" +
-        "<div class='panel'>" +
-          "<h2 class='panel-title'>Личная жизнь</h2>" +
-          "<div class='choice-grid'>" +
-            "<div class='card'><h3>Вечер с близкими</h3><p>$10. Снимает напряжение и укрепляет отношения.</p><button class='button' onclick='actionLife(\"family\")'>Провести вечер</button></div>" +
-            "<div class='card'><h3>Свидание</h3><p>$25. Сильнее качает отношения и мораль.</p><button class='button' onclick='actionLife(\"date\")'>Позвать на встречу</button></div>" +
-            "<div class='card'><h3>Ночной отрыв</h3><p>$20. Дает эмоции и славу, но может ударить по телу и отношениям.</p><button class='danger' onclick='actionLife(\"party\")'>Уйти в ночь</button></div>" +
-          "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
-        "</div>";
-    }
-
-    function renderFightSelectPanel() {
-      var html = [];
-      var i;
-      html.push("<div class='panel'><h2 class='panel-title'>Выбор соперника</h2><div class='muted'>Все бойцы на этом экране принадлежат текущей стране: " + getCountryInfo(state.fighter.currentCountry).name + ". Арена недели: " + getCountryInfo(state.fighter.currentCountry).city + ".</div><div class='card-grid' style='margin-top:16px'>");
-      for (i = 0; i < state.opponents.length; i += 1) {
-        var opponent = state.opponents[i];
-        html.push("<div class='card'>");
-        html.push("<div class='meta'>" + opponent.danger + "</div>");
-        html.push("<h3>" + fullOpponentName(opponent) + "</h3>");
-        html.push("<p>" + opponent.profile + ". " + getCountryInfo(opponent.countryKey).name + ", " + opponent.venue + ". Кошелек $" + opponent.purse + ", слава +" + opponent.fameReward + ", форма " + opponent.condition + "/100, раундов " + opponent.rounds + ".</p>");
-        html.push("<div class='split-row'><div class='chip'>Сила " + opponent.stats.power + "</div><div class='chip'>Скорость " + opponent.stats.speed + "</div><div class='chip'>Выносливость " + opponent.stats.endurance + "</div><div class='chip'>Техника " + opponent.stats.technique + "</div></div>");
-        html.push("<button class='button' onclick='startFight(" + i + ")'>Принять бой</button>");
-        html.push("</div>");
-      }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
-      return html.join("");
-    }
-
-    function renderSkillPanel() {
-      return "" +
-        "<div class='panel'>" +
-          "<h2 class='panel-title'>Навыки и архетипы</h2>" +
-          "<div class='empty-state'>Пока эта система стоит на паузе. Здесь позже появятся ветки прокачки, пассивки и полноценные билды.</div>" +
-          "<div class='panel' style='margin-top:14px'><h2 class='panel-title'>Текущий статус</h2>" + renderSkillList(state.fighter.skills) + "</div>" +
-        "</div>";
-    }
-
-    function renderRetirePanel() {
-      return "" +
-        "<div class='panel'>" +
-          "<h2 class='panel-title'>Завершить карьеру?</h2>" +
-          "<div class='empty-state'>Если нажмешь сейчас, забег закончится, а игра покажет итог твоей истории.</div>" +
-          "<div class='footer-actions'>" +
-            "<button class='danger' onclick='retireCareer()'>Да, выйти из игры</button>" +
-            "<button class='ghost' onclick='openPanel(\"home\")'>Нет, продолжать</button>" +
-          "</div>" +
-        "</div>";
-    }
-
-    function fightAction(actionKey) {
-      var fight = state.fight;
-      var action = FIGHT_ACTIONS[actionKey];
-      if (!fight || fight.result || !action || fight.playerActionsLeft <= 0 || fight.actionLock) {
-        return;
-      }
-      if (!canUseFightAction(fight, "player", actionKey)) {
-        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
-        render();
-        return;
-      }
-      fight.actionLock = true;
-      if (action.type === "move") {
-        moveActor(fight, "player", actionKey);
-        fight.playerActionsLeft -= 1;
-        render();
-        setTimeout(function () {
-          runAiAfterPlayer();
-        }, 1000);
-        return;
-      }
-      if (strikeActor(fight, "player", actionKey)) {
-        fight.playerActionsLeft -= 1;
-        render();
-        setTimeout(function () {
-          applyFightAnimationResult();
-        }, 1000);
-        return;
-      }
-      fight.playerActionsLeft -= 1;
-      render();
-      setTimeout(function () {
-        applyFightAnimationResult();
-        if (fight.result) {
-          return;
-        }
-        runAiAfterPlayer();
-      }, 1000);
-    }
-
-    function closeFightResult() {
-      state.fight = null;
-      state.panel = "home";
-      render();
-    }
-
     function generateOpponent(tier) {
       var fighter = state.fighter;
       var country = getCountryInfo(fighter.currentCountry);
@@ -2743,28 +1256,6 @@
       return side === "player" ? "opponent" : "player";
     }
 
-    function canUseFightAction(fight, side, actionKey) {
-      var action = FIGHT_ACTIONS[actionKey];
-      var actor = fightStateBySide(fight, side);
-      var target = fightStateBySide(fight, otherSide(side));
-      var nextX;
-      var nextY;
-      var distance;
-      if (!action) {
-        return false;
-      }
-      if (action.type === "move") {
-        nextX = actor.position.x + action.dx;
-        nextY = actor.position.y + action.dy;
-        return insideRing(nextX, nextY) && !(nextX === target.position.x && nextY === target.position.y);
-      }
-      distance = ringDistance(actor.position, target.position);
-      if (action.reach === "close") {
-        return distance === 1;
-      }
-      return distance >= 1 && distance <= action.range && (actor.position.x === target.position.x || actor.position.y === target.position.y);
-    }
-
     function pushFightLine(fight, text) {
       fight.lines.unshift(text);
       if (fight.lines.length > 48) {
@@ -2789,133 +1280,6 @@
       pushFightLine(fight, fightNameBySide(fight, side) + " смещается: " + fromX + ":" + fromY + " -> " + (actor.position.x + 1) + ":" + (actor.position.y + 1) + ".");
     }
 
-    function fatalityRoll(loserState, loserCondition) {
-      var risk = Math.max(0, loserState.trauma - 4) * 7;
-      risk += Math.max(0, -loserState.hp) * 2;
-      risk += Math.max(0, loserState.bodyDamage - 24) / 2;
-      risk += Math.max(0, 42 - loserCondition) / 3;
-      return chance(Math.max(0, Math.round(risk)));
-    }
-
-    function resolveKnockdown(fight, victimSide) {
-      var victim = fightStateBySide(fight, victimSide);
-      var attackerSide = otherSide(victimSide);
-      var victimStats = fightStatsBySide(fight, victimSide);
-      var victimName = fightNameBySide(fight, victimSide);
-      var riseChance = 34 + victimStats.heart * 5 + victimStats.endurance * 2 - victim.trauma * 8 - victim.knockdowns * 15;
-      awardFightPressure(fight, attackerSide, 12);
-      riseChance = clamp(riseChance, 5, 88);
-      if (victim.knockdowns < 2 && chance(riseChance)) {
-        victim.knockdowns += 1;
-        victim.hp = 12 + victimStats.heart * 2;
-        victim.stamina = clamp(victim.stamina - 12, 0, 100);
-        victim.trauma += 1;
-        resetRingPositions(fight);
-        pushFightLine(fight, victimName + " падает, встает на счет и бой возвращается в центр ринга.");
-        return false;
-      }
-      pushFightLine(fight, victimName + " больше не поднимается после отсчета.");
-      finalizeFight(
-        victimSide === "player" ? "loss" : "win",
-        "KO/TKO",
-        [],
-        fatalityRoll(victim, victimSide === "player" ? state.fighter.health : fight.opponent.condition) ? victimSide : ""
-      );
-      return true;
-    }
-
-    function strikeActor(fight, side, actionKey) {
-      var attacker = fightStateBySide(fight, side);
-      var defender = fightStateBySide(fight, otherSide(side));
-      var attackerStats = fightStatsBySide(fight, side);
-      var defenderStats = fightStatsBySide(fight, otherSide(side));
-      var attackerName = fightNameBySide(fight, side);
-      var defenderName = fightNameBySide(fight, otherSide(side));
-      var action = FIGHT_ACTIONS[actionKey];
-      var distance = ringDistance(attacker.position, defender.position);
-      var hitChance;
-      var damage;
-      var critical;
-      var bodyDrain;
-      attacker.stamina = clamp(attacker.stamina - (action.stamina + Math.max(0, distance - 1)), 0, 100);
-      if (!canUseFightAction(fight, side, actionKey)) {
-        pushFightLine(fight, attackerName + " выбрасывает " + action.label.toLowerCase() + ", но дистанция не позволяет попасть.");
-        return false;
-      }
-      hitChance = action.accuracy + attackerStats.speed * 2 + attackerStats.technique * 2 + attackerStats.power * 0.4;
-      hitChance -= defenderStats.speed * 1.5 + defenderStats.technique * 1.2 + defenderStats.heart * 0.35;
-      hitChance -= Math.max(0, 40 - attacker.stamina) / 2;
-      if (action.reach === "line" && distance === 2) {
-        hitChance -= 8;
-      }
-      hitChance = clamp(Math.round(hitChance), 24, 90);
-      if (!chance(hitChance)) {
-        pushFightLine(fight, attackerName + " не доносит " + action.label.toLowerCase() + ", и " + defenderName + " уходит с линии атаки.");
-        return false;
-      }
-      damage = action.damage + attackerStats.power * 1.1 + attackerStats.technique * 0.5 + attackerStats.speed * 0.2;
-      damage -= defenderStats.endurance * 0.75 + defenderStats.heart * 0.25;
-      if (action.reach === "line" && distance === 2) {
-        damage -= 2;
-      }
-      if (actionKey === "uppercut") {
-        damage += 2;
-      } else if (actionKey === "hook") {
-        damage += 1;
-      } else if (actionKey === "jab") {
-        damage -= 1;
-      }
-      damage = Math.max(4, Math.round(damage + rand(-2, 2)));
-      critical = chance(clamp(8 + attackerStats.technique * 2 + (actionKey === "uppercut" ? 8 : 0) + (actionKey === "cross" ? 4 : 0), 8, 38));
-      if (critical) {
-        damage += rand(3, 6);
-      }
-      defender.hp -= damage;
-      defender.damageTaken += damage;
-      defender.trauma += action.trauma + (critical ? 1 : 0);
-      if (chance(5)) {
-        defender.trauma += 1;
-        pushFightLine(fight, defenderName + " получает дополнительную травму после точного попадания.");
-      }
-      awardFightPressure(fight, side, damage + (critical ? 4 : 2));
-      if (action.body) {
-        bodyDrain = rand(6, 10) + Math.max(0, attackerStats.power - 5);
-        defender.stamina = clamp(defender.stamina - bodyDrain, 0, 100);
-        defender.bodyDamage += damage;
-      }
-      if (critical) {
-        pushFightLine(fight, attackerName + " ловит момент и тяжело попадает: " + action.label + " проходит на " + damage + " урона.");
-      } else {
-        pushFightLine(fight, attackerName + " попадает ударом '" + action.label + "' и снимает " + damage + " прочности.");
-      }
-      if (action.body) {
-        pushFightLine(fight, defenderName + " теряет темп после работы по корпусу.");
-      }
-      if (defender.hp <= 0) {
-        return resolveKnockdown(fight, otherSide(side));
-      }
-      return false;
-    }
-
-    function doctorStopNeeded(fight, side) {
-      var actor = fightStateBySide(fight, side);
-      return actor.trauma >= 9 || (actor.bodyDamage >= 28 && actor.hp < actor.maxHp * 0.4);
-    }
-
-    function checkFightSafety(fight) {
-      if (doctorStopNeeded(fight, "player")) {
-        pushFightLine(fight, "Врач останавливает бой: твоему углу нельзя выпускать тебя дальше.");
-        finalizeFight("loss", "Остановлен врачом", [], fatalityRoll(fight.playerState, state.fighter.health) ? "player" : "");
-        return true;
-      }
-      if (doctorStopNeeded(fight, "opponent")) {
-        pushFightLine(fight, "Угол соперника выбрасывает полотенце. Продолжать опасно.");
-        finalizeFight("win", "Остановлен врачом", [], fatalityRoll(fight.opponentState, fight.opponent.condition) ? "opponent" : "");
-        return true;
-      }
-      return false;
-    }
-
     function availableFightActions(fight, side, type) {
       var keys = [];
       var key;
@@ -2925,160 +1289,6 @@
         }
       }
       return keys;
-    }
-
-    function pickAIMove(fight, retreat) {
-      var keys = ["move_up", "move_left", "move_right", "move_down"];
-      var actor = fight.opponentState;
-      var target = fight.playerState;
-      var best = [];
-      var bestScore = retreat ? -999 : 999;
-      var i;
-      var action;
-      var nextPos;
-      var distance;
-      var score;
-      for (i = 0; i < keys.length; i += 1) {
-        if (!canUseFightAction(fight, "opponent", keys[i])) {
-          continue;
-        }
-        action = FIGHT_ACTIONS[keys[i]];
-        nextPos = { x: actor.position.x + action.dx, y: actor.position.y + action.dy };
-        distance = ringDistance(nextPos, target.position);
-        score = distance * 10 + ((nextPos.x === target.position.x || nextPos.y === target.position.y) ? 0 : 1);
-        if (retreat) {
-          if (score > bestScore) {
-            bestScore = score;
-            best = [keys[i]];
-          } else if (score === bestScore) {
-            best.push(keys[i]);
-          }
-        } else if (score < bestScore) {
-          bestScore = score;
-          best = [keys[i]];
-        } else if (score === bestScore) {
-          best.push(keys[i]);
-        }
-      }
-      return best.length ? choice(best) : null;
-    }
-
-    function pickAiAction(fight) {
-      var ai = fight.opponentState;
-      var player = fight.playerState;
-      var distance = ringDistance(ai.position, player.position);
-      var attacks = availableFightActions(fight, "opponent", "attack");
-      var retreat = ai.hp < ai.maxHp * 0.25 || ai.trauma >= 6 || ai.stamina < 16;
-      if (attacks.length) {
-        if (distance === 1) {
-          if ((player.hp < player.maxHp * 0.32 || player.trauma >= 5) && canUseFightAction(fight, "opponent", "uppercut")) {
-            return "uppercut";
-          }
-          if (canUseFightAction(fight, "opponent", "hook") && chance(60)) {
-            return "hook";
-          }
-          if (canUseFightAction(fight, "opponent", "body") && chance(35)) {
-            return "body";
-          }
-        } else {
-          if (canUseFightAction(fight, "opponent", "cross") && chance(55)) {
-            return "cross";
-          }
-          if (canUseFightAction(fight, "opponent", "jab") && chance(70)) {
-            return "jab";
-          }
-        }
-        return choice(attacks);
-      }
-      return pickAIMove(fight, retreat || distance === 1);
-    }
-
-    function finishFightRound() {
-      var fight = state.fight;
-      var playerCard = 10;
-      var opponentCard = 10;
-      var delta = fight.roundPoints.player - fight.roundPoints.opponent;
-      if (delta >= 14) {
-        opponentCard = 8;
-      } else if (delta > 0) {
-        opponentCard = 9;
-      } else if (delta <= -14) {
-        playerCard = 8;
-      } else if (delta < 0) {
-        playerCard = 9;
-      }
-      fight.judges.player += playerCard;
-      fight.judges.opponent += opponentCard;
-      fight.roundCards.unshift("Раунд " + fight.round + ": " + playerCard + "-" + opponentCard);
-      fight.roundsCompleted = fight.round;
-      pushFightLine(fight, "Раунд " + fight.round + " закрыт по активности: " + playerCard + "-" + opponentCard + ".");
-      pushLog("Раунд " + fight.round + " завершен. Карточка отрезков: " + playerCard + "-" + opponentCard + ".", "warn");
-      if (fight.round >= fight.opponent.rounds) {
-        finalizeFight(
-          fight.judges.player > fight.judges.opponent ? "win" : (fight.judges.player < fight.judges.opponent ? "loss" : "draw"),
-          "Решение судей " + fight.judges.player + ":" + fight.judges.opponent,
-          ["Судейские записки: " + fight.roundCards.slice(0).reverse().join(", ") + "."],
-          ""
-        );
-        return;
-      }
-      fight.round += 1;
-      fight.segment = 1;
-      fight.playerActionsLeft = 3;
-      fight.aiActionsLeft = 3;
-      fight.roundPoints = { player: 0, opponent: 0 };
-      resetRingPositions(fight);
-      fight.playerState.stamina = clamp(fight.playerState.stamina + 16 + Math.floor(state.fighter.stats.endurance / 2), 0, 100);
-      fight.opponentState.stamina = clamp(fight.opponentState.stamina + 16 + Math.floor(fight.opponent.stats.endurance / 2), 0, 100);
-      pushFightLine(fight, "Стартует раунд " + fight.round + ". Бойцов снова сводят в центр.");
-    }
-
-    function completeFightSegment() {
-      var fight = state.fight;
-      if (fight.result) {
-        return;
-      }
-      if (checkFightSafety(fight)) {
-        return;
-      }
-      pushFightLine(fight, "Отрезок " + fight.segment + " завершен. Дистанция между бойцами: " + ringDistance(fight.playerState.position, fight.opponentState.position) + " клетк.");
-      if (fight.segment >= 10) {
-        finishFightRound();
-        return;
-      }
-      fight.segment += 1;
-      fight.playerActionsLeft = 3;
-      fight.aiActionsLeft = 3;
-      fight.playerState.stamina = clamp(fight.playerState.stamina + 3, 0, 100);
-      fight.opponentState.stamina = clamp(fight.opponentState.stamina + 3, 0, 100);
-      pushFightLine(fight, "Раунд " + fight.round + ", отрезок " + fight.segment + ". На оба угла снова по 3 действия.");
-    }
-
-    function startFight(index) {
-      var opponent = state.opponents[index];
-      state.fight = {
-        opponent: opponent,
-        round: 1,
-        segment: 1,
-        uiTab: "controls",
-        actionGroup: "move",
-        playerActionsLeft: 3,
-        aiActionsLeft: 3,
-        playerState: buildFightState(state.fighter.stats, state.fighter.health, startRingPosition("player")),
-        opponentState: buildFightState(opponent.stats, opponent.condition, startRingPosition("opponent")),
-        lines: [
-          "Бой против " + fullOpponentName(opponent) + " начинается. Ринг 5x5, в каждом раунде 10 отрезков по 3 действия."
-        ],
-        result: null,
-        method: null,
-        fatality: "",
-        roundsCompleted: 0,
-        judges: { player: 0, opponent: 0 },
-        roundPoints: { player: 0, opponent: 0 },
-        roundCards: []
-      };
-      state.panel = "fightLive";
-      render();
     }
 
     function openFightTab(tabKey) {
@@ -3096,64 +1306,6 @@
       state.fight.uiTab = "controls";
       state.fight.actionGroup = groupKey;
       render();
-    }
-
-    function fightAction(actionKey) {
-      var fight = state.fight;
-      var action = FIGHT_ACTIONS[actionKey];
-      var aiActionKey;
-      if (!fight || fight.result || !action || fight.playerActionsLeft <= 0) {
-        return;
-      }
-      if (!canUseFightAction(fight, "player", actionKey)) {
-        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
-        render();
-        return;
-      }
-      if (action.type === "move") {
-        moveActor(fight, "player", actionKey);
-      } else if (strikeActor(fight, "player", actionKey)) {
-        return;
-      }
-      fight.playerActionsLeft -= 1;
-      if (fight.result || checkFightSafety(fight)) {
-        return;
-      }
-      if (fight.aiActionsLeft > 0) {
-        aiActionKey = pickAiAction(fight);
-        if (aiActionKey) {
-          if (FIGHT_ACTIONS[aiActionKey].type === "move") {
-            moveActor(fight, "opponent", aiActionKey);
-          } else if (strikeActor(fight, "opponent", aiActionKey)) {
-            fight.aiActionsLeft -= 1;
-            return;
-          }
-          fight.aiActionsLeft -= 1;
-        } else {
-          fight.aiActionsLeft = 0;
-          pushFightLine(fight, fullOpponentName(fight.opponent) + " теряет темп и не находит чистого действия.");
-        }
-      }
-      if (fight.result || checkFightSafety(fight)) {
-        return;
-      }
-      if (fight.playerActionsLeft <= 0 && fight.aiActionsLeft <= 0) {
-        completeFightSegment();
-        if (fight.result) {
-          return;
-        }
-      }
-      render();
-    }
-
-    function playFightRound(playerTactic) {
-      fightAction(playerTactic);
-    }
-
-    function renderFightActionButton(actionKey, className) {
-      var fight = state.fight;
-      var disabled = !fight || fight.result || fight.playerActionsLeft <= 0 || !canUseFightAction(fight, "player", actionKey);
-      return "<button class='" + className + "' " + (disabled ? "disabled='disabled'" : "") + " onclick='fightAction(\"" + actionKey + "\")'>" + FIGHT_ACTIONS[actionKey].label + "</button>";
     }
 
     function renderFightControlsPanel(fight) {
@@ -3180,10 +1332,6 @@
       }
       html.push("</div></div>");
       return html.join("");
-    }
-
-    function renderFightStatsPanel(fight) {
-      return "<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip gold'>Твоя травма " + fight.playerState.trauma + "</div><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip red'>Его травма " + fight.opponentState.trauma + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
     }
 
     function renderFightLogPanel(fight) {
@@ -3217,84 +1365,10 @@
       render();
     }
 
-    function applyFightResults() {
-      var fight = state.fight;
-      var fighter = state.fighter;
-      var opponent = fight.opponent;
-      var injury = Math.floor(fight.playerState.damageTaken * 0.32 + fight.playerState.trauma * 5 + fight.playerState.knockdowns * 8 + fight.playerState.bodyDamage * 0.35);
-      var fameGain;
-      fighter.health -= injury;
-      fighter.stress += 7 + fight.playerState.trauma * 4 + Math.floor(fight.playerState.bodyDamage / 5);
-      if (fight.result === "win") {
-        fighter.wins += 1;
-        fighter.money += opponent.purse;
-        fighter.fame += opponent.fameReward;
-        fighter.morale += 10;
-        if (fight.method.indexOf("KO") !== -1) {
-          fighter.kos += 1;
-        }
-        pushLog("Победа. Ты забираешь $" + opponent.purse + " и +" + opponent.fameReward + " к известности.", "good");
-      } else if (fight.result === "loss") {
-        fameGain = Math.max(2, Math.floor(opponent.fameReward / 3));
-        fighter.losses += 1;
-        fighter.money += Math.floor(opponent.purse * 0.35);
-        fighter.fame += fameGain;
-        fighter.morale -= 12;
-        fighter.stress += 6;
-        pushLog("Поражение. Даже оно приносит часть денег и оставляет шум вокруг имени.", "bad");
-      } else {
-        fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
-        fighter.money += Math.floor(opponent.purse * 0.55);
-        fighter.fame += fameGain;
-        fighter.morale += 1;
-        pushLog("Ничья. Ты выжил в рубке и ушел с деньгами и известностью.", "warn");
-      }
-      if (fight.fatality === "opponent") {
-        fighter.deathsCaused += 1;
-        fighter.fame += 12;
-        fighter.relationship -= 10;
-        fighter.stress += 18;
-        pushLog("Бой закончился трагедией. Имя гремит сильнее, но цена за это чудовищная.", "bad");
-      } else if (fight.fatality === "player") {
-        fighter.alive = false;
-        pushLog("Повреждения оказываются критическими. Этот бой становится последним.", "bad");
-      }
-      applyBounds(fighter);
-    }
-
     function closeFightResult() {
       state.fight = null;
       state.panel = "home";
       render();
-    }
-
-    function renderCreate() {
-      var html = [];
-      var i;
-      var country;
-      var identityText = state.create.identity ? state.create.identity.fullName : "Сначала выбери стартовую страну";
-      html.push("<div class='shell'>");
-      html.push("<div class='hero'>");
-      html.push("<div class='eyebrow'>Street Boxer Career</div>");
-      html.push("<div class='title'>Собери бойца для подпольной карьеры</div>");
-      html.push("<div class='subtitle'>Теперь карьера начинается с выбора стартовой точки. Имя, фамилия и кличка зависят от страны, а позже ты сможешь путешествовать и охотиться за более крупными гонорарами на чужой территории.</div>");
-      html.push("<div><h2 class='panel-title'>Стартовая точка</h2><div class='create-grid'>");
-      for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
-        country = COUNTRY_DATA.countries[i];
-        html.push("<div class='create-card" + (state.create.country === country.key ? " selected" : "") + "'>");
-        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ". За границей в этой стране платят x" + country.awayMoneyBonus.toFixed(2) + " денег и x" + country.awayFameBonus.toFixed(2) + " известности.</p>");
-        html.push("<button class='button' onclick='setCreateCountry(\"" + country.key + "\")'>" + (state.create.country === country.key ? "Выбрана" : "Выбрать") + "</button>");
-        html.push("</div>");
-      }
-      html.push("</div></div>");
-      html.push("<div class='nameplate'><div><div class='fighter-class'>Имя на афише</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>Сменить имя</button></div>");
-      html.push("<div class='card'><div class='meta'>Временная заглушка</div><h3>Архетипы и навыки</h3><p>Пока они отключены. На старте у всех одинаковая база, а бой решают статы, позиция на ринге 5x5 и последовательность действий в каждом отрезке.</p></div>");
-      html.push("<div class='footer-actions'>");
-      html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "Страна не выбрана") + "</div>");
-      html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>Начать карьеру</button>");
-      html.push("</div>");
-      html.push("</div></div>");
-      return html.join("");
     }
 
     function renderHomeSummaryPanel() {
@@ -3336,43 +1410,38 @@
         "</div>";
     }
 
-    function renderCharacterPanel() {
-      var fighter = state.fighter;
-      var home = getCountryInfo(fighter.homeCountry);
-      var current = getCountryInfo(fighter.currentCountry);
-      var bonus = currentTravelBonus(fighter);
+    function renderRecentLogEntries(limit, emptyText) {
       var html = [];
-      html.push("<div class='panel'>");
-      html.push("<h2 class='panel-title'>Персонаж</h2>");
-      html.push("<div class='fighter-name' style='font-size:26px'>" + fighter.name + "</div>");
-      html.push("<div class='record-row'>");
-      html.push("<div class='chip gold'>Рекорд " + recordText(fighter) + "</div>");
-      html.push("<div class='chip'>Слава " + fighter.fame + "</div>");
-      html.push("<div class='chip'>Деньги $" + fighter.money + "</div>");
-      html.push("<div class='chip'>Дом " + (home ? home.name : "-") + "</div>");
-      html.push("<div class='chip'>Сейчас " + (current ? current.name : "-") + "</div>");
-      html.push("</div>");
-      if (current && home && current.key !== home.key) {
-        html.push("<div class='record-row'><div class='chip gold'>Чужая территория</div><div class='chip'>Гонорар x" + bonus.money.toFixed(2) + "</div><div class='chip'>Известность x" + bonus.fame.toFixed(2) + "</div></div>");
-      } else if (current) {
-        html.push("<div class='record-row'><div class='chip'>Домашняя арена: " + current.city + "</div></div>");
+      var max = Math.min(limit, state.log.length);
+      var i;
+      if (!max) {
+        return "<div class='empty-state'>" + emptyText + "</div>";
       }
-      html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
-      html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
-      html.push("<div>" + meter("Мораль", fighter.morale) + "</div>");
-      html.push("<div>" + meter("Личная жизнь", fighter.relationship) + "</div>");
-      html.push("</div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Статы</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
+      for (i = 0; i < max; i += 1) {
+        html.push("<div class='log-entry " + state.log[i].tone + "'>" + state.log[i].text + "</div>");
+      }
       return html.join("");
     }
 
     function renderHomePanel() {
-      return renderHomeSummaryPanel();
+      return renderHomeSummaryPanel() +
+        "<div class='panel'>" +
+          "<h2 class='panel-title'>Последние события</h2>" +
+          "<div class='log-list'>" +
+            renderRecentLogEntries(6, "Пока здесь тихо. Первые записи появятся после старта карьеры.") +
+          "</div>" +
+        "</div>";
     }
 
     function renderCareerLogPage() {
-      return "<div class='panel'>" + renderLogPanelInner() + "</div>";
+      return "<div class='panel fill-panel'>" + renderLogPanelInner() + "</div>";
+    }
+
+    function wrapGamePanel(panelKey, html) {
+      if (panelKey === "fightLive" || panelKey === "fightBreak" || panelKey === "fightResult") {
+        return html;
+      }
+      return "<div class='page-stack page-" + panelKey + "'>" + html + "</div>";
     }
 
     function renderNavigationTabs() {
@@ -3392,25 +1461,6 @@
       return html.join("");
     }
 
-    function renderTravelPanel() {
-      var html = [];
-      var fighter = state.fighter;
-      var i;
-      var country;
-      var cost;
-      html.push("<div class='panel'><h2 class='panel-title'>Путешествие</h2><div class='card-grid' style='margin-top:16px'>");
-      for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
-        country = COUNTRY_DATA.countries[i];
-        if (country.key === fighter.currentCountry) {
-          continue;
-        }
-        cost = flightCost(fighter.currentCountry, country.key);
-        html.push("<div class='card'><div class='meta'>Перелет $" + cost + "</div><h3>" + country.name + "</h3><p>Город боев: " + country.city + ". На чужой территории здесь платят x" + country.awayMoneyBonus.toFixed(2) + " денег и x" + country.awayFameBonus.toFixed(2) + " известности.</p><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Лететь</button></div>");
-      }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
-      return html.join("");
-    }
-
     function renderTrainPanel() {
       var html = [];
       var key;
@@ -3426,15 +1476,15 @@
 
     function renderSkillPanel() {
       return "" +
-        "<div class='panel'>" +
+        "<div class='panel fill-panel'>" +
           "<h2 class='panel-title'>Навыки и архетипы</h2>" +
-          "<div class='empty-state'>Архетипы и навыки временно убраны из активной игры. Здесь позже будет полная система сборки билда, выбора архетипов, прокачки веток и пассивных особенностей.</div>" +
+          "<div class='empty-state'>Система навыков находится на полной переработке под мобильную версию. Здесь позже появятся архетип, ветки умений и пассивные бонусы.</div>" +
           "<div class='skill-grid' style='margin-top:14px'>" +
             "<div class='card'><h3>Архетип</h3><p>Слот пока пуст. Позже здесь будет выбран базовый стиль бойца.</p></div>" +
             "<div class='card'><h3>Активные навыки</h3><p>Здесь появятся открытые приемы, бонусы к ударам и особые реакции.</p></div>" +
             "<div class='card'><h3>Пассивные ветки</h3><p>Позже сюда переедут долгосрочные улучшения характера, выносливости и рингового IQ.</p></div>" +
           "</div>" +
-          "<div class='panel' style='margin-top:14px'><h2 class='panel-title'>Текущий статус</h2>" + renderSkillList(state.fighter.skills) + "</div>" +
+          "<div class='panel inset-panel' style='margin-top:14px'><h2 class='panel-title'>Текущий статус</h2>" + renderSkillList(state.fighter.skills) + "</div>" +
         "</div>";
     }
 
@@ -3495,141 +1545,6 @@
       return html.join("");
     }
 
-    function renderFightLivePanel() {
-      var fight = state.fight;
-      var html = [];
-      var x;
-      var y;
-      var i;
-      var playerCell;
-      var opponentCell;
-      var activeTab = fight.uiTab || "controls";
-      html.push("<div class='battle-shell'>");
-      html.push("<div class='battle-topbar'>");
-      html.push("<div class='battle-health-card'>");
-      html.push("<div class='chip gold'>Ты</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("<div class='battle-health-card right'>");
-      html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-stage'>");
-      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Отрезок " + fight.segment + " / 10</div>");
-      html.push("<div class='title' style='font-size:22px'>Ринг 5x5</div>");
-      html.push("<div class='subtitle'>У тебя " + fight.playerActionsLeft + " действия, у соперника " + fight.aiActionsLeft + ".</div>");
-      html.push("<div class='ring-board'>");
-      for (y = 0; y < RING_SIZE; y += 1) {
-        html.push("<div class='ring-row'>");
-        for (x = 0; x < RING_SIZE; x += 1) {
-          playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
-          opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='token player'>Ты</div>" : (opponentCell ? "<div class='token opponent'>Он</div>" : "")) + "</div>");
-        }
-        html.push("</div>");
-      }
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-bottom'>");
-      html.push("<div class='battle-column'>");
-      html.push("<div class='battle-panel'><strong>Движение</strong><div class='battle-actions-row compact'>");
-      html.push(renderFightActionButton("move_up", "ghost"));
-      html.push(renderFightActionButton("move_left", "ghost"));
-      html.push(renderFightActionButton("move_right", "ghost"));
-      html.push(renderFightActionButton("move_down", "ghost"));
-      html.push("</div></div>");
-      html.push("<div class='battle-panel'><strong>Удары</strong><div class='battle-actions-row'>");
-      html.push(renderFightActionButton("jab", "button"));
-      html.push(renderFightActionButton("cross", "button"));
-      html.push(renderFightActionButton("hook", "danger"));
-      html.push(renderFightActionButton("uppercut", "danger"));
-      html.push(renderFightActionButton("body", "button"));
-      html.push("</div></div>");
-      html.push("</div>");
-      html.push("<div class='battle-column right'>");
-      html.push("<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip gold'>Твоя травма " + fight.playerState.trauma + "</div><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip red'>Его травма " + fight.opponentState.trauma + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>");
-      if (fight.roundCards.length) {
-        html.push("<div class='battle-panel'><strong>Карточки</strong>");
-        for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
-          html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
-        }
-        html.push("</div>");
-      }
-      html.push("<div class='battle-panel'><strong>Лента боя</strong><div class='battle-log'>");
-      for (i = 0; i < Math.min(8, fight.lines.length); i += 1) {
-        html.push("<div class='log-entry'>" + fight.lines[i] + "</div>");
-      }
-      html.push("</div>");
-      html.push("</div></div>");
-      html.push("</div></div>");
-      return html.join("");
-    }
-
-    function renderFightLivePanel() {
-      var fight = state.fight;
-      var html = [];
-      var x;
-      var y;
-      var i;
-      var playerCell;
-      var opponentCell;
-      var activeTab = fight.uiTab || "controls";
-      html.push("<div class='battle-shell'>");
-      html.push("<div class='battle-topbar'>");
-      html.push("<div class='battle-health-card'>");
-      html.push("<div class='chip gold'>Ты</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("<div class='battle-health-card right'>");
-      html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-stage'>");
-      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Отрезок " + fight.segment + " / 10</div>");
-      html.push("<div class='title' style='font-size:22px'>Ринг 5x5</div>");
-      html.push("<div class='subtitle'>У тебя " + fight.playerActionsLeft + " действия, у соперника " + fight.aiActionsLeft + ".</div>");
-      html.push("<div class='ring-board'>");
-      for (y = 0; y < RING_SIZE; y += 1) {
-        html.push("<div class='ring-row'>");
-        for (x = 0; x < RING_SIZE; x += 1) {
-          playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
-          opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='token player'>Ты</div>" : (opponentCell ? "<div class='token opponent'>Он</div>" : "")) + "</div>");
-        }
-        html.push("</div>");
-      }
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-bottom'>");
-      html.push("<div class='battle-tabs'>");
-      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>");
-      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>");
-      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>");
-      html.push("</div>");
-      if (activeTab === "stats") {
-        html.push(renderFightStatsPanel(fight));
-        if (fight.roundCards.length) {
-          html.push("<div class='battle-panel'><strong>Карточки</strong>");
-          for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
-            html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
-          }
-          html.push("</div>");
-        }
-      } else if (activeTab === "log") {
-        html.push(renderFightLogPanel(fight));
-      } else {
-        html.push(renderFightControlsPanel(fight));
-      }
-      html.push("</div></div>");
-      return html.join("");
-    }
-
     function renderCreate() {
       var html = [];
       var i;
@@ -3650,7 +1565,7 @@
       }
       html.push("</div></div>");
       html.push("<div class='nameplate'><div><div class='fighter-class'>Имя на афише</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>Сменить имя</button></div>");
-      html.push("<div class='card'><div class='meta'>Временная заглушка</div><h3>Архетипы и навыки</h3><p>Пока они отключены. На старте у всех одинаковая база, а бой решают статы, позиция на ринге 5x5 и последовательность действий в каждом отрезке.</p></div>");
+      html.push("<div class='card'><div class='meta'>Временная заглушка</div><h3>Архетипы и навыки</h3><p>Пока они отключены. На старте у всех одинаковая база, а бой решают статы, позиция на ринге 5x5 и выбор действий в ходе раунда.</p></div>");
       html.push("<div class='footer-actions'>");
       html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "Страна не выбрана") + "</div>");
       html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>Начать карьеру</button>");
@@ -3687,35 +1602,6 @@
       html.push("</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Статы</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
       html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
-      return html.join("");
-    }
-
-    function renderFightResultPanel() {
-      var fight = state.fight;
-      var resultLabel = fight.result === "win" ? "Победа" : (fight.result === "loss" ? "Поражение" : "Ничья");
-      var html = [];
-      var i;
-      html.push("<div class='battle-shell'><div class='battle-result'>");
-      html.push("<div class='result-banner'><div class='eyebrow'>Итог боя</div><div class='title' style='font-size:24px'>" + resultLabel + " через " + fight.method + "</div>");
-      html.push("<div class='subtitle'>Раундов прошло: " + fight.roundsCompleted + ".</div></div>");
-      html.push("<div class='battle-bottom' style='margin-top:12px'>");
-      html.push("<div class='battle-column'><div class='battle-panel'><strong>Ты в бою</strong>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("Стамина", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div></div></div></div>");
-      html.push("<div class='battle-column right'><div class='battle-panel'><strong>Соперник</strong>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("Стамина", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div></div>");
-      html.push("</div>");
-      if (fight.roundCards.length) {
-        html.push("<div class='battle-panel' style='margin-top:12px'><strong>Карточки судей</strong>");
-        for (i = 0; i < Math.min(8, fight.roundCards.length); i += 1) {
-          html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
-        }
-        html.push("</div>");
-      }
-      html.push("<div class='battle-panel' style='margin-top:12px'><strong>Последние события</strong><div class='battle-log'>");
-      for (i = 0; i < Math.min(10, fight.lines.length); i += 1) {
-        html.push("<div class='log-entry'>" + fight.lines[i] + "</div>");
-      }
-      html.push("</div></div>");
-      html.push("<div class='footer-actions'><button class='button' onclick='closeFightResult()'>Вернуться в карьеру</button></div>");
-      html.push("</div></div>");
       return html.join("");
     }
 
@@ -3831,18 +1717,6 @@
         return zone === "close";
       }
       return zone === "line";
-    }
-
-    function fatalityRoll() {
-      return false;
-    }
-
-    function doctorStopNeeded() {
-      return false;
-    }
-
-    function checkFightSafety() {
-      return false;
     }
 
     function resolveKnockdown(fight, victimSide) {
@@ -4007,162 +1881,6 @@
       render();
     }
 
-    function finalizeFightTurn() {
-      var fight = state.fight;
-      if (!fight || fight.result) {
-        return;
-      }
-      if (fight.playerActionsLeft <= 0 && fight.aiActionsLeft <= 0) {
-        completeFightSegment();
-        if (fight.result) {
-          return;
-        }
-      }
-      fight.actionLock = false;
-      render();
-    }
-
-    function runAiAfterPlayer() {
-      var fight = state.fight;
-      var aiActionKey;
-      if (!fight || fight.result) {
-        return;
-      }
-      if (fight.aiActionsLeft > 0) {
-        aiActionKey = pickAiAction(fight);
-        if (aiActionKey) {
-          if (FIGHT_ACTIONS[aiActionKey].type === "move") {
-            moveActor(fight, "opponent", aiActionKey);
-            fight.aiActionsLeft -= 1;
-            finalizeFightTurn();
-            return;
-          }
-          if (strikeActor(fight, "opponent", aiActionKey)) {
-            fight.aiActionsLeft -= 1;
-            render();
-            setTimeout(function () {
-              applyFightAnimationResult();
-            }, 1000);
-            return;
-          }
-          fight.aiActionsLeft -= 1;
-          render();
-          setTimeout(function () {
-            applyFightAnimationResult();
-            finalizeFightTurn();
-          }, 1000);
-          return;
-        }
-        fight.aiActionsLeft = 0;
-        pushFightLine(fight, fullOpponentName(fight.opponent) + " теряет темп и не находит чистого действия.");
-      }
-      finalizeFightTurn();
-    }
-
-    function fightAction(actionKey) {
-      var fight = state.fight;
-      var action = FIGHT_ACTIONS[actionKey];
-      if (!fight || fight.result || !action || fight.playerActionsLeft <= 0 || fight.actionLock) {
-        return;
-      }
-      if (!canUseFightAction(fight, "player", actionKey)) {
-        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
-        render();
-        return;
-      }
-      fight.actionLock = true;
-      if (action.type === "move") {
-        moveActor(fight, "player", actionKey);
-        fight.playerActionsLeft -= 1;
-        fight.actionLock = false;
-        finalizeFightTurn();
-        return;
-      }
-      if (strikeActor(fight, "player", actionKey)) {
-        fight.playerActionsLeft -= 1;
-        render();
-        setTimeout(function () {
-          applyFightAnimationResult();
-        }, 1000);
-        return;
-      }
-      fight.playerActionsLeft -= 1;
-      render();
-      setTimeout(function () {
-        applyFightAnimationResult();
-        if (fight.result) {
-          return;
-        }
-        runAiAfterPlayer();
-      }, 1000);
-    }
-
-    function renderFightStatsPanel(fight) {
-      return "<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
-    }
-
-    function renderFightLivePanel() {
-      var fight = state.fight;
-      var html = [];
-      var x;
-      var y;
-      var i;
-      var playerCell;
-      var opponentCell;
-      var activeTab = fight.uiTab || "controls";
-      html.push("<div class='battle-shell'>");
-      html.push("<div class='battle-topbar'>");
-      html.push("<div class='battle-health-card'>");
-      html.push("<div class='chip gold'>Ты</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("<div class='battle-health-card right'>");
-      html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-stage'>");
-      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Отрезок " + fight.segment + " / 10</div>");
-      html.push("<div class='title' style='font-size:22px'>Ринг 5x5</div>");
-      html.push("<div class='subtitle'>У тебя " + fight.playerActionsLeft + " действия, у соперника " + fight.aiActionsLeft + ".</div>");
-      html.push("<div class='ring-board'>");
-      for (y = 0; y < RING_SIZE; y += 1) {
-        html.push("<div class='ring-row'>");
-        for (x = 0; x < RING_SIZE; x += 1) {
-          playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
-          opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='" + tokenClassFor("player") + "'>Ты</div>" : (opponentCell ? "<div class='" + tokenClassFor("opponent") + "'>Он</div>" : "")) + "</div>");
-        }
-        html.push("</div>");
-      }
-      html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-bottom'>");
-      html.push("<div class='battle-tabs'>");
-      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>");
-      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>");
-      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>");
-      html.push("</div>");
-      if (activeTab === "stats") {
-        html.push(renderFightStatsPanel(fight));
-        if (fight.roundCards.length) {
-          html.push("<div class='battle-panel'><strong>Карточки</strong>");
-          for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
-            html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
-          }
-          html.push("</div>");
-        }
-      } else if (activeTab === "log") {
-        html.push(renderFightLogPanel(fight));
-      } else {
-        html.push(renderFightControlsPanel(fight));
-      }
-      html.push("</div></div>");
-      return html.join("");
-    }
-
     function renderFightResultPanel() {
       var fight = state.fight;
       var resultLabel = fight.result === "win" ? "Победа" : (fight.result === "loss" ? "Поражение" : "Ничья");
@@ -4228,31 +1946,20 @@
     }
 
     function renderMainPanel() {
-      if (state.panel === "character") { return renderCharacterPanel(); }
-      if (state.panel === "careerLog") { return renderCareerLogPage(); }
-      if (state.panel === "train") { return renderTrainPanel(); }
-      if (state.panel === "skills") { return renderSkillPanel(); }
-      if (state.panel === "recover") { return renderRecoverPanel(); }
-      if (state.panel === "work") { return renderWorkPanel(); }
-      if (state.panel === "life") { return renderLifePanel(); }
-      if (state.panel === "travel") { return renderTravelPanel(); }
-      if (state.panel === "fightSelect") { return renderFightSelectPanel(); }
+      if (state.panel === "character") { return wrapGamePanel("character", renderCharacterPanel()); }
+      if (state.panel === "careerLog") { return wrapGamePanel("careerLog", renderCareerLogPage()); }
+      if (state.panel === "train") { return wrapGamePanel("train", renderTrainPanel()); }
+      if (state.panel === "skills") { return wrapGamePanel("skills", renderSkillPanel()); }
+      if (state.panel === "recover") { return wrapGamePanel("recover", renderRecoverPanel()); }
+      if (state.panel === "work") { return wrapGamePanel("work", renderWorkPanel()); }
+      if (state.panel === "life") { return wrapGamePanel("life", renderLifePanel()); }
+      if (state.panel === "travel") { return wrapGamePanel("travel", renderTravelPanel()); }
+      if (state.panel === "fightSelect") { return wrapGamePanel("fightSelect", renderFightSelectPanel()); }
       if (state.panel === "fightLive") { return renderFightLivePanel(); }
       if (state.panel === "fightBreak") { return renderFightBreakPanel(); }
       if (state.panel === "fightResult") { return renderFightResultPanel(); }
-      if (state.panel === "retire") { return renderRetirePanel(); }
-      return renderHomePanel();
-    }
-
-    function renderLogPanel() {
-      var html = [];
-      var i;
-      html.push("<div class='log-panel'><h2 class='panel-title'>Лента карьеры</h2><div class='log-list'>");
-      for (i = 0; i < state.log.length; i += 1) {
-        html.push("<div class='log-entry " + state.log[i].tone + "'>" + state.log[i].text + "</div>");
-      }
-      html.push("</div></div>");
-      return html.join("");
+      if (state.panel === "retire") { return wrapGamePanel("retire", renderRetirePanel()); }
+      return wrapGamePanel("home", renderHomePanel());
     }
 
     function renderLogPanelInner() {
@@ -4267,12 +1974,14 @@
     }
 
     function renderGame() {
+      var current = getCountryInfo(state.fighter.currentCountry);
       if (state.panel === "fightLive" || state.panel === "fightBreak" || state.panel === "fightResult") {
         return renderMainPanel();
       }
       return "" +
         "<div class='shell'>" +
           "<div class='topbar'>" +
+            "<div class='brand'><div class='eyebrow'>Street Boxer Simulator</div><div class='title'>" + state.fighter.name + "</div><div class='subtitle'>" + current.name + ", арена " + current.city + ".</div></div>" +
             "<div class='week-chip'>Неделя " + state.fighter.week + "</div>" +
           "</div>" +
           renderNavigationTabs() +
@@ -4616,7 +2325,6 @@
 
     function render() {
       var app = document.getElementById("app");
-      applyAdaptiveMode();
       if (state.screen === "create") {
         app.innerHTML = renderCreate();
       } else if (state.screen === "end") {
@@ -4626,51 +2334,12 @@
       }
     }
 
-    function viewportWidth() {
-      if (document.documentElement && document.documentElement.clientWidth) {
-        return document.documentElement.clientWidth;
-      }
-      if (document.body && document.body.clientWidth) {
-        return document.body.clientWidth;
-      }
-      return 1280;
-    }
-
-    function viewportHeight() {
-      if (document.documentElement && document.documentElement.clientHeight) {
-        return document.documentElement.clientHeight;
-      }
-      if (document.body && document.body.clientHeight) {
-        return document.body.clientHeight;
-      }
-      return 720;
-    }
-
-    function applyAdaptiveMode() {
-      var width = viewportWidth();
-      var height = viewportHeight();
-      var mode = "";
-      if (!document.body) {
-        return;
-      }
-      if (width <= 700) {
-        mode = "scale-tight";
-      } else if (width <= 1180 || height <= 700) {
-        mode = "scale-compact";
-      } else if (width <= 1500 || height <= 860) {
-        mode = "scale-compact";
-      }
-      document.body.className = mode;
-    }
-
     window.onload = function () {
       resetCreate();
-      applyAdaptiveMode();
       render();
     };
 
     window.onresize = function () {
-      applyAdaptiveMode();
       render();
     };
   </script>
@@ -4679,4 +2348,10 @@
   <div id="app"></div>
 </body>
 </html>
+
+
+
+
+
+
 
