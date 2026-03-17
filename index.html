@@ -459,12 +459,11 @@
       padding: 46px 62px 66px 62px;
       margin-left: auto;
       margin-right: auto;
-      background-image:
-        linear-gradient(180deg, rgba(10, 14, 19, 0.18), rgba(10, 14, 19, 0.34)),
-        url('ring_top_view.png');
-      background-repeat: no-repeat, no-repeat;
-      background-position: center center, center center;
-      background-size: cover, 100% 100%;
+      background-color: #d8dde6;
+      background-image: url('ring_top_view.png');
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: 100% 100%;
       font-size: 0;
       text-align: center;
     }
@@ -482,10 +481,10 @@
       display: inline-block;
       vertical-align: top;
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
-        rgba(15, 20, 28, 0.38);
+        linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+        rgba(15, 20, 28, 0.18);
       position: relative;
       text-align: center;
     }
@@ -603,6 +602,16 @@
       padding: 10px;
     }
 
+    .battle-tabs {
+      margin-bottom: 8px;
+    }
+
+    .battle-tabs .button,
+    .battle-tabs .ghost {
+      margin: 0 8px 8px 0;
+      min-width: 160px;
+    }
+
     .battle-column {
       width: 50%;
       float: left;
@@ -621,6 +630,11 @@
 
     .battle-panel:last-child {
       margin-bottom: 0;
+    }
+
+    .battle-panel strong {
+      display: block;
+      margin-bottom: 8px;
     }
 
     .battle-actions-row {
@@ -1129,7 +1143,7 @@
     }
 
     function startRingPosition(side) {
-      return side === "player" ? { x: 1, y: 2 } : { x: 3, y: 2 };
+      return side === "player" ? { x: 0, y: 2 } : { x: 4, y: 2 };
     }
 
     function ringDistance(a, b) {
@@ -2314,6 +2328,8 @@
         opponent: opponent,
         round: 1,
         segment: 1,
+        uiTab: "controls",
+        actionGroup: "move",
         playerActionsLeft: 3,
         aiActionsLeft: 3,
         playerState: buildFightState(state.fighter.stats, state.fighter.health, startRingPosition("player")),
@@ -2330,6 +2346,23 @@
         roundCards: []
       };
       state.panel = "fightLive";
+      render();
+    }
+
+    function openFightTab(tabKey) {
+      if (!state.fight) {
+        return;
+      }
+      state.fight.uiTab = tabKey;
+      render();
+    }
+
+    function openFightActionGroup(groupKey) {
+      if (!state.fight) {
+        return;
+      }
+      state.fight.uiTab = "controls";
+      state.fight.actionGroup = groupKey;
       render();
     }
 
@@ -2389,6 +2422,47 @@
       var fight = state.fight;
       var disabled = !fight || fight.result || fight.playerActionsLeft <= 0 || !canUseFightAction(fight, "player", actionKey);
       return "<button class='" + className + "' " + (disabled ? "disabled='disabled'" : "") + " onclick='fightAction(\"" + actionKey + "\")'>" + FIGHT_ACTIONS[actionKey].label + "</button>";
+    }
+
+    function renderFightControlsPanel(fight) {
+      var html = [];
+      var showMoves = !fight.actionGroup || fight.actionGroup === "move";
+      html.push("<div class='battle-panel'>");
+      html.push("<strong>Управление</strong>");
+      html.push("<div class='footer-actions'>");
+      html.push("<button class='" + (showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"move\")'>Движение</button>");
+      html.push("<button class='" + (!showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"attack\")'>Удары</button>");
+      html.push("</div>");
+      html.push("<div class='battle-actions-row" + (showMoves ? " compact" : "") + "'>");
+      if (showMoves) {
+        html.push(renderFightActionButton("move_up", "ghost"));
+        html.push(renderFightActionButton("move_left", "ghost"));
+        html.push(renderFightActionButton("move_right", "ghost"));
+        html.push(renderFightActionButton("move_down", "ghost"));
+      } else {
+        html.push(renderFightActionButton("jab", "button"));
+        html.push(renderFightActionButton("cross", "button"));
+        html.push(renderFightActionButton("hook", "danger"));
+        html.push(renderFightActionButton("uppercut", "danger"));
+        html.push(renderFightActionButton("body", "button"));
+      }
+      html.push("</div></div>");
+      return html.join("");
+    }
+
+    function renderFightStatsPanel(fight) {
+      return "<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip gold'>Твоя травма " + fight.playerState.trauma + "</div><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip red'>Его травма " + fight.opponentState.trauma + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
+    }
+
+    function renderFightLogPanel(fight) {
+      var html = [];
+      var i;
+      html.push("<div class='battle-panel'><strong>Лента боя</strong><div class='battle-log'>");
+      for (i = 0; i < Math.min(8, fight.lines.length); i += 1) {
+        html.push("<div class='log-entry'>" + fight.lines[i] + "</div>");
+      }
+      html.push("</div></div>");
+      return html.join("");
     }
 
     function finalizeFight(result, method, lines, fatality) {
@@ -2740,6 +2814,68 @@
       }
       html.push("</div>");
       html.push("</div></div>");
+      html.push("</div></div>");
+      return html.join("");
+    }
+
+    function renderFightLivePanel() {
+      var fight = state.fight;
+      var html = [];
+      var x;
+      var y;
+      var i;
+      var playerCell;
+      var opponentCell;
+      var activeTab = fight.uiTab || "controls";
+      html.push("<div class='battle-shell'>");
+      html.push("<div class='battle-topbar'>");
+      html.push("<div class='battle-health-card'>");
+      html.push("<div class='chip gold'>Ты</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
+      html.push("</div>");
+      html.push("<div class='battle-health-card right'>");
+      html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
+      html.push("</div>");
+      html.push("</div>");
+      html.push("<div class='battle-stage'>");
+      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Отрезок " + fight.segment + " / 10</div>");
+      html.push("<div class='title' style='font-size:22px'>Ринг 5x5</div>");
+      html.push("<div class='subtitle'>У тебя " + fight.playerActionsLeft + " действия, у соперника " + fight.aiActionsLeft + ".</div>");
+      html.push("<div class='ring-board'>");
+      for (y = 0; y < RING_SIZE; y += 1) {
+        html.push("<div class='ring-row'>");
+        for (x = 0; x < RING_SIZE; x += 1) {
+          playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
+          opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
+          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='token player'>Ты</div>" : (opponentCell ? "<div class='token opponent'>Он</div>" : "")) + "</div>");
+        }
+        html.push("</div>");
+      }
+      html.push("</div>");
+      html.push("</div>");
+      html.push("<div class='battle-bottom'>");
+      html.push("<div class='battle-tabs'>");
+      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>");
+      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>");
+      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>");
+      html.push("</div>");
+      if (activeTab === "stats") {
+        html.push(renderFightStatsPanel(fight));
+        if (fight.roundCards.length) {
+          html.push("<div class='battle-panel'><strong>Карточки</strong>");
+          for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
+            html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
+          }
+          html.push("</div>");
+        }
+      } else if (activeTab === "log") {
+        html.push(renderFightLogPanel(fight));
+      } else {
+        html.push(renderFightControlsPanel(fight));
+      }
       html.push("</div></div>");
       return html.join("");
     }
