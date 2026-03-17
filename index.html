@@ -462,8 +462,8 @@
       background-color: #d8dde6;
       background-image: url('ring_top_view.png');
       background-repeat: no-repeat;
-      background-position: center center;
-      background-size: 100% 100%;
+      background-position: center 44%;
+      background-size: 100% 108%;
       font-size: 0;
       text-align: center;
     }
@@ -2145,6 +2145,10 @@
       defender.hp -= damage;
       defender.damageTaken += damage;
       defender.trauma += action.trauma + (critical ? 1 : 0);
+      if (chance(5)) {
+        defender.trauma += 1;
+        pushFightLine(fight, defenderName + " получает дополнительную травму после точного попадания.");
+      }
       awardFightPressure(fight, side, damage + (critical ? 4 : 2));
       if (action.body) {
         bodyDrain = rand(6, 10) + Math.max(0, attackerStats.power - 5);
@@ -2887,7 +2891,7 @@
       var i;
       html.push("<div class='battle-shell'><div class='battle-result'>");
       html.push("<div class='result-banner'><div class='eyebrow'>Итог боя</div><div class='title' style='font-size:24px'>" + resultLabel + " через " + fight.method + "</div>");
-      html.push("<div class='subtitle'>Раундов прошло: " + fight.roundsCompleted + ". Отрезки, нокдауны и послебоевое состояние уже учтены в карточке слева.</div></div>");
+      html.push("<div class='subtitle'>Раундов прошло: " + fight.roundsCompleted + ".</div></div>");
       html.push("<div class='battle-bottom' style='margin-top:12px'>");
       html.push("<div class='battle-column'><div class='battle-panel'><strong>Ты в бою</strong>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("Стамина", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Травма " + fight.playerState.trauma + "</div><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div></div></div></div>");
       html.push("<div class='battle-column right'><div class='battle-panel'><strong>Соперник</strong>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("Стамина", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Травма " + fight.opponentState.trauma + "</div><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div></div></div></div>");
