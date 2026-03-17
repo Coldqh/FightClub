@@ -456,12 +456,12 @@
       max-width: 920px;
       min-width: 560px;
       height: 420px;
-      padding: 42px 56px 60px 56px;
+      padding: 46px 62px 66px 62px;
       margin-left: auto;
       margin-right: auto;
       background-image:
         linear-gradient(180deg, rgba(10, 14, 19, 0.18), rgba(10, 14, 19, 0.34)),
-        url('https://www.pngall.com/wp-content/uploads/15/Boxing-Ring-PNG-Images.png');
+        url('ring_top_view.png');
       background-repeat: no-repeat, no-repeat;
       background-position: center center, center center;
       background-size: cover, 100% 100%;
@@ -680,7 +680,7 @@
       .ring-board {
         width: 72%;
         height: 360px;
-        padding: 34px 44px 50px 44px;
+        padding: 38px 50px 56px 50px;
       }
 
       .ring-cell {
@@ -725,7 +725,7 @@
         width: 92%;
         min-width: 0;
         height: 300px;
-        padding: 28px 24px 42px 24px;
+        padding: 32px 30px 46px 30px;
       }
 
       .ring-cell {
@@ -792,7 +792,7 @@
       max-width: 840px;
       min-width: 480px;
       height: 340px;
-      padding: 32px 42px 46px 42px;
+      padding: 36px 48px 52px 48px;
     }
 
     body.scale-compact .ring-cell {
@@ -829,7 +829,7 @@
       min-width: 0;
       max-width: none;
       height: 280px;
-      padding: 22px 18px 30px 18px;
+      padding: 26px 24px 36px 24px;
     }
 
     body.scale-tight .ring-cell {
@@ -864,7 +864,7 @@
       .ring-board {
         width: 96%;
         height: 250px;
-        padding: 16px 14px 24px 14px;
+        padding: 20px 18px 28px 18px;
       }
 
       .ring-cell {
@@ -2498,7 +2498,6 @@
       return "" +
         "<div class='panel'>" +
           "<h2 class='panel-title'>Неделя " + state.fighter.week + "</h2>" +
-          "<div class='muted'>Сейчас ты базируешься в " + current.name + ", арена " + current.city + ". " + (current.key === home.key ? "Домашние бои безопаснее по логистике, но путешествия приносят больше денег и известности." : "Ты дерешься за границей: гонорар x" + bonus.money.toFixed(2) + ", известность x" + bonus.fame.toFixed(2) + ".") + " Новая боевка идет через ринг 5x5, 10 отрезков на раунд и 3 действия в каждом отрезке.</div>" +
           "<div class='record-row' style='margin-top:14px'>" +
             "<div class='chip gold'>Рекорд " + recordText(state.fighter) + "</div>" +
             "<div class='chip'>Слава " + state.fighter.fame + "</div>" +
@@ -2581,14 +2580,14 @@
       var i;
       var country;
       var cost;
-      html.push("<div class='panel'><h2 class='panel-title'>Путешествие</h2><div class='muted'>Перелет тратит неделю и деньги, но на чужой территории бои дают больше гонораров и известности. В каждой стране тебя будут ждать только местные имена и клички.</div><div class='card-grid' style='margin-top:16px'>");
+      html.push("<div class='panel'><h2 class='panel-title'>Путешествие</h2><div class='card-grid' style='margin-top:16px'>");
       for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
         country = COUNTRY_DATA.countries[i];
         if (country.key === fighter.currentCountry) {
           continue;
         }
         cost = flightCost(fighter.currentCountry, country.key);
-        html.push("<div class='card'><div class='meta'>Перелет $" + cost + "</div><h3>" + country.name + "</h3><p>Город боев: " + country.city + ". На чужой территории здесь платят x" + country.awayMoneyBonus.toFixed(2) + " денег и x" + country.awayFameBonus.toFixed(2) + " известности.</p><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Лететь</button></div>");
+        html.push("<div class='card'><div class='meta'>Перелет $" + cost + "</div><h3>" + country.name + "</h3><div class='chip'>Город: " + country.city + "</div><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Лететь</button></div>");
       }
       html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
       return html.join("");
@@ -2709,7 +2708,6 @@
         html.push("</div>");
       }
       html.push("</div>");
-      html.push("<div class='ring-note'>Джеб, кросс и корпус работают по прямой на 1-2 клетки. Хук и апперкот доступны только с соседней клетки. Любое движение или удар стоят 1 действие.</div>");
       html.push("</div>");
       html.push("<div class='battle-bottom'>");
       html.push("<div class='battle-column'>");
