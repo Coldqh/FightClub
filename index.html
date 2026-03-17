@@ -1013,68 +1013,68 @@
   <script type="text/javascript">
     var DATA = {
       statLabels: {
-        power: "РЎРёР»Р° СѓРґР°СЂР°",
-        speed: "РЎРєРѕСЂРѕСЃС‚СЊ",
-        endurance: "Р’С‹РЅРѕСЃР»РёРІРѕСЃС‚СЊ",
-        technique: "РўРµС…РЅРёРєР°",
-        heart: "РҐР°СЂР°РєС‚РµСЂ",
-        charisma: "РҐР°СЂРёР·РјР°"
+        power: "Сила удара",
+        speed: "Скорость",
+        endurance: "Выносливость",
+        technique: "Техника",
+        heart: "Характер",
+        charisma: "Харизма"
       },
       tactics: {
-        pressure: { name: "РџСЂРµСЃСЃРёРЅРі", accuracy: -4, damage: 3, defense: -8, stamina: 16 },
-        precision: { name: "РўРѕС‡РЅС‹Р№ Р±РѕРєСЃ", accuracy: 7, damage: 1, defense: 0, stamina: 12 },
-        counter: { name: "РљРѕРЅС‚СЂР°С‚Р°РєР°", accuracy: 2, damage: 2, defense: 8, stamina: 10 },
-        recover: { name: "РЎРѕР±СЂР°С‚СЊ РґС‹С…Р°РЅРёРµ", accuracy: -14, damage: -4, defense: 12, stamina: -14 }
+        pressure: { name: "Прессинг", accuracy: -4, damage: 3, defense: -8, stamina: 16 },
+        precision: { name: "Точный бокс", accuracy: 7, damage: 1, defense: 0, stamina: 12 },
+        counter: { name: "Контратака", accuracy: 2, damage: 2, defense: 8, stamina: 10 },
+        recover: { name: "Собрать дыхание", accuracy: -14, damage: -4, defense: 12, stamina: -14 }
       },
       styles: {
-        slugger: { name: "РџР°РЅС‡РµСЂ", mods: { power: 2, technique: -1, heart: 1 } },
-        technician: { name: "РўРµС…РЅР°СЂСЊ", mods: { technique: 2, speed: 1, power: -1 } },
-        survivor: { name: "Р’С‹Р¶РёРІР°Р»СЊС‰РёРє", mods: { endurance: 2, heart: 1 } },
-        stalker: { name: "РџСЂРµСЃР»РµРґРѕРІР°С‚РµР»СЊ", mods: { speed: 1, power: 1, endurance: 1 } }
+        slugger: { name: "Панчер", mods: { power: 2, technique: -1, heart: 1 } },
+        technician: { name: "Технарь", mods: { technique: 2, speed: 1, power: -1 } },
+        survivor: { name: "Выживальщик", mods: { endurance: 2, heart: 1 } },
+        stalker: { name: "Преследователь", mods: { speed: 1, power: 1, endurance: 1 } }
       },
       archetypes: [
         {
           key: "yard_slugger",
-          name: "Р”РІРѕСЂРѕРІС‹Р№ РїР°РЅС‡РµСЂ",
-          description: "Р”Р°РІРёС‚ СЃРёР»РѕР№, Р»СЋР±РёС‚ СЂСѓР±РєСѓ Рё Р±С‹СЃС‚СЂРѕ Р»РѕРјР°РµС‚ РґРёСЃС‚Р°РЅС†РёСЋ.",
+          name: "Дворовый панчер",
+          description: "Давит силой, любит рубку и быстро ломает дистанцию.",
           mods: { power: 2, heart: 1, speed: -1 },
           money: 110,
           morale: 60
         },
         {
           key: "smart_tech",
-          name: "РҐРёС‚СЂС‹Р№ С‚РµС…РЅР°СЂСЊ",
-          description: "РџРѕР±РµР¶РґР°РµС‚ С‚Р°Р№РјРёРЅРіРѕРј, С‡С‚РµРЅРёРµРј СЃРѕРїРµСЂРЅРёРєР° Рё С‡РёСЃС‚С‹РјРё РїРѕРїР°РґР°РЅРёСЏРјРё.",
+          name: "Хитрый технарь",
+          description: "Побеждает таймингом, чтением соперника и чистыми попаданиями.",
           mods: { technique: 2, speed: 1, power: -1 },
           money: 130,
           morale: 55
         },
         {
           key: "iron_veteran",
-          name: "РќРµСѓР±РёРІР°РµРјС‹Р№ РІРµС‚РµСЂР°РЅ",
-          description: "Р–РёРІРµС‚ РЅР° С…Р°СЂР°РєС‚РµСЂРµ, С‚РµСЂРїРёС‚ СѓСЂРѕРЅ Рё РЅР°РІСЏР·С‹РІР°РµС‚ С‚СЏР¶РµР»С‹Р№ С‚РµРјРї.",
+          name: "Неубиваемый ветеран",
+          description: "Живет на характере, терпит урон и навязывает тяжелый темп.",
           mods: { endurance: 2, heart: 2, charisma: -1 },
           money: 95,
           morale: 58
         },
         {
           key: "showman",
-          name: "РЁРѕСѓРјРµРЅ СЂР°Р№РѕРЅР°",
-          description: "Р‘С‹СЃС‚СЂС‹Р№, СЏСЂРєРёР№, СѓРјРµРµС‚ РїСЂРѕРґР°РІР°С‚СЊ СЃРµР±СЏ Рё СЃС‚СЂРѕРёС‚СЊ Р»РµРіРµРЅРґСѓ.",
+          name: "Шоумен района",
+          description: "Быстрый, яркий, умеет продавать себя и строить легенду.",
           mods: { speed: 1, technique: 1, charisma: 2, heart: -1 },
           money: 150,
           morale: 62
         }
       ],
       skills: [
-        { key: "pressure_master", name: "РҐРёС‰РЅС‹Р№ РїСЂРµСЃСЃРёРЅРі", description: "РџСЂРµСЃСЃРёРЅРі РЅР°РЅРѕСЃРёС‚ Р±РѕР»СЊС€Рµ СѓСЂРѕРЅР° Рё С‡Р°С‰Рµ Р·Р°Р±РёСЂР°РµС‚ СЂР°СѓРЅРґ СЃРёР»РѕР№.", cost: 2 },
-        { key: "iron_chin", name: "Р–РµР»РµР·РЅС‹Р№ РїРѕРґР±РѕСЂРѕРґРѕРє", description: "Р›РµРіС‡Рµ РїРµСЂРµР¶РёРІР°С‚СЊ РЅРѕРєРґР°СѓРЅС‹ Рё РЅРёР¶Рµ СЂРёСЃРє Р»РµС‚Р°Р»СЊРЅРѕРіРѕ РёСЃС…РѕРґР°.", cost: 2 },
-        { key: "bodywork", name: "Р Р°Р±РѕС‚Р° РїРѕ РєРѕСЂРїСѓСЃСѓ", description: "РўРѕС‡РЅС‹Рµ СѓРґР°СЂС‹ Рё РїСЂРµСЃСЃРёРЅРі СЃРёР»СЊРЅРµРµ РІС‹Р¶РёРіР°СЋС‚ РІС‹РЅРѕСЃР»РёРІРѕСЃС‚СЊ СЃРѕРїРµСЂРЅРёРєР°.", cost: 2 },
-        { key: "step_back", name: "РЁР°Рі РЅР°Р·Р°Рґ", description: "РљРѕРЅС‚СЂР°С‚Р°РєР° РїРѕР»СѓС‡Р°РµС‚ Р±РѕРЅСѓСЃ РїСЂРѕС‚РёРІ Р°РіСЂРµСЃСЃРѕСЂРѕРІ.", cost: 2 },
-        { key: "cold_mind", name: "РҐРѕР»РѕРґРЅР°СЏ РіРѕР»РѕРІР°", description: "РЎС‚СЂРµСЃСЃ СЂР°СЃС‚РµС‚ РјРµРґР»РµРЅРЅРµРµ, Р° РјРѕСЂР°Р»СЊ РјРµРЅСЊС€Рµ Р»РѕРјР°РµС‚ С‚РµР±СЏ РІ Р±РѕСЋ.", cost: 2 },
-        { key: "finisher", name: "Р¤РёРЅРёС€РµСЂ", description: "Р›РµРіС‡Рµ РґРѕР±РёРІР°С‚СЊ РїРѕС‚СЂСЏСЃРµРЅРЅРѕРіРѕ СЃРѕРїРµСЂРЅРёРєР° Рё РѕС„РѕСЂРјР»СЏС‚СЊ РґРѕСЃСЂРѕС‡РєРё.", cost: 2 },
-        { key: "idol", name: "РќР°СЂРѕРґРЅС‹Р№ Р»СЋР±РёРјРµС†", description: "Р¤Р°РЅР°С‚С‹ РїСЂРёРЅРѕСЃСЏС‚ Р±РѕР»СЊС€Рµ СЃР»Р°РІС‹, Р° РѕС‚РЅРѕС€РµРЅРёСЏ РєР°С‡Р°СЋС‚СЃСЏ РїСЂРѕС‰Рµ.", cost: 2 },
-        { key: "street_grit", name: "РЈР»РёС‡РЅР°СЏ С…РІР°С‚РєР°", description: "РљР°Р¶РґС‹Р№ СЂР°Р·РјРµРЅ СЃС‚Р°РЅРѕРІРёС‚СЃСЏ Р¶РµСЃС‚С‡Рµ, РЅРѕ РѕСЃС‚Р°РІР»СЏРµС‚ СЃР»РµРґ РЅР° РїСЃРёС…РёРєРµ.", cost: 3 }
+        { key: "pressure_master", name: "Хищный прессинг", description: "Прессинг наносит больше урона и чаще забирает раунд силой.", cost: 2 },
+        { key: "iron_chin", name: "Железный подбородок", description: "Легче переживать нокдауны и ниже риск летального исхода.", cost: 2 },
+        { key: "bodywork", name: "Работа по корпусу", description: "Точные удары и прессинг сильнее выжигают выносливость соперника.", cost: 2 },
+        { key: "step_back", name: "Шаг назад", description: "Контратака получает бонус против агрессоров.", cost: 2 },
+        { key: "cold_mind", name: "Холодная голова", description: "Стресс растет медленнее, а мораль меньше ломает тебя в бою.", cost: 2 },
+        { key: "finisher", name: "Финишер", description: "Легче добивать потрясенного соперника и оформлять досрочки.", cost: 2 },
+        { key: "idol", name: "Народный любимец", description: "Фанаты приносят больше славы, а отношения качаются проще.", cost: 2 },
+        { key: "street_grit", name: "Уличная хватка", description: "Каждый размен становится жестче, но оставляет след на психике.", cost: 3 }
       ]
     };
 
@@ -1219,7 +1219,7 @@
     }
 
     function recordText(fighter) {
-      return fighter.wins + "-" + fighter.losses + " (РљРћ: " + fighter.kos + ")";
+      return fighter.wins + "-" + fighter.losses + " (КО: " + fighter.kos + ")";
     }
 
     function combatRating(fighter) {
@@ -1230,15 +1230,15 @@
 
     var RING_SIZE = 5;
     var FIGHT_ACTIONS = {
-      move_up: { type: "move", label: "РЁР°Рі РІРІРµСЂС…", dx: 0, dy: -1 },
-      move_left: { type: "move", label: "РЁР°Рі РІР»РµРІРѕ", dx: -1, dy: 0 },
-      move_right: { type: "move", label: "РЁР°Рі РІРїСЂР°РІРѕ", dx: 1, dy: 0 },
-      move_down: { type: "move", label: "РЁР°Рі РІРЅРёР·", dx: 0, dy: 1 },
-      jab: { type: "attack", label: "Р”Р¶РµР±", reach: "line", range: 2, accuracy: 66, damage: 8, stamina: 5, trauma: 1, body: false },
-      cross: { type: "attack", label: "РљСЂРѕСЃСЃ", reach: "line", range: 2, accuracy: 61, damage: 11, stamina: 7, trauma: 2, body: false },
-      hook: { type: "attack", label: "РҐСѓРє", reach: "close", range: 1, accuracy: 58, damage: 12, stamina: 8, trauma: 2, body: false },
-      uppercut: { type: "attack", label: "РђРїРїРµСЂРєРѕС‚", reach: "close", range: 1, accuracy: 54, damage: 14, stamina: 9, trauma: 3, body: false },
-      body: { type: "attack", label: "РЈРґР°СЂ РІ РєРѕСЂРїСѓСЃ", reach: "line", range: 2, accuracy: 63, damage: 9, stamina: 6, trauma: 1, body: true }
+      move_up: { type: "move", label: "Шаг вверх", dx: 0, dy: -1 },
+      move_left: { type: "move", label: "Шаг влево", dx: -1, dy: 0 },
+      move_right: { type: "move", label: "Шаг вправо", dx: 1, dy: 0 },
+      move_down: { type: "move", label: "Шаг вниз", dx: 0, dy: 1 },
+      jab: { type: "attack", label: "Джеб", reach: "line", range: 2, accuracy: 66, damage: 8, stamina: 5, trauma: 1, body: false },
+      cross: { type: "attack", label: "Кросс", reach: "line", range: 2, accuracy: 61, damage: 11, stamina: 7, trauma: 2, body: false },
+      hook: { type: "attack", label: "Хук", reach: "close", range: 1, accuracy: 58, damage: 12, stamina: 8, trauma: 2, body: false },
+      uppercut: { type: "attack", label: "Апперкот", reach: "close", range: 1, accuracy: 54, damage: 14, stamina: 9, trauma: 3, body: false },
+      body: { type: "attack", label: "Удар в корпус", reach: "line", range: 2, accuracy: 63, damage: 9, stamina: 6, trauma: 1, body: true }
     };
 
     function buildFightState(stats, condition, position) {
@@ -1289,7 +1289,7 @@
       state.fight = null;
       state.endingReason = "";
       state.log = [
-        { text: "РќРѕРІС‹Р№ Р·Р°Р±РµРі РЅР°С‡РёРЅР°РµС‚СЃСЏ. РЎРѕР±РµСЂРё Р±РѕР№С†Р° Рё РІС‹Р±РµСЂРё, РєР°РєРёРј РёРјРµРЅРµРј СЂР°Р№РѕРЅ Р±СѓРґРµС‚ РµРіРѕ РїРѕРјРЅРёС‚СЊ.", tone: "warn" }
+        { text: "Новый забег начинается. Собери бойца и выбери, каким именем район будет его помнить.", tone: "warn" }
       ];
     }
 
@@ -1301,7 +1301,7 @@
       state.fighter = {
         name: state.create.identity.fullName,
         identity: state.create.identity,
-        archetype: "РђСЂС…РµС‚РёРїС‹ СЃРєРѕСЂРѕ РІРµСЂРЅСѓС‚СЃСЏ",
+        archetype: "Архетипы скоро вернутся",
         stats: stats,
         skills: [],
         money: 120,
@@ -1325,7 +1325,7 @@
       state.screen = "game";
       state.panel = "home";
       state.log.unshift({
-        text: state.fighter.name + " СЃС‚Р°СЂС‚СѓРµС‚ РІ " + getCountryInfo(state.fighter.homeCountry).name + ". Р‘РѕРµРІР°СЏ СЃРёСЃС‚РµРјР° СЃРѕР±СЂР°РЅР° Р·Р°РЅРѕРІРѕ РІРѕРєСЂСѓРі С‚Р°РєС‚РёС‡РµСЃРєРѕРіРѕ СЂРёРЅРіР° 5x5.",
+        text: state.fighter.name + " стартует в " + getCountryInfo(state.fighter.homeCountry).name + ". Боевая система собрана заново вокруг тактического ринга 5x5.",
         tone: "good"
       });
       render();
@@ -1379,7 +1379,7 @@
       var html = [];
       var i;
       if (!skills.length) {
-        return "<div class='empty-state'>РќР°РІС‹РєРё Рё Р°СЂС…РµС‚РёРїС‹ РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡РµРЅС‹. РЎРµР№С‡Р°СЃ РєР°СЂСЊРµСЂР° РґРµСЂР¶РёС‚СЃСЏ РЅР° СЃС‚Р°С‚Р°С…, РїРµСЂРµРјРµС‰РµРЅРёРё РїРѕ СЂРёРЅРіСѓ Рё РІС‹Р±РѕСЂРµ СѓРґР°СЂРѕРІ РїРѕ РєР»РµС‚РєР°Рј.</div>";
+        return "<div class='empty-state'>Навыки и архетипы временно отключены. Сейчас карьера держится на статах, перемещении по рингу и выборе ударов по клеткам.</div>";
       }
       html.push("<ul class='mini-list'>");
       for (i = 0; i < skills.length; i += 1) {
@@ -1454,34 +1454,34 @@
       if (event === "mentor") {
         fighter.stats.speed += 1;
         fighter.morale += 4;
-        pushLog("РЎС‚Р°СЂС‹Р№ С‚СЂРµРЅРµСЂ РїРѕРїСЂР°РІРёР» СЂР°Р±РѕС‚Сѓ РЅРѕРі. РЎРєРѕСЂРѕСЃС‚СЊ РІС‹СЂРѕСЃР»Р° РЅР° 1.", "good");
+        pushLog("Старый тренер поправил работу ног. Скорость выросла на 1.", "good");
       } else if (event === "rumor") {
         fighter.fame += 5;
         fighter.relationship -= 3;
-        pushLog("РџРѕ СЂР°Р№РѕРЅСѓ РїРѕС€РµР» РЅРѕРІС‹Р№ СЃР»СѓС… Рѕ С‚РµР±Рµ. РЎР»Р°РІР° РІРІРµСЂС…, РґРѕРјР° С‡СѓС‚СЊ С…РѕР»РѕРґРЅРµРµ.", "warn");
+        pushLog("По району пошел новый слух о тебе. Слава вверх, дома чуть холоднее.", "warn");
       } else if (event === "cash") {
         fighter.money += rand(20, 45);
-        pushLog("РЎР»СѓС‡Р°Р№РЅС‹Р№ РєР°Р»С‹Рј РїРѕРјРѕРі Р·Р°РєСЂС‹С‚СЊ РЅРµРґРµР»СЋ С‡СѓС‚СЊ СЃРїРѕРєРѕР№РЅРµРµ.", "good");
+        pushLog("Случайный калым помог закрыть неделю чуть спокойнее.", "good");
       } else if (event === "pressure") {
         fighter.stress += 8;
         fighter.morale -= 3;
-        pushLog("РќР°РїСЂСЏР¶РµРЅРёРµ РІРѕРєСЂСѓРі Р±РѕРµРІ СЂР°СЃС‚РµС‚. Р“РѕР»РѕРІР° РіСѓРґРёС‚ СЃРёР»СЊРЅРµРµ РѕР±С‹С‡РЅРѕРіРѕ.", "bad");
+        pushLog("Напряжение вокруг боев растет. Голова гудит сильнее обычного.", "bad");
       } else if (event === "injury") {
         fighter.health -= 8;
         fighter.stress += 6;
-        pushLog("РЎС‚Р°СЂР°СЏ С‚СЂР°РІРјР° СЃРЅРѕРІР° РЅР°РїРѕРјРёРЅР°РµС‚ Рѕ СЃРµР±Рµ. РўРµР»Рѕ СЃРѕРїСЂРѕС‚РёРІР»СЏРµС‚СЃСЏ РіСЂР°С„РёРєСѓ.", "bad");
+        pushLog("Старая травма снова напоминает о себе. Тело сопротивляется графику.", "bad");
       } else if (event === "support") {
         fighter.relationship += 5;
         fighter.stress -= 8;
-        pushLog("РљС‚Рѕ-С‚Рѕ Р±Р»РёР·РєРёР№ РІС‹С‚СЏРЅСѓР» С‚РµР±СЏ РёР· РјСЂР°РєР° РѕР±С‹С‡РЅС‹Рј СЂР°Р·РіРѕРІРѕСЂРѕРј.", "good");
+        pushLog("Кто-то близкий вытянул тебя из мрака обычным разговором.", "good");
       } else if (event === "burnout") {
         fighter.morale -= 8;
         fighter.stress -= 3;
-        pushLog("Р’С‹РіРѕСЂР°РЅРёРµ РЅР°РєСЂС‹РІР°РµС‚ Р¶РµСЃС‚РєРѕ. Р”Р°Р¶Рµ РїРѕР±РµРґС‹ Р±РѕР»СЊС€Рµ РЅРµ Р·РІСѓС‡Р°С‚ С‚Р°Рє РіСЂРѕРјРєРѕ.", "warn");
+        pushLog("Выгорание накрывает жестко. Даже победы больше не звучат так громко.", "warn");
       } else {
         fighter.money += 55;
         fighter.fame += 4;
-        pushLog("РњРµСЃС‚РЅС‹Р№ СЃРїРѕРЅСЃРѕСЂ РїРѕРґРєРёРЅСѓР» РґРµРЅРµРі Р·Р° РёРјСЏ РЅР° Р°С„РёС€Рµ. +$55 Рё РЅРµРјРЅРѕРіРѕ С€СѓРјР° РІРѕРєСЂСѓРі С‚РµР±СЏ.", "good");
+        pushLog("Местный спонсор подкинул денег за имя на афише. +$55 и немного шума вокруг тебя.", "good");
       }
       applyBounds(fighter);
     }
@@ -1525,18 +1525,18 @@
         score += 10;
       }
       if (score >= 160) {
-        return "Р›РµРіРµРЅРґР° РїРѕРґРїРѕР»СЊСЏ";
+        return "Легенда подполья";
       }
       if (score >= 110) {
-        return "РљРѕСЂРѕР»СЊ СЂР°Р№РѕРЅР°";
+        return "Король района";
       }
       if (score >= 70) {
-        return "Р“СЂРѕРјРєРѕРµ РёРјСЏ";
+        return "Громкое имя";
       }
       if (score >= 40) {
-        return "РР·РІРµСЃС‚РЅС‹Р№ Р±РѕРµС†";
+        return "Известный боец";
       }
-      return "РќРѕРІРёС‡РѕРє СѓР»РёС†";
+      return "Новичок улиц";
     }
 
     function travelToCountry(countryKey) {
@@ -1547,7 +1547,7 @@
         return;
       }
       if (fighter.money < cost) {
-        pushLog("РќР° РїРµСЂРµР»РµС‚ РІ " + destination.name + " СЃРµР№С‡Р°СЃ РЅРµ С…РІР°С‚Р°РµС‚ РґРµРЅРµРі.", "bad");
+        pushLog("На перелет в " + destination.name + " сейчас не хватает денег.", "bad");
         render();
         return;
       }
@@ -1556,7 +1556,7 @@
       fighter.stress += 4;
       fighter.morale += 1;
       applyBounds(fighter);
-      pushLog("РџРµСЂРµР»РµС‚ РІ " + destination.name + " РѕР±РѕС€РµР»СЃСЏ РІ $" + cost + ". РќРѕРІР°СЏ Р°СЂРµРЅР°: " + destination.city + ".", "warn");
+      pushLog("Перелет в " + destination.name + " обошелся в $" + cost + ". Новая арена: " + destination.city + ".", "warn");
       spendWeek();
     }
 
@@ -1568,12 +1568,12 @@
       fighter.stress += rand(4, 7);
       fighter.morale += 2;
       applyBounds(fighter);
-      pushLog(fighter.name + " РєР°С‡Р°РµС‚ '" + DATA.statLabels[statKey] + "' РЅР° +" + gain + ".", "good");
+      pushLog(fighter.name + " качает '" + DATA.statLabels[statKey] + "' на +" + gain + ".", "good");
       spendWeek();
     }
 
     function learnSkill(skillKey) {
-      pushLog("Р”РµСЂРµРІРѕ РЅР°РІС‹РєРѕРІ РІСЂРµРјРµРЅРЅРѕ РЅР° РїР°СѓР·Рµ. РЎРµР№С‡Р°СЃ РІР°Р¶РЅРµРµ РїРѕР·РёС†РёСЏ РЅР° СЂРёРЅРіРµ Рё РІС‹Р±РѕСЂ СѓРґР°СЂР°.", "warn");
+      pushLog("Дерево навыков временно на паузе. Сейчас важнее позиция на ринге и выбор удара.", "warn");
       render();
     }
 
@@ -1583,20 +1583,20 @@
         fighter.health += rand(12, 18);
         fighter.stress -= 10;
         fighter.morale += 4;
-        pushLog("РўС‹ РІС‹РґРѕС…РЅСѓР» РґРѕРјР° Рё СЃРѕР±СЂР°Р» СЃРµР±СЏ РѕР±СЂР°С‚РЅРѕ РїРѕ РєСѓСЃРєР°Рј.", "good");
+        pushLog("Ты выдохнул дома и собрал себя обратно по кускам.", "good");
       } else if (kind === "doctor") {
         if (fighter.money < 60) {
-          pushLog("РќР° СЃРїРѕСЂС‚РёРІРЅРѕРіРѕ РІСЂР°С‡Р° РїРѕРєР° РЅРµ С…РІР°С‚Р°РµС‚ РґРµРЅРµРі.", "bad");
+          pushLog("На спортивного врача пока не хватает денег.", "bad");
           render();
           return;
         }
         fighter.money -= 60;
         fighter.health += rand(22, 28);
         fighter.stress -= 6;
-        pushLog("РќРѕСЂРјР°Р»СЊРЅРѕРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РѕСЃРІРµР¶РёР»Рѕ С‚РµР»Рѕ РїРµСЂРµРґ СЃР»РµРґСѓСЋС‰РµР№ РЅРµРґРµР»РµР№.", "good");
+        pushLog("Нормальное восстановление освежило тело перед следующей неделей.", "good");
       } else {
         if (fighter.money < 35) {
-          pushLog("РќР° С‚РµСЂР°РїРёСЋ Рё РјР°СЃСЃР°Р¶ СЃРµР№С‡Р°СЃ РЅРµ С…РІР°С‚Р°РµС‚ РґРµРЅРµРі.", "bad");
+          pushLog("На терапию и массаж сейчас не хватает денег.", "bad");
           render();
           return;
         }
@@ -1604,7 +1604,7 @@
         fighter.health += rand(14, 18);
         fighter.stress -= 12;
         fighter.morale += 3;
-        pushLog("РњС‹С€С†С‹ РѕС‚РїСѓСЃС‚РёР»Рѕ, Р° РІ РіРѕР»РѕРІРµ СЃС‚Р°Р»Рѕ С‡СѓС‚СЊ С‚РёС€Рµ.", "good");
+        pushLog("Мышцы отпустило, а в голове стало чуть тише.", "good");
       }
       applyBounds(fighter);
       spendWeek();
@@ -1616,19 +1616,19 @@
         fighter.money += rand(40, 55);
         fighter.stress += 4;
         fighter.health -= rand(0, 3);
-        pushLog("РЎРјРµРЅР° РЅР° РѕС…СЂР°РЅРµ РїСЂРѕС€Р»Р° С‚СЏР¶РµР»Рѕ, РЅРѕ РєРѕС€РµР»РµРє СЃС‚Р°Р» С‡СѓС‚СЊ С‚РѕР»С‰Рµ.", "warn");
+        pushLog("Смена на охране прошла тяжело, но кошелек стал чуть толще.", "warn");
       } else if (kind === "collector") {
         fighter.money += rand(70, 95);
         fighter.stress += rand(7, 12);
         fighter.health -= rand(3, 9);
         fighter.relationship -= rand(4, 7);
         fighter.fame += 4;
-        pushLog("Р“СЂСЏР·РЅР°СЏ СЂР°Р±РѕС‚Р° Р·Р°РєСЂС‹С‚Р°. Р”РµРЅРµРі Р±РѕР»СЊС€Рµ, РЅРѕ СЃРѕРІРµСЃС‚СЊ Рё Р±Р»РёР·РєРёРµ РІ РјРёРЅСѓСЃРµ.", "bad");
+        pushLog("Грязная работа закрыта. Денег больше, но совесть и близкие в минусе.", "bad");
       } else {
         fighter.money += rand(20, 35) + Math.max(0, fighter.stats.charisma - 4) * 4;
         fighter.fame += 4 + (hasSkill(fighter.skills, "idol") ? 3 : 0);
         fighter.stress += 2;
-        pushLog("Р’РёРґРµРѕ СЃРѕ СЃРїР°СЂСЂРёРЅРіР° Р·Р°Р»РµС‚РµР»Рѕ. РРјСЏ РєСЂСѓС‚РёС‚СЃСЏ РїРѕ СЂР°Р№РѕРЅСѓ РІСЃРµ С‡Р°С‰Рµ.", "good");
+        pushLog("Видео со спарринга залетело. Имя крутится по району все чаще.", "good");
       }
       applyBounds(fighter);
       spendWeek();
@@ -1638,7 +1638,7 @@
       var fighter = state.fighter;
       if (kind === "family") {
         if (fighter.money < 10) {
-          pushLog("Р”Р°Р¶Рµ РЅР° СЃРїРѕРєРѕР№РЅС‹Р№ РІРµС‡РµСЂ СЃРµР№С‡Р°СЃ РЅРµ С…РІР°С‚Р°РµС‚.", "bad");
+          pushLog("Даже на спокойный вечер сейчас не хватает.", "bad");
           render();
           return;
         }
@@ -1646,10 +1646,10 @@
         fighter.relationship += 8 + (hasSkill(fighter.skills, "idol") ? 4 : 0);
         fighter.stress -= 12;
         fighter.morale += 6;
-        pushLog("РќРѕСЂРјР°Р»СЊРЅС‹Р№ С‡РµР»РѕРІРµС‡РµСЃРєРёР№ РІРµС‡РµСЂ РЅР°РїРѕРјРЅРёР», СЂР°РґРё С‡РµРіРѕ С‚С‹ РІРѕРѕР±С‰Рµ Р»РµР·РµС€СЊ РІ РґСЂР°РєРё.", "good");
+        pushLog("Нормальный человеческий вечер напомнил, ради чего ты вообще лезешь в драки.", "good");
       } else if (kind === "date") {
         if (fighter.money < 25) {
-          pushLog("РЎРІРёРґР°РЅРёРµ РїСЂРёРґРµС‚СЃСЏ РѕС‚Р»РѕР¶РёС‚СЊ РґРѕ Р±РѕР»РµРµ РґРµРЅРµР¶РЅРѕР№ РЅРµРґРµР»Рё.", "bad");
+          pushLog("Свидание придется отложить до более денежной недели.", "bad");
           render();
           return;
         }
@@ -1657,10 +1657,10 @@
         fighter.relationship += 12 + (hasSkill(fighter.skills, "idol") ? 4 : 0);
         fighter.morale += 8;
         fighter.stress -= 6;
-        pushLog("РўС‹ РІР»РѕР¶РёР»СЃСЏ РІ РѕС‚РЅРѕС€РµРЅРёСЏ Рё РїРѕС‡СѓРІСЃС‚РІРѕРІР°Р», С‡С‚Рѕ Р¶РёР·РЅСЊ РЅРµ СЃРІРѕРґРёС‚СЃСЏ Рє СЂРёРЅРіСѓ.", "good");
+        pushLog("Ты вложился в отношения и почувствовал, что жизнь не сводится к рингу.", "good");
       } else {
         if (fighter.money < 20) {
-          pushLog("РћС‚СЂС‹РІ РїСЂРёРґРµС‚СЃСЏ РѕС‚РјРµРЅРёС‚СЊ. РЎР»РёС€РєРѕРј РїСѓСЃС‚Рѕ РІ РєР°СЂРјР°РЅРµ.", "bad");
+          pushLog("Отрыв придется отменить. Слишком пусто в кармане.", "bad");
           render();
           return;
         }
@@ -1670,7 +1670,7 @@
         fighter.health -= rand(3, 8);
         fighter.relationship -= rand(2, 6);
         fighter.stress -= 3;
-        pushLog("РќРѕС‡СЊ Р±С‹Р»Р° РіСЂРѕРјРєРѕР№. РСЃС‚РѕСЂРёСЏ РєСЂР°СЃРёРІР°СЏ, РїРѕСЃР»РµРґСЃС‚РІРёСЏ С‚РѕР¶Рµ РЅР°СЃС‚РѕСЏС‰РёРµ.", "warn");
+        pushLog("Ночь была громкой. История красивая, последствия тоже настоящие.", "warn");
       }
       applyBounds(fighter);
       spendWeek();
@@ -1719,7 +1719,7 @@
         fameReward: Math.round(((tier === "safe" ? 6 : (tier === "even" ? 10 : 16)) + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
         condition: rand(70, 100),
         rounds: tier === "danger" ? choice([6, 7, 8]) : choice([5, 6, 7]),
-        danger: tier === "safe" ? "РќРёР¶Рµ РїРѕ СЂРёСЃРєСѓ" : (tier === "even" ? "Р РѕРІРЅС‹Р№ Р±РѕР№" : "РћС‡РµРЅСЊ РѕРїР°СЃРµРЅ"),
+        danger: tier === "safe" ? "Ниже по риску" : (tier === "even" ? "Ровный бой" : "Очень опасен"),
         venue: country ? country.city : ""
       };
     }
@@ -1774,7 +1774,7 @@
           regained += 4;
         }
         attackerState.stamina = clamp(attackerState.stamina + regained, 0, 100);
-        return { line: attackerName + " СЃРѕР±РёСЂР°РµС‚ РґС‹С…Р°РЅРёРµ Рё РІРѕР·РІСЂР°С‰Р°РµС‚ РєРѕРЅС‚СЂРѕР»СЊ.", critical: false };
+        return { line: attackerName + " собирает дыхание и возвращает контроль.", critical: false };
       }
 
       accuracy = 41 + attackerStats.speed * 2 + attackerStats.technique * 1.7 + attackData.accuracy;
@@ -1796,9 +1796,9 @@
 
       if (!chance(hitChance)) {
         return { line: choice([
-          attackerName + " РЅРµ РґРѕСЃС‚Р°РµС‚ РґРѕ С†РµР»Рё.",
-          defenderName + " С‡РёС‚Р°РµС‚ Р°С‚Р°РєСѓ Рё СѓС…РѕРґРёС‚ РѕС‚ СѓРґР°СЂР°.",
-          attackerName + " РјР°Р¶РµС‚, Рё РјРѕРјРµРЅС‚ СѓС…РѕРґРёС‚."
+          attackerName + " не достает до цели.",
+          defenderName + " читает атаку и уходит от удара.",
+          attackerName + " мажет, и момент уходит."
         ]), critical: false };
       }
 
@@ -1834,9 +1834,9 @@
       traumaGain += critical && damage >= 14 ? 1 : 0;
       defenderState.trauma += traumaGain;
       if (critical) {
-        return { line: attackerName + " Р»РѕРІРёС‚ РјРѕРјРµРЅС‚ Рё С‚СЏР¶РµР»Рѕ РїРѕРїР°РґР°РµС‚ РїРѕ " + defenderName + " РЅР° " + damage + " СѓСЂРѕРЅР°.", critical: true };
+        return { line: attackerName + " ловит момент и тяжело попадает по " + defenderName + " на " + damage + " урона.", critical: true };
       }
-      return { line: attackerName + " РґРѕРЅРѕСЃРёС‚ СЃРµСЂРёСЋ Рё СЃРЅРёРјР°РµС‚ " + damage + " РѕС‡РєРѕРІ РїСЂРѕС‡РЅРѕСЃС‚Рё.", critical: false };
+      return { line: attackerName + " доносит серию и снимает " + damage + " очков прочности.", critical: false };
     }
 
     function knockdownOrFinish(targetName, targetState, targetStats, targetSkills) {
@@ -1853,9 +1853,9 @@
         targetState.knockdowns += 1;
         targetState.hp = 8 + targetStats.heart;
         targetState.trauma += 1;
-        return { over: false, line: targetName + " РїР°РґР°РµС‚, РЅРѕ РїРѕРґРЅРёРјР°РµС‚СЃСЏ Рё РїСЂРѕРґРѕР»Р¶Р°РµС‚ Р±РѕР№." };
+        return { over: false, line: targetName + " падает, но поднимается и продолжает бой." };
       }
-      return { over: true, line: targetName + " Р±РѕР»СЊС€Рµ РЅРµ РјРѕР¶РµС‚ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ Р±РѕР№." };
+      return { over: true, line: targetName + " больше не может продолжать бой." };
     }
 
     function fatalityRoll(loserState, loserCondition, winnerSkills, loserSkills) {
@@ -1877,7 +1877,7 @@
         playerState: buildFightState(state.fighter.stats, state.fighter.health),
         opponentState: buildFightState(opponent.stats, opponent.condition),
         lines: [
-          "Р‘РѕР№ РїСЂРѕС‚РёРІ " + fullOpponentName(opponent) + " РЅР°С‡РёРЅР°РµС‚СЃСЏ. Р Р°СѓРЅРґРѕРІ: " + opponent.rounds + "."
+          "Бой против " + fullOpponentName(opponent) + " начинается. Раундов: " + opponent.rounds + "."
         ],
         result: null,
         method: null,
@@ -1903,7 +1903,7 @@
         return;
       }
 
-      lines.push("Р Р°СѓРЅРґ " + fight.round + ": С‚С‹ РІС‹Р±РёСЂР°РµС€СЊ '" + DATA.tactics[playerTactic].name + "', СЃРѕРїРµСЂРЅРёРє РѕС‚РІРµС‡Р°РµС‚ '" + DATA.tactics[opponentTactic].name + "'.");
+      lines.push("Раунд " + fight.round + ": ты выбираешь '" + DATA.tactics[playerTactic].name + "', соперник отвечает '" + DATA.tactics[opponentTactic].name + "'.");
 
       exchanges = [
         {
@@ -1949,7 +1949,7 @@
         lines.push(hit.line);
         if (kd.line) {
           lines.push(kd.line);
-          if (kd.line.indexOf("РїР°РґР°РµС‚") !== -1) {
+          if (kd.line.indexOf("падает") !== -1) {
             if (ex.attackerName === fighter.name) {
               fight.playerState.score += 8;
             } else {
@@ -1968,31 +1968,31 @@
       }
 
       if (fight.playerState.trauma >= 6 && fight.playerState.hp < fight.playerState.maxHp * 0.25) {
-        lines.push("Р”РѕРєС‚РѕСЂ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ Р±РѕР№. РџСЂРѕРґРѕР»Р¶Р°С‚СЊ СЃР»РёС€РєРѕРј РѕРїР°СЃРЅРѕ.");
-        finalizeFight("loss", "РћСЃС‚Р°РЅРѕРІР»РµРЅ РІСЂР°С‡РѕРј", lines, fatalityRoll(fight.playerState, fighter.health, opponentSkills, playerSkills) ? "player" : "");
+        lines.push("Доктор останавливает бой. Продолжать слишком опасно.");
+        finalizeFight("loss", "Остановлен врачом", lines, fatalityRoll(fight.playerState, fighter.health, opponentSkills, playerSkills) ? "player" : "");
         return;
       }
 
       if (fight.opponentState.trauma >= 6 && fight.opponentState.hp < fight.opponentState.maxHp * 0.25) {
-        lines.push("Р’СЂР°С‡ СЃРѕРїРµСЂРЅРёРєР° РјР°С€РµС‚ СЂСѓРєРѕР№: РїСЂРѕРґРѕР»Р¶Р°С‚СЊ РЅРµР»СЊР·СЏ.");
-        finalizeFight("win", "РћСЃС‚Р°РЅРѕРІР»РµРЅ РІСЂР°С‡РѕРј", lines, fatalityRoll(fight.opponentState, opponent.condition, playerSkills, opponentSkills) ? "opponent" : "");
+        lines.push("Врач соперника машет рукой: продолжать нельзя.");
+        finalizeFight("win", "Остановлен врачом", lines, fatalityRoll(fight.opponentState, opponent.condition, playerSkills, opponentSkills) ? "opponent" : "");
         return;
       }
 
       if (fight.round >= opponent.rounds) {
         if (fight.playerState.score >= fight.opponentState.score + 6) {
-          finalizeFight("win", "Р РµС€РµРЅРёРµ СЃСѓРґРµР№", lines, "");
+          finalizeFight("win", "Решение судей", lines, "");
         } else if (fight.opponentState.score >= fight.playerState.score + 6) {
-          finalizeFight("loss", "Р РµС€РµРЅРёРµ СЃСѓРґРµР№", lines, "");
+          finalizeFight("loss", "Решение судей", lines, "");
         } else {
-          finalizeFight("draw", "РќРёС‡СЊСЏ", lines, "");
+          finalizeFight("draw", "Ничья", lines, "");
         }
         return;
       }
 
       fight.round += 1;
       fight.lines = lines.concat(fight.lines);
-      pushLog("Р Р°СѓРЅРґ " + (fight.round - 1) + " Р·Р°РІРµСЂС€РµРЅ. РўС‹ " + fight.playerState.hp + "/" + fight.playerState.maxHp + " HP, СЃРѕРїРµСЂРЅРёРє " + fight.opponentState.hp + "/" + fight.opponentState.maxHp + ".", "warn");
+      pushLog("Раунд " + (fight.round - 1) + " завершен. Ты " + fight.playerState.hp + "/" + fight.playerState.maxHp + " HP, соперник " + fight.opponentState.hp + "/" + fight.opponentState.maxHp + ".", "warn");
       render();
     }
 
@@ -2036,7 +2036,7 @@
             fighter.stress += 5;
           }
         }
-        pushLog("РџРѕР±РµРґР°. РўС‹ Р·Р°Р±РёСЂР°РµС€СЊ $" + opponent.purse + " Рё +" + fameGain + " Рє СЃР»Р°РІРµ.", "good");
+        pushLog("Победа. Ты забираешь $" + opponent.purse + " и +" + fameGain + " к славе.", "good");
       } else if (fight.result === "loss") {
         fighter.losses += 1;
         fighter.money += Math.floor(opponent.purse * 0.35);
@@ -2045,26 +2045,238 @@
         fighter.morale -= 12;
         fighter.skillPoints += 1;
         fighter.stress += 6;
-        pushLog("РџРѕСЂР°Р¶РµРЅРёРµ. РќРѕ РґР°Р¶Рµ Р·Р° РЅРµРіРѕ РїСЂРёС…РѕРґРёС‚ С‡Р°СЃС‚СЊ РґРµРЅРµРі Рё РЅРµРјРЅРѕРіРѕ С€СѓРјР° РІРѕРєСЂСѓРі РёРјРµРЅРё.", "bad");
+        pushLog("Поражение. Но даже за него приходит часть денег и немного шума вокруг имени.", "bad");
       } else {
         fighter.money += Math.floor(opponent.purse * 0.55);
         fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
         fighter.fame += fameGain;
         fighter.morale += 1;
         fighter.skillPoints += 1;
-        pushLog("РќРёС‡СЊСЏ. РўС‹ РѕСЃС‚Р°Р»СЃСЏ РЅР° РЅРѕРіР°С… Рё СѓС€РµР» СЃ РґРµРЅСЊРіР°РјРё Рё СЃР»Р°РІРѕР№.", "warn");
+        pushLog("Ничья. Ты остался на ногах и ушел с деньгами и славой.", "warn");
       }
       if (fight.fatality === "opponent") {
         fighter.deathsCaused += 1;
         fighter.fame += 12;
         fighter.relationship -= 10;
         fighter.stress += 18;
-        pushLog("Р‘РѕР№ Р·Р°РєРѕРЅС‡РёР»СЃСЏ С‚СЂР°РіРµРґРёРµР№. Р Р°Р№РѕРЅ Р·Р°РіСѓРґРµР», Р° Р¶РёС‚СЊ СЃ СЌС‚РёРј РїСЂРёРґРµС‚СЃСЏ С‚РµР±Рµ.", "bad");
+        pushLog("Бой закончился трагедией. Район загудел, а жить с этим придется тебе.", "bad");
       } else if (fight.fatality === "player") {
         fighter.alive = false;
-        pushLog("РџРѕРІСЂРµР¶РґРµРЅРёСЏ РѕРєР°Р·С‹РІР°СЋС‚СЃСЏ РєСЂРёС‚РёС‡РµСЃРєРёРјРё. Р­С‚РѕС‚ Р±РѕР№ СЃС‚Р°РЅРѕРІРёС‚СЃСЏ РїРѕСЃР»РµРґРЅРёРј.", "bad");
+        pushLog("Повреждения оказываются критическими. Этот бой становится последним.", "bad");
       }
       applyBounds(fighter);
+    }
+
+    var COUNTRY_DISPLAY = {
+      mexico: { name: "Мексика", city: "Мехико" },
+      usa: { name: "США", city: "Лас-Вегас" },
+      russia: { name: "Россия", city: "Москва" },
+      cuba: { name: "Куба", city: "Гавана" },
+      japan: { name: "Япония", city: "Токио" },
+      china: { name: "Китай", city: "Шанхай" },
+      uk: { name: "Великобритания", city: "Лондон" },
+      philippines: { name: "Филиппины", city: "Манила" }
+    };
+
+    var RUSSIA_IDENTITY = {
+      first: ["Иван", "Дмитрий", "Сергей", "Алексей", "Михаил", "Виктор", "Николай", "Андрей", "Павел", "Юрий", "Константин", "Артем", "Денис", "Егор", "Максим", "Роман", "Кирилл", "Олег", "Тимур", "Илья"],
+      last: ["Иванов", "Петров", "Сидоров", "Смирнов", "Кузнецов", "Попов", "Васильев", "Федоров", "Волков", "Соловьев", "Морозов", "Лебедев", "Козлов", "Новиков", "Павлов", "Соколов", "Виноградов", "Макаров", "Орлов", "Егоров"],
+      nick: ["Северный Волк", "Железный Молот", "Дикий Волк", "Ледяной Шторм", "Стальной Кулак", "Ночной Ворон", "Грозный Таран", "Красный Град", "Русский Медведь", "Сибирский Лис"]
+    };
+
+    function getCountryInfo(countryKey) {
+      var i;
+      var country;
+      var display;
+      for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
+        country = COUNTRY_DATA.countries[i];
+        if (country.key === countryKey) {
+          display = COUNTRY_DISPLAY[countryKey];
+          if (display) {
+            country.name = display.name;
+            country.city = display.city;
+          }
+          return country;
+        }
+      }
+      return null;
+    }
+
+    function makeIdentity(countryKey) {
+      var identity;
+      if (countryKey === "russia") {
+        identity = {
+          firstName: choice(RUSSIA_IDENTITY.first),
+          lastName: choice(RUSSIA_IDENTITY.last),
+          nickname: choice(RUSSIA_IDENTITY.nick)
+        };
+        identity.fullName = identity.firstName + ' "' + identity.nickname + '" ' + identity.lastName;
+        return identity;
+      }
+      return window.makeIdentityBase ? window.makeIdentityBase(countryKey) : (function () {
+        var pool = getCountryPool(countryKey);
+        var seed = COUNTRY_DATA.seeds[countryKey];
+        var surnameParts;
+        var firstName;
+        var lastName;
+        var nickname;
+        if (!pool) {
+          return null;
+        }
+        if (seed && seed.firstJoin === "join") {
+          firstName = choice(pool.firstNames);
+        } else {
+          firstName = choice(seed.firstLeft.concat(seed.firstRight));
+        }
+        surnameParts = seed && seed.lastJoin === "join" ? pool.lastNames.slice(0) : seed.lastLeft.concat(seed.lastRight);
+        lastName = choice(surnameParts);
+        if (chance(5) && surnameParts.length > 1) {
+          var secondSurname = choice(surnameParts);
+          var separator = (countryKey === "mexico" || countryKey === "cuba" || countryKey === "philippines") ? " " : "-";
+          while (secondSurname === lastName) {
+            secondSurname = choice(surnameParts);
+          }
+          lastName = lastName + separator + secondSurname;
+        }
+        nickname = choice(pool.nicknames);
+        return {
+          firstName: firstName,
+          lastName: lastName,
+          nickname: nickname,
+          fullName: firstName + ' "' + nickname + '" ' + lastName
+        };
+      }());
+    }
+
+    function renderTrainPanel() {
+      var html = [];
+      var key;
+      html.push("<div class='panel'><h2 class='panel-title'>Тренировка</h2><div class='muted'>Выбери характеристику, которую хочешь подтянуть на этой неделе.</div><div class='choice-grid' style='margin-top:16px'>");
+      for (key in DATA.statLabels) {
+        if (DATA.statLabels.hasOwnProperty(key)) {
+          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>Текущий показатель: " + state.fighter.stats[key] + "</p><button class='button' onclick='actionTrain(\"" + key + "\")'>Качать</button></div>");
+        }
+      }
+      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
+      return html.join("");
+    }
+
+    function renderRecoverPanel() {
+      return "" +
+        "<div class='panel'>" +
+          "<h2 class='panel-title'>Восстановление</h2>" +
+          "<div class='choice-grid'>" +
+            "<div class='card'><h3>Отлежаться дома</h3><p>Бесплатно. Чинишь здоровье, сбиваешь стресс, возвращаешь мораль.</p><button class='button' onclick='actionRecover(\"home\")'>Выбрать</button></div>" +
+            "<div class='card'><h3>Спортивный врач</h3><p>$60. Самое сильное восстановление тела.</p><button class='button' onclick='actionRecover(\"doctor\")'>Выбрать</button></div>" +
+            "<div class='card'><h3>Терапия и массаж</h3><p>$35. Баланс между телом и головой.</p><button class='button' onclick='actionRecover(\"therapy\")'>Выбрать</button></div>" +
+          "</div>" +
+          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
+        "</div>";
+    }
+
+    function renderWorkPanel() {
+      return "" +
+        "<div class='panel'>" +
+          "<h2 class='panel-title'>Заработок</h2>" +
+          "<div class='choice-grid'>" +
+            "<div class='card'><h3>Охрана клуба</h3><p>Стабильные деньги и легкий стресс.</p><button class='button' onclick='actionWork(\"guard\")'>Выйти на смену</button></div>" +
+            "<div class='card'><h3>Сбор долгов</h3><p>Больше денег, но выше риск для здоровья и отношений.</p><button class='danger' onclick='actionWork(\"collector\")'>Вписаться</button></div>" +
+            "<div class='card'><h3>Снять спарринг</h3><p>Легкий заработок, шум вокруг имени и немного славы.</p><button class='button' onclick='actionWork(\"media\")'>Записать ролик</button></div>" +
+          "</div>" +
+          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
+        "</div>";
+    }
+
+    function renderLifePanel() {
+      return "" +
+        "<div class='panel'>" +
+          "<h2 class='panel-title'>Личная жизнь</h2>" +
+          "<div class='choice-grid'>" +
+            "<div class='card'><h3>Вечер с близкими</h3><p>$10. Снимает напряжение и укрепляет отношения.</p><button class='button' onclick='actionLife(\"family\")'>Провести вечер</button></div>" +
+            "<div class='card'><h3>Свидание</h3><p>$25. Сильнее качает отношения и мораль.</p><button class='button' onclick='actionLife(\"date\")'>Позвать на встречу</button></div>" +
+            "<div class='card'><h3>Ночной отрыв</h3><p>$20. Дает эмоции и славу, но может ударить по телу и отношениям.</p><button class='danger' onclick='actionLife(\"party\")'>Уйти в ночь</button></div>" +
+          "</div>" +
+          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
+        "</div>";
+    }
+
+    function renderFightSelectPanel() {
+      var html = [];
+      var i;
+      html.push("<div class='panel'><h2 class='panel-title'>Выбор соперника</h2><div class='muted'>Все бойцы на этом экране принадлежат текущей стране: " + getCountryInfo(state.fighter.currentCountry).name + ". Арена недели: " + getCountryInfo(state.fighter.currentCountry).city + ".</div><div class='card-grid' style='margin-top:16px'>");
+      for (i = 0; i < state.opponents.length; i += 1) {
+        var opponent = state.opponents[i];
+        html.push("<div class='card'>");
+        html.push("<div class='meta'>" + opponent.danger + "</div>");
+        html.push("<h3>" + fullOpponentName(opponent) + "</h3>");
+        html.push("<p>" + opponent.profile + ". " + getCountryInfo(opponent.countryKey).name + ", " + opponent.venue + ". Кошелек $" + opponent.purse + ", слава +" + opponent.fameReward + ", форма " + opponent.condition + "/100, раундов " + opponent.rounds + ".</p>");
+        html.push("<div class='split-row'><div class='chip'>Сила " + opponent.stats.power + "</div><div class='chip'>Скорость " + opponent.stats.speed + "</div><div class='chip'>Выносливость " + opponent.stats.endurance + "</div><div class='chip'>Техника " + opponent.stats.technique + "</div></div>");
+        html.push("<button class='button' onclick='startFight(" + i + ")'>Принять бой</button>");
+        html.push("</div>");
+      }
+      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
+      return html.join("");
+    }
+
+    function renderSkillPanel() {
+      return "" +
+        "<div class='panel'>" +
+          "<h2 class='panel-title'>Навыки и архетипы</h2>" +
+          "<div class='empty-state'>Пока эта система стоит на паузе. Здесь позже появятся ветки прокачки, пассивки и полноценные билды.</div>" +
+          "<div class='panel' style='margin-top:14px'><h2 class='panel-title'>Текущий статус</h2>" + renderSkillList(state.fighter.skills) + "</div>" +
+        "</div>";
+    }
+
+    function renderRetirePanel() {
+      return "" +
+        "<div class='panel'>" +
+          "<h2 class='panel-title'>Завершить карьеру?</h2>" +
+          "<div class='empty-state'>Если нажмешь сейчас, забег закончится, а игра покажет итог твоей истории.</div>" +
+          "<div class='footer-actions'>" +
+            "<button class='danger' onclick='retireCareer()'>Да, выйти из игры</button>" +
+            "<button class='ghost' onclick='openPanel(\"home\")'>Нет, продолжать</button>" +
+          "</div>" +
+        "</div>";
+    }
+
+    function fightAction(actionKey) {
+      var fight = state.fight;
+      var action = FIGHT_ACTIONS[actionKey];
+      if (!fight || fight.result || !action || fight.playerActionsLeft <= 0 || fight.actionLock) {
+        return;
+      }
+      if (!canUseFightAction(fight, "player", actionKey)) {
+        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
+        render();
+        return;
+      }
+      fight.actionLock = true;
+      if (action.type === "move") {
+        moveActor(fight, "player", actionKey);
+        fight.playerActionsLeft -= 1;
+        render();
+        setTimeout(function () {
+          runAiAfterPlayer();
+        }, 1000);
+        return;
+      }
+      if (strikeActor(fight, "player", actionKey)) {
+        fight.playerActionsLeft -= 1;
+        render();
+        setTimeout(function () {
+          applyFightAnimationResult();
+        }, 1000);
+        return;
+      }
+      fight.playerActionsLeft -= 1;
+      render();
+      setTimeout(function () {
+        applyFightAnimationResult();
+        if (fight.result) {
+          return;
+        }
+        runAiAfterPlayer();
+      }, 1000);
     }
 
     function closeFightResult() {
@@ -2094,13 +2306,13 @@
         nickname: identity.nickname,
         fullName: identity.fullName,
         countryKey: fighter.currentCountry,
-        profile: choice(["Р”Р°РІРёС‚ РїРѕ С†РµРЅС‚СЂСѓ", "Р›СЋР±РёС‚ РѕР±С…РѕРґ РїРѕ С„Р»Р°РЅРіСѓ", "Р’С‹Р¶РёРґР°РµС‚ Рё Р»РѕРІРёС‚", "Р›РµР·РµС‚ РІ РєРѕСЂРїСѓСЃ", "РћС…РѕС‚РёС‚СЃСЏ Р·Р° Р±Р»РёР¶РЅРµР№"]),
+        profile: choice(["Давит по центру", "Любит обход по флангу", "Выжидает и ловит", "Лезет в корпус", "Охотится за ближней"]),
         stats: stats,
         purse: Math.round(((tier === "safe" ? 65 : (tier === "even" ? 95 : 150)) + base * 8 + rand(0, 24)) * bonus.money),
         fameReward: Math.round(((tier === "safe" ? 6 : (tier === "even" ? 11 : 17)) + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
         condition: rand(72, 100),
         rounds: tier === "danger" ? choice([6, 7]) : (tier === "even" ? choice([5, 6]) : choice([4, 5])),
-        danger: tier === "safe" ? "РќРёР¶Рµ РїРѕ СЂРёСЃРєСѓ" : (tier === "even" ? "Р РѕРІРЅС‹Р№ Р±РѕР№" : "РћС‡РµРЅСЊ РѕРїР°СЃРµРЅ"),
+        danger: tier === "safe" ? "Ниже по риску" : (tier === "even" ? "Ровный бой" : "Очень опасен"),
         venue: country ? country.city : ""
       };
     }
@@ -2174,7 +2386,7 @@
         x: actor.position.x + action.dx,
         y: actor.position.y + action.dy
       };
-      pushFightLine(fight, fightNameBySide(fight, side) + " СЃРјРµС‰Р°РµС‚СЃСЏ: " + fromX + ":" + fromY + " -> " + (actor.position.x + 1) + ":" + (actor.position.y + 1) + ".");
+      pushFightLine(fight, fightNameBySide(fight, side) + " смещается: " + fromX + ":" + fromY + " -> " + (actor.position.x + 1) + ":" + (actor.position.y + 1) + ".");
     }
 
     function fatalityRoll(loserState, loserCondition) {
@@ -2199,10 +2411,10 @@
         victim.stamina = clamp(victim.stamina - 12, 0, 100);
         victim.trauma += 1;
         resetRingPositions(fight);
-        pushFightLine(fight, victimName + " РїР°РґР°РµС‚, РІСЃС‚Р°РµС‚ РЅР° СЃС‡РµС‚ Рё Р±РѕР№ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ РІ С†РµРЅС‚СЂ СЂРёРЅРіР°.");
+        pushFightLine(fight, victimName + " падает, встает на счет и бой возвращается в центр ринга.");
         return false;
       }
-      pushFightLine(fight, victimName + " Р±РѕР»СЊС€Рµ РЅРµ РїРѕРґРЅРёРјР°РµС‚СЃСЏ РїРѕСЃР»Рµ РѕС‚СЃС‡РµС‚Р°.");
+      pushFightLine(fight, victimName + " больше не поднимается после отсчета.");
       finalizeFight(
         victimSide === "player" ? "loss" : "win",
         "KO/TKO",
@@ -2227,7 +2439,7 @@
       var bodyDrain;
       attacker.stamina = clamp(attacker.stamina - (action.stamina + Math.max(0, distance - 1)), 0, 100);
       if (!canUseFightAction(fight, side, actionKey)) {
-        pushFightLine(fight, attackerName + " РІС‹Р±СЂР°СЃС‹РІР°РµС‚ " + action.label.toLowerCase() + ", РЅРѕ РґРёСЃС‚Р°РЅС†РёСЏ РЅРµ РїРѕР·РІРѕР»СЏРµС‚ РїРѕРїР°СЃС‚СЊ.");
+        pushFightLine(fight, attackerName + " выбрасывает " + action.label.toLowerCase() + ", но дистанция не позволяет попасть.");
         return false;
       }
       hitChance = action.accuracy + attackerStats.speed * 2 + attackerStats.technique * 2 + attackerStats.power * 0.4;
@@ -2238,7 +2450,7 @@
       }
       hitChance = clamp(Math.round(hitChance), 24, 90);
       if (!chance(hitChance)) {
-        pushFightLine(fight, attackerName + " РЅРµ РґРѕРЅРѕСЃРёС‚ " + action.label.toLowerCase() + ", Рё " + defenderName + " СѓС…РѕРґРёС‚ СЃ Р»РёРЅРёРё Р°С‚Р°РєРё.");
+        pushFightLine(fight, attackerName + " не доносит " + action.label.toLowerCase() + ", и " + defenderName + " уходит с линии атаки.");
         return false;
       }
       damage = action.damage + attackerStats.power * 1.1 + attackerStats.technique * 0.5 + attackerStats.speed * 0.2;
@@ -2263,7 +2475,7 @@
       defender.trauma += action.trauma + (critical ? 1 : 0);
       if (chance(5)) {
         defender.trauma += 1;
-        pushFightLine(fight, defenderName + " РїРѕР»СѓС‡Р°РµС‚ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅСѓСЋ С‚СЂР°РІРјСѓ РїРѕСЃР»Рµ С‚РѕС‡РЅРѕРіРѕ РїРѕРїР°РґР°РЅРёСЏ.");
+        pushFightLine(fight, defenderName + " получает дополнительную травму после точного попадания.");
       }
       awardFightPressure(fight, side, damage + (critical ? 4 : 2));
       if (action.body) {
@@ -2272,12 +2484,12 @@
         defender.bodyDamage += damage;
       }
       if (critical) {
-        pushFightLine(fight, attackerName + " Р»РѕРІРёС‚ РјРѕРјРµРЅС‚ Рё С‚СЏР¶РµР»Рѕ РїРѕРїР°РґР°РµС‚: " + action.label + " РїСЂРѕС…РѕРґРёС‚ РЅР° " + damage + " СѓСЂРѕРЅР°.");
+        pushFightLine(fight, attackerName + " ловит момент и тяжело попадает: " + action.label + " проходит на " + damage + " урона.");
       } else {
-        pushFightLine(fight, attackerName + " РїРѕРїР°РґР°РµС‚ СѓРґР°СЂРѕРј '" + action.label + "' Рё СЃРЅРёРјР°РµС‚ " + damage + " РїСЂРѕС‡РЅРѕСЃС‚Рё.");
+        pushFightLine(fight, attackerName + " попадает ударом '" + action.label + "' и снимает " + damage + " прочности.");
       }
       if (action.body) {
-        pushFightLine(fight, defenderName + " С‚РµСЂСЏРµС‚ С‚РµРјРї РїРѕСЃР»Рµ СЂР°Р±РѕС‚С‹ РїРѕ РєРѕСЂРїСѓСЃСѓ.");
+        pushFightLine(fight, defenderName + " теряет темп после работы по корпусу.");
       }
       if (defender.hp <= 0) {
         return resolveKnockdown(fight, otherSide(side));
@@ -2292,13 +2504,13 @@
 
     function checkFightSafety(fight) {
       if (doctorStopNeeded(fight, "player")) {
-        pushFightLine(fight, "Р’СЂР°С‡ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ Р±РѕР№: С‚РІРѕРµРјСѓ СѓРіР»Сѓ РЅРµР»СЊР·СЏ РІС‹РїСѓСЃРєР°С‚СЊ С‚РµР±СЏ РґР°Р»СЊС€Рµ.");
-        finalizeFight("loss", "РћСЃС‚Р°РЅРѕРІР»РµРЅ РІСЂР°С‡РѕРј", [], fatalityRoll(fight.playerState, state.fighter.health) ? "player" : "");
+        pushFightLine(fight, "Врач останавливает бой: твоему углу нельзя выпускать тебя дальше.");
+        finalizeFight("loss", "Остановлен врачом", [], fatalityRoll(fight.playerState, state.fighter.health) ? "player" : "");
         return true;
       }
       if (doctorStopNeeded(fight, "opponent")) {
-        pushFightLine(fight, "РЈРіРѕР» СЃРѕРїРµСЂРЅРёРєР° РІС‹Р±СЂР°СЃС‹РІР°РµС‚ РїРѕР»РѕС‚РµРЅС†Рµ. РџСЂРѕРґРѕР»Р¶Р°С‚СЊ РѕРїР°СЃРЅРѕ.");
-        finalizeFight("win", "РћСЃС‚Р°РЅРѕРІР»РµРЅ РІСЂР°С‡РѕРј", [], fatalityRoll(fight.opponentState, fight.opponent.condition) ? "opponent" : "");
+        pushFightLine(fight, "Угол соперника выбрасывает полотенце. Продолжать опасно.");
+        finalizeFight("win", "Остановлен врачом", [], fatalityRoll(fight.opponentState, fight.opponent.condition) ? "opponent" : "");
         return true;
       }
       return false;
@@ -2397,15 +2609,15 @@
       }
       fight.judges.player += playerCard;
       fight.judges.opponent += opponentCard;
-      fight.roundCards.unshift("Р Р°СѓРЅРґ " + fight.round + ": " + playerCard + "-" + opponentCard);
+      fight.roundCards.unshift("Раунд " + fight.round + ": " + playerCard + "-" + opponentCard);
       fight.roundsCompleted = fight.round;
-      pushFightLine(fight, "Р Р°СѓРЅРґ " + fight.round + " Р·Р°РєСЂС‹С‚ РїРѕ Р°РєС‚РёРІРЅРѕСЃС‚Рё: " + playerCard + "-" + opponentCard + ".");
-      pushLog("Р Р°СѓРЅРґ " + fight.round + " Р·Р°РІРµСЂС€РµРЅ. РљР°СЂС‚РѕС‡РєР° РѕС‚СЂРµР·РєРѕРІ: " + playerCard + "-" + opponentCard + ".", "warn");
+      pushFightLine(fight, "Раунд " + fight.round + " закрыт по активности: " + playerCard + "-" + opponentCard + ".");
+      pushLog("Раунд " + fight.round + " завершен. Карточка отрезков: " + playerCard + "-" + opponentCard + ".", "warn");
       if (fight.round >= fight.opponent.rounds) {
         finalizeFight(
           fight.judges.player > fight.judges.opponent ? "win" : (fight.judges.player < fight.judges.opponent ? "loss" : "draw"),
-          "Р РµС€РµРЅРёРµ СЃСѓРґРµР№ " + fight.judges.player + ":" + fight.judges.opponent,
-          ["РЎСѓРґРµР№СЃРєРёРµ Р·Р°РїРёСЃРєРё: " + fight.roundCards.slice(0).reverse().join(", ") + "."],
+          "Решение судей " + fight.judges.player + ":" + fight.judges.opponent,
+          ["Судейские записки: " + fight.roundCards.slice(0).reverse().join(", ") + "."],
           ""
         );
         return;
@@ -2418,7 +2630,7 @@
       resetRingPositions(fight);
       fight.playerState.stamina = clamp(fight.playerState.stamina + 16 + Math.floor(state.fighter.stats.endurance / 2), 0, 100);
       fight.opponentState.stamina = clamp(fight.opponentState.stamina + 16 + Math.floor(fight.opponent.stats.endurance / 2), 0, 100);
-      pushFightLine(fight, "РЎС‚Р°СЂС‚СѓРµС‚ СЂР°СѓРЅРґ " + fight.round + ". Р‘РѕР№С†РѕРІ СЃРЅРѕРІР° СЃРІРѕРґСЏС‚ РІ С†РµРЅС‚СЂ.");
+      pushFightLine(fight, "Стартует раунд " + fight.round + ". Бойцов снова сводят в центр.");
     }
 
     function completeFightSegment() {
@@ -2429,7 +2641,7 @@
       if (checkFightSafety(fight)) {
         return;
       }
-      pushFightLine(fight, "РћС‚СЂРµР·РѕРє " + fight.segment + " Р·Р°РІРµСЂС€РµРЅ. Р”РёСЃС‚Р°РЅС†РёСЏ РјРµР¶РґСѓ Р±РѕР№С†Р°РјРё: " + ringDistance(fight.playerState.position, fight.opponentState.position) + " РєР»РµС‚Рє.");
+      pushFightLine(fight, "Отрезок " + fight.segment + " завершен. Дистанция между бойцами: " + ringDistance(fight.playerState.position, fight.opponentState.position) + " клетк.");
       if (fight.segment >= 10) {
         finishFightRound();
         return;
@@ -2439,7 +2651,7 @@
       fight.aiActionsLeft = 3;
       fight.playerState.stamina = clamp(fight.playerState.stamina + 3, 0, 100);
       fight.opponentState.stamina = clamp(fight.opponentState.stamina + 3, 0, 100);
-      pushFightLine(fight, "Р Р°СѓРЅРґ " + fight.round + ", РѕС‚СЂРµР·РѕРє " + fight.segment + ". РќР° РѕР±Р° СѓРіР»Р° СЃРЅРѕРІР° РїРѕ 3 РґРµР№СЃС‚РІРёСЏ.");
+      pushFightLine(fight, "Раунд " + fight.round + ", отрезок " + fight.segment + ". На оба угла снова по 3 действия.");
     }
 
     function startFight(index) {
@@ -2455,7 +2667,7 @@
         playerState: buildFightState(state.fighter.stats, state.fighter.health, startRingPosition("player")),
         opponentState: buildFightState(opponent.stats, opponent.condition, startRingPosition("opponent")),
         lines: [
-          "Р‘РѕР№ РїСЂРѕС‚РёРІ " + fullOpponentName(opponent) + " РЅР°С‡РёРЅР°РµС‚СЃСЏ. Р РёРЅРі 5x5, РІ РєР°Р¶РґРѕРј СЂР°СѓРЅРґРµ 10 РѕС‚СЂРµР·РєРѕРІ РїРѕ 3 РґРµР№СЃС‚РІРёСЏ."
+          "Бой против " + fullOpponentName(opponent) + " начинается. Ринг 5x5, в каждом раунде 10 отрезков по 3 действия."
         ],
         result: null,
         method: null,
@@ -2494,7 +2706,7 @@
         return;
       }
       if (!canUseFightAction(fight, "player", actionKey)) {
-        pushFightLine(fight, "Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРЅРѕ РїРѕ РїРѕР·РёС†РёРё РЅР° СЂРёРЅРіРµ.");
+        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
         render();
         return;
       }
@@ -2519,7 +2731,7 @@
           fight.aiActionsLeft -= 1;
         } else {
           fight.aiActionsLeft = 0;
-          pushFightLine(fight, fullOpponentName(fight.opponent) + " С‚РµСЂСЏРµС‚ С‚РµРјРї Рё РЅРµ РЅР°С…РѕРґРёС‚ С‡РёСЃС‚РѕРіРѕ РґРµР№СЃС‚РІРёСЏ.");
+          pushFightLine(fight, fullOpponentName(fight.opponent) + " теряет темп и не находит чистого действия.");
         }
       }
       if (fight.result || checkFightSafety(fight)) {
@@ -2548,10 +2760,10 @@
       var html = [];
       var showMoves = !fight.actionGroup || fight.actionGroup === "move";
       html.push("<div class='battle-panel'>");
-      html.push("<strong>РЈРїСЂР°РІР»РµРЅРёРµ</strong>");
+      html.push("<strong>Управление</strong>");
       html.push("<div class='footer-actions'>");
-      html.push("<button class='" + (showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"move\")'>Р”РІРёР¶РµРЅРёРµ</button>");
-      html.push("<button class='" + (!showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"attack\")'>РЈРґР°СЂС‹</button>");
+      html.push("<button class='" + (showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"move\")'>Движение</button>");
+      html.push("<button class='" + (!showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"attack\")'>Удары</button>");
       html.push("</div>");
       html.push("<div class='battle-actions-row" + (showMoves ? " compact" : "") + "'>");
       if (showMoves) {
@@ -2571,13 +2783,13 @@
     }
 
     function renderFightStatsPanel(fight) {
-      return "<div class='battle-panel'><strong>РЎС‚Р°С‚РёСЃС‚РёРєР°</strong><div class='battle-chip-line'><div class='chip gold'>РўРІРѕСЏ С‚СЂР°РІРјР° " + fight.playerState.trauma + "</div><div class='chip'>РўРІРѕРё РЅРѕРєРґР°СѓРЅС‹ " + fight.playerState.knockdowns + "</div><div class='chip'>РўРІРѕСЏ РїРѕР·РёС†РёСЏ " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip red'>Р•РіРѕ С‚СЂР°РІРјР° " + fight.opponentState.trauma + "</div><div class='chip'>Р•РіРѕ РЅРѕРєРґР°СѓРЅС‹ " + fight.opponentState.knockdowns + "</div><div class='chip'>Р•РіРѕ РїРѕР·РёС†РёСЏ " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
+      return "<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip gold'>Твоя травма " + fight.playerState.trauma + "</div><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip red'>Его травма " + fight.opponentState.trauma + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
     }
 
     function renderFightLogPanel(fight) {
       var html = [];
       var i;
-      html.push("<div class='battle-panel'><strong>Р›РµРЅС‚Р° Р±РѕСЏ</strong><div class='battle-log'>");
+      html.push("<div class='battle-panel'><strong>Лента боя</strong><div class='battle-log'>");
       for (i = 0; i < Math.min(8, fight.lines.length); i += 1) {
         html.push("<div class='log-entry'>" + fight.lines[i] + "</div>");
       }
@@ -2621,7 +2833,7 @@
         if (fight.method.indexOf("KO") !== -1) {
           fighter.kos += 1;
         }
-        pushLog("РџРѕР±РµРґР°. РўС‹ Р·Р°Р±РёСЂР°РµС€СЊ $" + opponent.purse + " Рё +" + opponent.fameReward + " Рє РёР·РІРµСЃС‚РЅРѕСЃС‚Рё.", "good");
+        pushLog("Победа. Ты забираешь $" + opponent.purse + " и +" + opponent.fameReward + " к известности.", "good");
       } else if (fight.result === "loss") {
         fameGain = Math.max(2, Math.floor(opponent.fameReward / 3));
         fighter.losses += 1;
@@ -2629,23 +2841,23 @@
         fighter.fame += fameGain;
         fighter.morale -= 12;
         fighter.stress += 6;
-        pushLog("РџРѕСЂР°Р¶РµРЅРёРµ. Р”Р°Р¶Рµ РѕРЅРѕ РїСЂРёРЅРѕСЃРёС‚ С‡Р°СЃС‚СЊ РґРµРЅРµРі Рё РѕСЃС‚Р°РІР»СЏРµС‚ С€СѓРј РІРѕРєСЂСѓРі РёРјРµРЅРё.", "bad");
+        pushLog("Поражение. Даже оно приносит часть денег и оставляет шум вокруг имени.", "bad");
       } else {
         fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
         fighter.money += Math.floor(opponent.purse * 0.55);
         fighter.fame += fameGain;
         fighter.morale += 1;
-        pushLog("РќРёС‡СЊСЏ. РўС‹ РІС‹Р¶РёР» РІ СЂСѓР±РєРµ Рё СѓС€РµР» СЃ РґРµРЅСЊРіР°РјРё Рё РёР·РІРµСЃС‚РЅРѕСЃС‚СЊСЋ.", "warn");
+        pushLog("Ничья. Ты выжил в рубке и ушел с деньгами и известностью.", "warn");
       }
       if (fight.fatality === "opponent") {
         fighter.deathsCaused += 1;
         fighter.fame += 12;
         fighter.relationship -= 10;
         fighter.stress += 18;
-        pushLog("Р‘РѕР№ Р·Р°РєРѕРЅС‡РёР»СЃСЏ С‚СЂР°РіРµРґРёРµР№. РРјСЏ РіСЂРµРјРёС‚ СЃРёР»СЊРЅРµРµ, РЅРѕ С†РµРЅР° Р·Р° СЌС‚Рѕ С‡СѓРґРѕРІРёС‰РЅР°СЏ.", "bad");
+        pushLog("Бой закончился трагедией. Имя гремит сильнее, но цена за это чудовищная.", "bad");
       } else if (fight.fatality === "player") {
         fighter.alive = false;
-        pushLog("РџРѕРІСЂРµР¶РґРµРЅРёСЏ РѕРєР°Р·С‹РІР°СЋС‚СЃСЏ РєСЂРёС‚РёС‡РµСЃРєРёРјРё. Р­С‚РѕС‚ Р±РѕР№ СЃС‚Р°РЅРѕРІРёС‚СЃСЏ РїРѕСЃР»РµРґРЅРёРј.", "bad");
+        pushLog("Повреждения оказываются критическими. Этот бой становится последним.", "bad");
       }
       applyBounds(fighter);
     }
@@ -2660,26 +2872,26 @@
       var html = [];
       var i;
       var country;
-      var identityText = state.create.identity ? state.create.identity.fullName : "РЎРЅР°С‡Р°Р»Р° РІС‹Р±РµСЂРё СЃС‚Р°СЂС‚РѕРІСѓСЋ СЃС‚СЂР°РЅСѓ";
+      var identityText = state.create.identity ? state.create.identity.fullName : "Сначала выбери стартовую страну";
       html.push("<div class='shell'>");
       html.push("<div class='hero'>");
       html.push("<div class='eyebrow'>Street Boxer Career</div>");
-      html.push("<div class='title'>РЎРѕР±РµСЂРё Р±РѕР№С†Р° РґР»СЏ РїРѕРґРїРѕР»СЊРЅРѕР№ РєР°СЂСЊРµСЂС‹</div>");
-      html.push("<div class='subtitle'>РўРµРїРµСЂСЊ РєР°СЂСЊРµСЂР° РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ РІС‹Р±РѕСЂР° СЃС‚Р°СЂС‚РѕРІРѕР№ С‚РѕС‡РєРё. РРјСЏ, С„Р°РјРёР»РёСЏ Рё РєР»РёС‡РєР° Р·Р°РІРёСЃСЏС‚ РѕС‚ СЃС‚СЂР°РЅС‹, Р° РїРѕР·Р¶Рµ С‚С‹ СЃРјРѕР¶РµС€СЊ РїСѓС‚РµС€РµСЃС‚РІРѕРІР°С‚СЊ Рё РѕС…РѕС‚РёС‚СЊСЃСЏ Р·Р° Р±РѕР»РµРµ РєСЂСѓРїРЅС‹РјРё РіРѕРЅРѕСЂР°СЂР°РјРё РЅР° С‡СѓР¶РѕР№ С‚РµСЂСЂРёС‚РѕСЂРёРё.</div>");
-      html.push("<div><h2 class='panel-title'>РЎС‚Р°СЂС‚РѕРІР°СЏ С‚РѕС‡РєР°</h2><div class='create-grid'>");
+      html.push("<div class='title'>Собери бойца для подпольной карьеры</div>");
+      html.push("<div class='subtitle'>Теперь карьера начинается с выбора стартовой точки. Имя, фамилия и кличка зависят от страны, а позже ты сможешь путешествовать и охотиться за более крупными гонорарами на чужой территории.</div>");
+      html.push("<div><h2 class='panel-title'>Стартовая точка</h2><div class='create-grid'>");
       for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
         country = COUNTRY_DATA.countries[i];
         html.push("<div class='create-card" + (state.create.country === country.key ? " selected" : "") + "'>");
-        html.push("<div class='meta'>РЎС‚СЂР°РЅР° СЃС‚Р°СЂС‚Р°</div><h3>" + country.name + "</h3><p>Р”РѕРјР°С€РЅСЏСЏ Р°СЂРµРЅР°: " + country.city + ". Р—Р° РіСЂР°РЅРёС†РµР№ РІ СЌС‚РѕР№ СЃС‚СЂР°РЅРµ РїР»Р°С‚СЏС‚ x" + country.awayMoneyBonus.toFixed(2) + " РґРµРЅРµРі Рё x" + country.awayFameBonus.toFixed(2) + " РёР·РІРµСЃС‚РЅРѕСЃС‚Рё.</p>");
-        html.push("<button class='button' onclick='setCreateCountry(\"" + country.key + "\")'>" + (state.create.country === country.key ? "Р’С‹Р±СЂР°РЅР°" : "Р’С‹Р±СЂР°С‚СЊ") + "</button>");
+        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ". За границей в этой стране платят x" + country.awayMoneyBonus.toFixed(2) + " денег и x" + country.awayFameBonus.toFixed(2) + " известности.</p>");
+        html.push("<button class='button' onclick='setCreateCountry(\"" + country.key + "\")'>" + (state.create.country === country.key ? "Выбрана" : "Выбрать") + "</button>");
         html.push("</div>");
       }
       html.push("</div></div>");
-      html.push("<div class='nameplate'><div><div class='fighter-class'>РРјСЏ РЅР° Р°С„РёС€Рµ</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>РЎРјРµРЅРёС‚СЊ РёРјСЏ</button></div>");
-      html.push("<div class='card'><div class='meta'>Р’СЂРµРјРµРЅРЅР°СЏ Р·Р°РіР»СѓС€РєР°</div><h3>РђСЂС…РµС‚РёРїС‹ Рё РЅР°РІС‹РєРё</h3><p>РџРѕРєР° РѕРЅРё РѕС‚РєР»СЋС‡РµРЅС‹. РќР° СЃС‚Р°СЂС‚Рµ Сѓ РІСЃРµС… РѕРґРёРЅР°РєРѕРІР°СЏ Р±Р°Р·Р°, Р° Р±РѕР№ СЂРµС€Р°СЋС‚ СЃС‚Р°С‚С‹, РїРѕР·РёС†РёСЏ РЅР° СЂРёРЅРіРµ 5x5 Рё РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ РґРµР№СЃС‚РІРёР№ РІ РєР°Р¶РґРѕРј РѕС‚СЂРµР·РєРµ.</p></div>");
+      html.push("<div class='nameplate'><div><div class='fighter-class'>Имя на афише</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>Сменить имя</button></div>");
+      html.push("<div class='card'><div class='meta'>Временная заглушка</div><h3>Архетипы и навыки</h3><p>Пока они отключены. На старте у всех одинаковая база, а бой решают статы, позиция на ринге 5x5 и последовательность действий в каждом отрезке.</p></div>");
       html.push("<div class='footer-actions'>");
-      html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "РЎС‚СЂР°РЅР° РЅРµ РІС‹Р±СЂР°РЅР°") + "</div>");
-      html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>РќР°С‡Р°С‚СЊ РєР°СЂСЊРµСЂСѓ</button>");
+      html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "Страна не выбрана") + "</div>");
+      html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>Начать карьеру</button>");
       html.push("</div>");
       html.push("</div></div>");
       return html.join("");
@@ -2690,22 +2902,22 @@
       var home = getCountryInfo(state.fighter.homeCountry);
       return "" +
         "<div class='panel'>" +
-          "<h2 class='panel-title'>РќРµРґРµР»СЏ " + state.fighter.week + "</h2>" +
+          "<h2 class='panel-title'>Неделя " + state.fighter.week + "</h2>" +
           "<div class='record-row' style='margin-top:14px'>" +
-            "<div class='chip gold'>Р РµРєРѕСЂРґ " + recordText(state.fighter) + "</div>" +
-            "<div class='chip'>РЎР»Р°РІР° " + state.fighter.fame + "</div>" +
-            "<div class='chip'>Р”РµРЅСЊРіРё $" + state.fighter.money + "</div>" +
-            "<div class='chip'>Р”РѕРј " + home.name + "</div>" +
-            "<div class='chip'>РЎРµР№С‡Р°СЃ " + current.name + "</div>" +
+            "<div class='chip gold'>Рекорд " + recordText(state.fighter) + "</div>" +
+            "<div class='chip'>Слава " + state.fighter.fame + "</div>" +
+            "<div class='chip'>Деньги $" + state.fighter.money + "</div>" +
+            "<div class='chip'>Дом " + home.name + "</div>" +
+            "<div class='chip'>Сейчас " + current.name + "</div>" +
           "</div>" +
           "<div class='footer-actions'>" +
-            "<button class='button' onclick='openPanel(\"train\")'>РўСЂРµРЅРёСЂРѕРІРєР°</button>" +
-            "<button class='button' onclick='openFightSelect()'>РќР°Р№С‚Рё СЃРѕРїРµСЂРЅРёРєР°</button>" +
-            "<button class='ghost' onclick='openPanel(\"work\")'>Р—Р°СЂР°Р±РѕС‚Р°С‚СЊ</button>" +
-            "<button class='ghost' onclick='openPanel(\"life\")'>Р›РёС‡РЅР°СЏ Р¶РёР·РЅСЊ</button>" +
-            "<button class='ghost' onclick='openPanel(\"recover\")'>Р’РѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊСЃСЏ</button>" +
-            "<button class='ghost' onclick='openPanel(\"travel\")'>РџСѓС‚РµС€РµСЃС‚РІРёРµ</button>" +
-            "<button class='danger' onclick='openPanel(\"retire\")'>Р—Р°РІРµСЂС€РёС‚СЊ РєР°СЂСЊРµСЂСѓ</button>" +
+            "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
+            "<button class='button' onclick='openFightSelect()'>Найти соперника</button>" +
+            "<button class='ghost' onclick='openPanel(\"work\")'>Заработать</button>" +
+            "<button class='ghost' onclick='openPanel(\"life\")'>Личная жизнь</button>" +
+            "<button class='ghost' onclick='openPanel(\"recover\")'>Восстановиться</button>" +
+            "<button class='ghost' onclick='openPanel(\"travel\")'>Путешествие</button>" +
+            "<button class='danger' onclick='openPanel(\"retire\")'>Завершить карьеру</button>" +
           "</div>" +
         "</div>";
     }
@@ -2717,27 +2929,27 @@
       var bonus = currentTravelBonus(fighter);
       var html = [];
       html.push("<div class='panel'>");
-      html.push("<h2 class='panel-title'>РџРµСЂСЃРѕРЅР°Р¶</h2>");
+      html.push("<h2 class='panel-title'>Персонаж</h2>");
       html.push("<div class='fighter-name' style='font-size:26px'>" + fighter.name + "</div>");
       html.push("<div class='record-row'>");
-      html.push("<div class='chip gold'>Р РµРєРѕСЂРґ " + recordText(fighter) + "</div>");
-      html.push("<div class='chip'>РЎР»Р°РІР° " + fighter.fame + "</div>");
-      html.push("<div class='chip'>Р”РµРЅСЊРіРё $" + fighter.money + "</div>");
-      html.push("<div class='chip'>Р”РѕРј " + (home ? home.name : "-") + "</div>");
-      html.push("<div class='chip'>РЎРµР№С‡Р°СЃ " + (current ? current.name : "-") + "</div>");
+      html.push("<div class='chip gold'>Рекорд " + recordText(fighter) + "</div>");
+      html.push("<div class='chip'>Слава " + fighter.fame + "</div>");
+      html.push("<div class='chip'>Деньги $" + fighter.money + "</div>");
+      html.push("<div class='chip'>Дом " + (home ? home.name : "-") + "</div>");
+      html.push("<div class='chip'>Сейчас " + (current ? current.name : "-") + "</div>");
       html.push("</div>");
       if (current && home && current.key !== home.key) {
-        html.push("<div class='record-row'><div class='chip gold'>Р§СѓР¶Р°СЏ С‚РµСЂСЂРёС‚РѕСЂРёСЏ</div><div class='chip'>Р“РѕРЅРѕСЂР°СЂ x" + bonus.money.toFixed(2) + "</div><div class='chip'>РР·РІРµСЃС‚РЅРѕСЃС‚СЊ x" + bonus.fame.toFixed(2) + "</div></div>");
+        html.push("<div class='record-row'><div class='chip gold'>Чужая территория</div><div class='chip'>Гонорар x" + bonus.money.toFixed(2) + "</div><div class='chip'>Известность x" + bonus.fame.toFixed(2) + "</div></div>");
       } else if (current) {
-        html.push("<div class='record-row'><div class='chip'>Р”РѕРјР°С€РЅСЏСЏ Р°СЂРµРЅР°: " + current.city + "</div></div>");
+        html.push("<div class='record-row'><div class='chip'>Домашняя арена: " + current.city + "</div></div>");
       }
-      html.push("<div>" + meter("Р—РґРѕСЂРѕРІСЊРµ", fighter.health) + "</div>");
-      html.push("<div>" + meter("РЎС‚СЂРµСЃСЃ", fighter.stress) + "</div>");
-      html.push("<div>" + meter("РњРѕСЂР°Р»СЊ", fighter.morale) + "</div>");
-      html.push("<div>" + meter("Р›РёС‡РЅР°СЏ Р¶РёР·РЅСЊ", fighter.relationship) + "</div>");
+      html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
+      html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
+      html.push("<div>" + meter("Мораль", fighter.morale) + "</div>");
+      html.push("<div>" + meter("Личная жизнь", fighter.relationship) + "</div>");
       html.push("</div>");
-      html.push("<div class='panel'><h2 class='panel-title'>РЎС‚Р°С‚С‹</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ</h2><div class='record-row'><div class='chip'>РќРµРґРµР»СЊ " + fighter.week + "</div><div class='chip'>РџРѕР±РµРґ " + fighter.wins + "</div><div class='chip'>РџРѕСЂР°Р¶РµРЅРёР№ " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>РЎРјРµСЂС‚РµР№ РІ Р±РѕСЏС… " + fighter.deathsCaused + "</div></div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Статы</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
       return html.join("");
     }
 
@@ -2751,10 +2963,10 @@
 
     function renderNavigationTabs() {
       var tabs = [
-        { key: "home", label: "РћСЃРЅРѕРІРЅРѕРµ" },
-        { key: "character", label: "РџРµСЂСЃРѕРЅР°Р¶" },
-        { key: "skills", label: "РќР°РІС‹РєРё" },
-        { key: "careerLog", label: "Р›РµРЅС‚Р°" }
+        { key: "home", label: "Основное" },
+        { key: "character", label: "Персонаж" },
+        { key: "skills", label: "Навыки" },
+        { key: "careerLog", label: "Лента" }
       ];
       var html = [];
       var i;
@@ -2772,95 +2984,95 @@
       var i;
       var country;
       var cost;
-      html.push("<div class='panel'><h2 class='panel-title'>РџСѓС‚РµС€РµСЃС‚РІРёРµ</h2><div class='card-grid' style='margin-top:16px'>");
+      html.push("<div class='panel'><h2 class='panel-title'>Путешествие</h2><div class='card-grid' style='margin-top:16px'>");
       for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
         country = COUNTRY_DATA.countries[i];
         if (country.key === fighter.currentCountry) {
           continue;
         }
         cost = flightCost(fighter.currentCountry, country.key);
-        html.push("<div class='card'><div class='meta'>РџРµСЂРµР»РµС‚ $" + cost + "</div><h3>" + country.name + "</h3><p>Р“РѕСЂРѕРґ Р±РѕРµРІ: " + country.city + ". РќР° С‡СѓР¶РѕР№ С‚РµСЂСЂРёС‚РѕСЂРёРё Р·РґРµСЃСЊ РїР»Р°С‚СЏС‚ x" + country.awayMoneyBonus.toFixed(2) + " РґРµРЅРµРі Рё x" + country.awayFameBonus.toFixed(2) + " РёР·РІРµСЃС‚РЅРѕСЃС‚Рё.</p><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Р›РµС‚РµС‚СЊ</button></div>");
+        html.push("<div class='card'><div class='meta'>Перелет $" + cost + "</div><h3>" + country.name + "</h3><p>Город боев: " + country.city + ". На чужой территории здесь платят x" + country.awayMoneyBonus.toFixed(2) + " денег и x" + country.awayFameBonus.toFixed(2) + " известности.</p><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Лететь</button></div>");
       }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>РќР°Р·Р°Рґ</button></div></div>");
+      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
       return html.join("");
     }
 
     function renderTrainPanel() {
       var html = [];
       var key;
-      html.push("<div class='panel'><h2 class='panel-title'>РўСЂРµРЅРёСЂРѕРІРєР°</h2><div class='muted'>РўСЂРµРЅРёСЂРѕРІРєР° С‚СЂР°С‚РёС‚ РЅРµРґРµР»СЋ: С‚С‹ РєР°С‡Р°РµС€СЊ Р±Р°Р·РѕРІС‹Р№ СЃС‚Р°С‚, РїР»Р°С‚РёС€СЊ Р·РґРѕСЂРѕРІСЊРµРј Рё СЃС‚СЂРµСЃСЃРѕРј, РЅРѕ СѓСЃРёР»РёРІР°РµС€СЊ Р±РѕР№С†Р° РїРѕРґ РЅРѕРІСѓСЋ СЃРёСЃС‚РµРјСѓ РєР»РµС‚РєРё Рё СѓРґР°СЂРѕРІ.</div><div class='choice-grid' style='margin-top:16px'>");
+      html.push("<div class='panel'><h2 class='panel-title'>Тренировка</h2><div class='muted'>Тренировка тратит неделю: ты качаешь базовый стат, платишь здоровьем и стрессом, но усиливаешь бойца под новую систему клетки и ударов.</div><div class='choice-grid' style='margin-top:16px'>");
       for (key in DATA.statLabels) {
         if (DATA.statLabels.hasOwnProperty(key)) {
-          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>РўРµРєСѓС‰РёР№ РїРѕРєР°Р·Р°С‚РµР»СЊ: " + state.fighter.stats[key] + "</p><button class='button' onclick='actionTrain(\"" + key + "\")'>РљР°С‡Р°С‚СЊ</button></div>");
+          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>Текущий показатель: " + state.fighter.stats[key] + "</p><button class='button' onclick='actionTrain(\"" + key + "\")'>Качать</button></div>");
         }
       }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>РќР°Р·Р°Рґ</button></div></div>");
+      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
       return html.join("");
     }
 
     function renderSkillPanel() {
       return "" +
         "<div class='panel'>" +
-          "<h2 class='panel-title'>РќР°РІС‹РєРё Рё Р°СЂС…РµС‚РёРїС‹</h2>" +
-          "<div class='empty-state'>РђСЂС…РµС‚РёРїС‹ Рё РЅР°РІС‹РєРё РІСЂРµРјРµРЅРЅРѕ СѓР±СЂР°РЅС‹ РёР· Р°РєС‚РёРІРЅРѕР№ РёРіСЂС‹. Р—РґРµСЃСЊ РїРѕР·Р¶Рµ Р±СѓРґРµС‚ РїРѕР»РЅР°СЏ СЃРёСЃС‚РµРјР° СЃР±РѕСЂРєРё Р±РёР»РґР°, РІС‹Р±РѕСЂР° Р°СЂС…РµС‚РёРїРѕРІ, РїСЂРѕРєР°С‡РєРё РІРµС‚РѕРє Рё РїР°СЃСЃРёРІРЅС‹С… РѕСЃРѕР±РµРЅРЅРѕСЃС‚РµР№.</div>" +
-          "<div class='panel' style='margin-top:14px'><h2 class='panel-title'>РўРµРєСѓС‰РёР№ СЃС‚Р°С‚СѓСЃ</h2>" + renderSkillList(state.fighter.skills) + "</div>" +
+          "<h2 class='panel-title'>Навыки и архетипы</h2>" +
+          "<div class='empty-state'>Архетипы и навыки временно убраны из активной игры. Здесь позже будет полная система сборки билда, выбора архетипов, прокачки веток и пассивных особенностей.</div>" +
+          "<div class='panel' style='margin-top:14px'><h2 class='panel-title'>Текущий статус</h2>" + renderSkillList(state.fighter.skills) + "</div>" +
         "</div>";
     }
 
     function renderRecoverPanel() {
       return "" +
         "<div class='panel'>" +
-          "<h2 class='panel-title'>Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ</h2>" +
+          "<h2 class='panel-title'>Восстановление</h2>" +
           "<div class='choice-grid'>" +
-            "<div class='card'><h3>РћС‚Р»РµР¶Р°С‚СЊСЃСЏ РґРѕРјР°</h3><p>Р‘РµСЃРїР»Р°С‚РЅРѕ. Р§РёРЅРёС€СЊ Р·РґРѕСЂРѕРІСЊРµ, СЃР±РёРІР°РµС€СЊ СЃС‚СЂРµСЃСЃ, РІРѕР·РІСЂР°С‰Р°РµС€СЊ РјРѕСЂР°Р»СЊ.</p><button class='button' onclick='actionRecover(\"home\")'>Р’С‹Р±СЂР°С‚СЊ</button></div>" +
-            "<div class='card'><h3>РЎРїРѕСЂС‚РёРІРЅС‹Р№ РІСЂР°С‡</h3><p>$60. РЎР°РјРѕРµ СЃРёР»СЊРЅРѕРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ С‚РµР»Р°.</p><button class='button' onclick='actionRecover(\"doctor\")'>Р’С‹Р±СЂР°С‚СЊ</button></div>" +
-            "<div class='card'><h3>РўРµСЂР°РїРёСЏ Рё РјР°СЃСЃР°Р¶</h3><p>$35. Р‘Р°Р»Р°РЅСЃ РјРµР¶РґСѓ С‚РµР»РѕРј Рё РіРѕР»РѕРІРѕР№.</p><button class='button' onclick='actionRecover(\"therapy\")'>Р’С‹Р±СЂР°С‚СЊ</button></div>" +
+            "<div class='card'><h3>Отлежаться дома</h3><p>Бесплатно. Чинишь здоровье, сбиваешь стресс, возвращаешь мораль.</p><button class='button' onclick='actionRecover(\"home\")'>Выбрать</button></div>" +
+            "<div class='card'><h3>Спортивный врач</h3><p>$60. Самое сильное восстановление тела.</p><button class='button' onclick='actionRecover(\"doctor\")'>Выбрать</button></div>" +
+            "<div class='card'><h3>Терапия и массаж</h3><p>$35. Баланс между телом и головой.</p><button class='button' onclick='actionRecover(\"therapy\")'>Выбрать</button></div>" +
           "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>РќР°Р·Р°Рґ</button></div>" +
+          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
         "</div>";
     }
 
     function renderWorkPanel() {
       return "" +
         "<div class='panel'>" +
-          "<h2 class='panel-title'>Р—Р°СЂР°Р±РѕС‚РѕРє</h2>" +
+          "<h2 class='panel-title'>Заработок</h2>" +
           "<div class='choice-grid'>" +
-            "<div class='card'><h3>РћС…СЂР°РЅР° РєР»СѓР±Р°</h3><p>РЎС‚Р°Р±РёР»СЊРЅС‹Рµ РґРµРЅСЊРіРё Рё Р»РµРіРєРёР№ СЃС‚СЂРµСЃСЃ.</p><button class='button' onclick='actionWork(\"guard\")'>Р’С‹Р№С‚Рё РЅР° СЃРјРµРЅСѓ</button></div>" +
-            "<div class='card'><h3>РЎР±РѕСЂ РґРѕР»РіРѕРІ</h3><p>Р‘РѕР»СЊС€Рµ РґРµРЅРµРі, Р±РѕР»СЊС€Рµ РіСЂСЏР·Рё, Р±РѕР»СЊС€Рµ СЂРёСЃРєР° РґР»СЏ Р·РґРѕСЂРѕРІСЊСЏ Рё РѕС‚РЅРѕС€РµРЅРёР№.</p><button class='danger' onclick='actionWork(\"collector\")'>Р’РїРёСЃР°С‚СЊСЃСЏ</button></div>" +
-            "<div class='card'><h3>РЎРЅСЏС‚СЊ СЃРїР°СЂСЂРёРЅРі</h3><p>Р›РµРіРєРёР№ Р·Р°СЂР°Р±РѕС‚РѕРє, СЃР»Р°РІР° Рё РјРµРґРёР№РЅРѕСЃС‚СЊ.</p><button class='button' onclick='actionWork(\"media\")'>Р—Р°РїРёСЃР°С‚СЊ СЂРѕР»РёРє</button></div>" +
+            "<div class='card'><h3>Охрана клуба</h3><p>Стабильные деньги и легкий стресс.</p><button class='button' onclick='actionWork(\"guard\")'>Выйти на смену</button></div>" +
+            "<div class='card'><h3>Сбор долгов</h3><p>Больше денег, больше грязи, больше риска для здоровья и отношений.</p><button class='danger' onclick='actionWork(\"collector\")'>Вписаться</button></div>" +
+            "<div class='card'><h3>Снять спарринг</h3><p>Легкий заработок, слава и медийность.</p><button class='button' onclick='actionWork(\"media\")'>Записать ролик</button></div>" +
           "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>РќР°Р·Р°Рґ</button></div>" +
+          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
         "</div>";
     }
 
     function renderLifePanel() {
       return "" +
         "<div class='panel'>" +
-          "<h2 class='panel-title'>Р›РёС‡РЅР°СЏ Р¶РёР·РЅСЊ</h2>" +
+          "<h2 class='panel-title'>Личная жизнь</h2>" +
           "<div class='choice-grid'>" +
-            "<div class='card'><h3>Р’РµС‡РµСЂ СЃ Р±Р»РёР·РєРёРјРё</h3><p>$10. РЎРЅРёРјР°РµС‚ РЅР°РїСЂСЏР¶РµРЅРёРµ Рё СѓРєСЂРµРїР»СЏРµС‚ РѕС‚РЅРѕС€РµРЅРёСЏ.</p><button class='button' onclick='actionLife(\"family\")'>РџСЂРѕРІРµСЃС‚Рё РІРµС‡РµСЂ</button></div>" +
-            "<div class='card'><h3>РЎРІРёРґР°РЅРёРµ</h3><p>$25. РЎРёР»СЊРЅРµРµ РєР°С‡Р°РµС‚ РѕС‚РЅРѕС€РµРЅРёСЏ Рё РјРѕСЂР°Р»СЊ.</p><button class='button' onclick='actionLife(\"date\")'>РџРѕР·РІР°С‚СЊ РЅР° РІСЃС‚СЂРµС‡Сѓ</button></div>" +
-            "<div class='card'><h3>РќРѕС‡РЅРѕР№ РѕС‚СЂС‹РІ</h3><p>$20. РЎР»Р°РІР° Рё РјРѕСЂР°Р»СЊ СЂР°СЃС‚СѓС‚, РЅРѕ С‚РµР»Рѕ Рё РѕС‚РЅРѕС€РµРЅРёСЏ РјРѕРіСѓС‚ РїСЂРѕСЃРµСЃС‚СЊ.</p><button class='danger' onclick='actionLife(\"party\")'>РЈР№С‚Рё РІ РЅРѕС‡СЊ</button></div>" +
+            "<div class='card'><h3>Вечер с близкими</h3><p>$10. Снимает напряжение и укрепляет отношения.</p><button class='button' onclick='actionLife(\"family\")'>Провести вечер</button></div>" +
+            "<div class='card'><h3>Свидание</h3><p>$25. Сильнее качает отношения и мораль.</p><button class='button' onclick='actionLife(\"date\")'>Позвать на встречу</button></div>" +
+            "<div class='card'><h3>Ночной отрыв</h3><p>$20. Слава и мораль растут, но тело и отношения могут просесть.</p><button class='danger' onclick='actionLife(\"party\")'>Уйти в ночь</button></div>" +
           "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>РќР°Р·Р°Рґ</button></div>" +
+          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
         "</div>";
     }
 
     function renderFightSelectPanel() {
       var html = [];
       var i;
-      html.push("<div class='panel'><h2 class='panel-title'>Р’С‹Р±РѕСЂ СЃРѕРїРµСЂРЅРёРєР°</h2><div class='muted'>Р’СЃРµ Р±РѕР№С†С‹ РЅР° СЌС‚РѕРј СЌРєСЂР°РЅРµ РїСЂРёРЅР°РґР»РµР¶Р°С‚ С‚РµРєСѓС‰РµР№ СЃС‚СЂР°РЅРµ: " + getCountryInfo(state.fighter.currentCountry).name + ". РђСЂРµРЅР° РЅРµРґРµР»Рё: " + getCountryInfo(state.fighter.currentCountry).city + ".</div><div class='card-grid' style='margin-top:16px'>");
+      html.push("<div class='panel'><h2 class='panel-title'>Выбор соперника</h2><div class='muted'>Все бойцы на этом экране принадлежат текущей стране: " + getCountryInfo(state.fighter.currentCountry).name + ". Арена недели: " + getCountryInfo(state.fighter.currentCountry).city + ".</div><div class='card-grid' style='margin-top:16px'>");
       for (i = 0; i < state.opponents.length; i += 1) {
         var opponent = state.opponents[i];
         html.push("<div class='card'>");
         html.push("<div class='meta'>" + opponent.danger + "</div>");
         html.push("<h3>" + fullOpponentName(opponent) + "</h3>");
-        html.push("<p>" + opponent.profile + ". " + getCountryInfo(opponent.countryKey).name + ", " + opponent.venue + ". РљРѕС€РµР»РµРє $" + opponent.purse + ", СЃР»Р°РІР° +" + opponent.fameReward + ", С„РѕСЂРјР° " + opponent.condition + "/100, СЂР°СѓРЅРґРѕРІ " + opponent.rounds + ".</p>");
-        html.push("<div class='split-row'><div class='chip'>РЎРёР»Р° " + opponent.stats.power + "</div><div class='chip'>РЎРєРѕСЂРѕСЃС‚СЊ " + opponent.stats.speed + "</div><div class='chip'>Р’С‹РЅРѕСЃР»РёРІРѕСЃС‚СЊ " + opponent.stats.endurance + "</div><div class='chip'>РўРµС…РЅРёРєР° " + opponent.stats.technique + "</div></div>");
-        html.push("<button class='button' onclick='startFight(" + i + ")'>РџСЂРёРЅСЏС‚СЊ Р±РѕР№</button>");
+        html.push("<p>" + opponent.profile + ". " + getCountryInfo(opponent.countryKey).name + ", " + opponent.venue + ". Кошелек $" + opponent.purse + ", слава +" + opponent.fameReward + ", форма " + opponent.condition + "/100, раундов " + opponent.rounds + ".</p>");
+        html.push("<div class='split-row'><div class='chip'>Сила " + opponent.stats.power + "</div><div class='chip'>Скорость " + opponent.stats.speed + "</div><div class='chip'>Выносливость " + opponent.stats.endurance + "</div><div class='chip'>Техника " + opponent.stats.technique + "</div></div>");
+        html.push("<button class='button' onclick='startFight(" + i + ")'>Принять бой</button>");
         html.push("</div>");
       }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>РќР°Р·Р°Рґ</button></div></div>");
+      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
       return html.join("");
     }
 
@@ -2876,27 +3088,27 @@
       html.push("<div class='battle-shell'>");
       html.push("<div class='battle-topbar'>");
       html.push("<div class='battle-health-card'>");
-      html.push("<div class='chip gold'>РўС‹</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.playerState.stamina)) + "</div>");
+      html.push("<div class='chip gold'>Ты</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
       html.push("</div>");
       html.push("<div class='battle-health-card right'>");
       html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.opponentState.stamina)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
       html.push("</div>");
       html.push("</div>");
       html.push("<div class='battle-stage'>");
-      html.push("<div class='eyebrow'>Р Р°СѓРЅРґ " + fight.round + " / " + fight.opponent.rounds + " вЂў РћС‚СЂРµР·РѕРє " + fight.segment + " / 10</div>");
-      html.push("<div class='title' style='font-size:22px'>Р РёРЅРі 5x5</div>");
-      html.push("<div class='subtitle'>РЈ С‚РµР±СЏ " + fight.playerActionsLeft + " РґРµР№СЃС‚РІРёСЏ, Сѓ СЃРѕРїРµСЂРЅРёРєР° " + fight.aiActionsLeft + ".</div>");
+      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Отрезок " + fight.segment + " / 10</div>");
+      html.push("<div class='title' style='font-size:22px'>Ринг 5x5</div>");
+      html.push("<div class='subtitle'>У тебя " + fight.playerActionsLeft + " действия, у соперника " + fight.aiActionsLeft + ".</div>");
       html.push("<div class='ring-board'>");
       for (y = 0; y < RING_SIZE; y += 1) {
         html.push("<div class='ring-row'>");
         for (x = 0; x < RING_SIZE; x += 1) {
           playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
           opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='token player'>РўС‹</div>" : (opponentCell ? "<div class='token opponent'>РћРЅ</div>" : "")) + "</div>");
+          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='token player'>Ты</div>" : (opponentCell ? "<div class='token opponent'>Он</div>" : "")) + "</div>");
         }
         html.push("</div>");
       }
@@ -2904,13 +3116,13 @@
       html.push("</div>");
       html.push("<div class='battle-bottom'>");
       html.push("<div class='battle-column'>");
-      html.push("<div class='battle-panel'><strong>Р”РІРёР¶РµРЅРёРµ</strong><div class='battle-actions-row compact'>");
+      html.push("<div class='battle-panel'><strong>Движение</strong><div class='battle-actions-row compact'>");
       html.push(renderFightActionButton("move_up", "ghost"));
       html.push(renderFightActionButton("move_left", "ghost"));
       html.push(renderFightActionButton("move_right", "ghost"));
       html.push(renderFightActionButton("move_down", "ghost"));
       html.push("</div></div>");
-      html.push("<div class='battle-panel'><strong>РЈРґР°СЂС‹</strong><div class='battle-actions-row'>");
+      html.push("<div class='battle-panel'><strong>Удары</strong><div class='battle-actions-row'>");
       html.push(renderFightActionButton("jab", "button"));
       html.push(renderFightActionButton("cross", "button"));
       html.push(renderFightActionButton("hook", "danger"));
@@ -2919,15 +3131,15 @@
       html.push("</div></div>");
       html.push("</div>");
       html.push("<div class='battle-column right'>");
-      html.push("<div class='battle-panel'><strong>РЎС‚Р°С‚РёСЃС‚РёРєР°</strong><div class='battle-chip-line'><div class='chip gold'>РўРІРѕСЏ С‚СЂР°РІРјР° " + fight.playerState.trauma + "</div><div class='chip'>РўРІРѕРё РЅРѕРєРґР°СѓРЅС‹ " + fight.playerState.knockdowns + "</div><div class='chip'>РўРІРѕСЏ РїРѕР·РёС†РёСЏ " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip red'>Р•РіРѕ С‚СЂР°РІРјР° " + fight.opponentState.trauma + "</div><div class='chip'>Р•РіРѕ РЅРѕРєРґР°СѓРЅС‹ " + fight.opponentState.knockdowns + "</div><div class='chip'>Р•РіРѕ РїРѕР·РёС†РёСЏ " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>");
+      html.push("<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip gold'>Твоя травма " + fight.playerState.trauma + "</div><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip red'>Его травма " + fight.opponentState.trauma + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>");
       if (fight.roundCards.length) {
-        html.push("<div class='battle-panel'><strong>РљР°СЂС‚РѕС‡РєРё</strong>");
+        html.push("<div class='battle-panel'><strong>Карточки</strong>");
         for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
           html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
         }
         html.push("</div>");
       }
-      html.push("<div class='battle-panel'><strong>Р›РµРЅС‚Р° Р±РѕСЏ</strong><div class='battle-log'>");
+      html.push("<div class='battle-panel'><strong>Лента боя</strong><div class='battle-log'>");
       for (i = 0; i < Math.min(8, fight.lines.length); i += 1) {
         html.push("<div class='log-entry'>" + fight.lines[i] + "</div>");
       }
@@ -2949,27 +3161,27 @@
       html.push("<div class='battle-shell'>");
       html.push("<div class='battle-topbar'>");
       html.push("<div class='battle-health-card'>");
-      html.push("<div class='chip gold'>РўС‹</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.playerState.stamina)) + "</div>");
+      html.push("<div class='chip gold'>Ты</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
       html.push("</div>");
       html.push("<div class='battle-health-card right'>");
       html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.opponentState.stamina)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
       html.push("</div>");
       html.push("</div>");
       html.push("<div class='battle-stage'>");
-      html.push("<div class='eyebrow'>Р Р°СѓРЅРґ " + fight.round + " / " + fight.opponent.rounds + " вЂў РћС‚СЂРµР·РѕРє " + fight.segment + " / 10</div>");
-      html.push("<div class='title' style='font-size:22px'>Р РёРЅРі 5x5</div>");
-      html.push("<div class='subtitle'>РЈ С‚РµР±СЏ " + fight.playerActionsLeft + " РґРµР№СЃС‚РІРёСЏ, Сѓ СЃРѕРїРµСЂРЅРёРєР° " + fight.aiActionsLeft + ".</div>");
+      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Отрезок " + fight.segment + " / 10</div>");
+      html.push("<div class='title' style='font-size:22px'>Ринг 5x5</div>");
+      html.push("<div class='subtitle'>У тебя " + fight.playerActionsLeft + " действия, у соперника " + fight.aiActionsLeft + ".</div>");
       html.push("<div class='ring-board'>");
       for (y = 0; y < RING_SIZE; y += 1) {
         html.push("<div class='ring-row'>");
         for (x = 0; x < RING_SIZE; x += 1) {
           playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
           opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='token player'>РўС‹</div>" : (opponentCell ? "<div class='token opponent'>РћРЅ</div>" : "")) + "</div>");
+          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='token player'>Ты</div>" : (opponentCell ? "<div class='token opponent'>Он</div>" : "")) + "</div>");
         }
         html.push("</div>");
       }
@@ -2977,14 +3189,14 @@
       html.push("</div>");
       html.push("<div class='battle-bottom'>");
       html.push("<div class='battle-tabs'>");
-      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>РЈРїСЂР°РІР»РµРЅРёРµ</button>");
-      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>РЎС‚Р°С‚РёСЃС‚РёРєР°</button>");
-      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Р›РµРЅС‚Р°</button>");
+      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>");
+      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>");
+      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>");
       html.push("</div>");
       if (activeTab === "stats") {
         html.push(renderFightStatsPanel(fight));
         if (fight.roundCards.length) {
-          html.push("<div class='battle-panel'><strong>РљР°СЂС‚РѕС‡РєРё</strong>");
+          html.push("<div class='battle-panel'><strong>Карточки</strong>");
           for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
             html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
           }
@@ -3003,26 +3215,26 @@
       var html = [];
       var i;
       var country;
-      var identityText = state.create.identity ? state.create.identity.fullName : "РЎРЅР°С‡Р°Р»Р° РІС‹Р±РµСЂРё СЃС‚Р°СЂС‚РѕРІСѓСЋ СЃС‚СЂР°РЅСѓ";
+      var identityText = state.create.identity ? state.create.identity.fullName : "Сначала выбери стартовую страну";
       html.push("<div class='shell'>");
       html.push("<div class='hero'>");
       html.push("<div class='eyebrow'>Street Boxer Career</div>");
-      html.push("<div class='title'>РЎРѕР±РµСЂРё Р±РѕР№С†Р° РґР»СЏ РїРѕРґРїРѕР»СЊРЅРѕР№ РєР°СЂСЊРµСЂС‹</div>");
-      html.push("<div class='subtitle'>РўРµРїРµСЂСЊ РєР°СЂСЊРµСЂР° РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ РІС‹Р±РѕСЂР° СЃС‚Р°СЂС‚РѕРІРѕР№ С‚РѕС‡РєРё. РРјСЏ, С„Р°РјРёР»РёСЏ Рё РєР»РёС‡РєР° Р·Р°РІРёСЃСЏС‚ РѕС‚ СЃС‚СЂР°РЅС‹, Р° РїРѕР·Р¶Рµ С‚С‹ СЃРјРѕР¶РµС€СЊ РїСѓС‚РµС€РµСЃС‚РІРѕРІР°С‚СЊ Рё РѕС…РѕС‚РёС‚СЊСЃСЏ Р·Р° Р±РѕР»РµРµ РєСЂСѓРїРЅС‹РјРё РіРѕРЅРѕСЂР°СЂР°РјРё РЅР° С‡СѓР¶РѕР№ С‚РµСЂСЂРёС‚РѕСЂРёРё.</div>");
-      html.push("<div><h2 class='panel-title'>РЎС‚Р°СЂС‚РѕРІР°СЏ С‚РѕС‡РєР°</h2><div class='create-grid'>");
+      html.push("<div class='title'>Собери бойца для подпольной карьеры</div>");
+      html.push("<div class='subtitle'>Теперь карьера начинается с выбора стартовой точки. Имя, фамилия и кличка зависят от страны, а позже ты сможешь путешествовать и охотиться за более крупными гонорарами на чужой территории.</div>");
+      html.push("<div><h2 class='panel-title'>Стартовая точка</h2><div class='create-grid'>");
       for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
         country = COUNTRY_DATA.countries[i];
         html.push("<div class='create-card" + (state.create.country === country.key ? " selected" : "") + "'>");
-        html.push("<div class='meta'>РЎС‚СЂР°РЅР° СЃС‚Р°СЂС‚Р°</div><h3>" + country.name + "</h3><p>Р”РѕРјР°С€РЅСЏСЏ Р°СЂРµРЅР°: " + country.city + ".</p>");
-        html.push("<button class='button' onclick='setCreateCountry(\"" + country.key + "\")'>" + (state.create.country === country.key ? "Р’С‹Р±СЂР°РЅР°" : "Р’С‹Р±СЂР°С‚СЊ") + "</button>");
+        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ".</p>");
+        html.push("<button class='button' onclick='setCreateCountry(\"" + country.key + "\")'>" + (state.create.country === country.key ? "Выбрана" : "Выбрать") + "</button>");
         html.push("</div>");
       }
       html.push("</div></div>");
-      html.push("<div class='nameplate'><div><div class='fighter-class'>РРјСЏ РЅР° Р°С„РёС€Рµ</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>РЎРјРµРЅРёС‚СЊ РёРјСЏ</button></div>");
-      html.push("<div class='card'><div class='meta'>Р’СЂРµРјРµРЅРЅР°СЏ Р·Р°РіР»СѓС€РєР°</div><h3>РђСЂС…РµС‚РёРїС‹ Рё РЅР°РІС‹РєРё</h3><p>РџРѕРєР° РѕРЅРё РѕС‚РєР»СЋС‡РµРЅС‹. РќР° СЃС‚Р°СЂС‚Рµ Сѓ РІСЃРµС… РѕРґРёРЅР°РєРѕРІР°СЏ Р±Р°Р·Р°, Р° Р±РѕР№ СЂРµС€Р°СЋС‚ СЃС‚Р°С‚С‹, РїРѕР·РёС†РёСЏ РЅР° СЂРёРЅРіРµ 5x5 Рё РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ РґРµР№СЃС‚РІРёР№ РІ РєР°Р¶РґРѕРј РѕС‚СЂРµР·РєРµ.</p></div>");
+      html.push("<div class='nameplate'><div><div class='fighter-class'>Имя на афише</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>Сменить имя</button></div>");
+      html.push("<div class='card'><div class='meta'>Временная заглушка</div><h3>Архетипы и навыки</h3><p>Пока они отключены. На старте у всех одинаковая база, а бой решают статы, позиция на ринге 5x5 и последовательность действий в каждом отрезке.</p></div>");
       html.push("<div class='footer-actions'>");
-      html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "РЎС‚СЂР°РЅР° РЅРµ РІС‹Р±СЂР°РЅР°") + "</div>");
-      html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>РќР°С‡Р°С‚СЊ РєР°СЂСЊРµСЂСѓ</button>");
+      html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "Страна не выбрана") + "</div>");
+      html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>Начать карьеру</button>");
       html.push("</div>");
       html.push("</div></div>");
       return html.join("");
@@ -3035,55 +3247,55 @@
       var bonus = currentTravelBonus(fighter);
       var html = [];
       html.push("<div class='panel'>");
-      html.push("<h2 class='panel-title'>РџРµСЂСЃРѕРЅР°Р¶</h2>");
+      html.push("<h2 class='panel-title'>Персонаж</h2>");
       html.push("<div class='fighter-name' style='font-size:26px'>" + fighter.name + "</div>");
       html.push("<div class='record-row'>");
-      html.push("<div class='chip gold'>Р РµРєРѕСЂРґ " + recordText(fighter) + "</div>");
-      html.push("<div class='chip'>РЎР»Р°РІР° " + fighter.fame + "</div>");
-      html.push("<div class='chip'>Р”РµРЅСЊРіРё $" + fighter.money + "</div>");
-      html.push("<div class='chip'>Р”РѕРј " + (home ? home.name : "-") + "</div>");
-      html.push("<div class='chip'>РЎРµР№С‡Р°СЃ " + (current ? current.name : "-") + "</div>");
+      html.push("<div class='chip gold'>Рекорд " + recordText(fighter) + "</div>");
+      html.push("<div class='chip'>Слава " + fighter.fame + "</div>");
+      html.push("<div class='chip'>Деньги $" + fighter.money + "</div>");
+      html.push("<div class='chip'>Дом " + (home ? home.name : "-") + "</div>");
+      html.push("<div class='chip'>Сейчас " + (current ? current.name : "-") + "</div>");
       html.push("</div>");
       if (current && home && current.key !== home.key) {
-        html.push("<div class='record-row'><div class='chip gold'>Р§СѓР¶Р°СЏ С‚РµСЂСЂРёС‚РѕСЂРёСЏ</div><div class='chip'>Р”РµРЅСЊРіРё x" + bonus.money.toFixed(2) + "</div><div class='chip'>РР·РІРµСЃС‚РЅРѕСЃС‚СЊ x" + bonus.fame.toFixed(2) + "</div></div>");
+        html.push("<div class='record-row'><div class='chip gold'>Чужая территория</div><div class='chip'>Деньги x" + bonus.money.toFixed(2) + "</div><div class='chip'>Известность x" + bonus.fame.toFixed(2) + "</div></div>");
       } else if (current) {
-        html.push("<div class='record-row'><div class='chip'>Р”РѕРјР°С€РЅСЏСЏ Р°СЂРµРЅР°: " + current.city + "</div><div class='chip gold'>Р”РµРЅСЊРіРё x1.20</div><div class='chip'>РР·РІРµСЃС‚РЅРѕСЃС‚СЊ x1.00</div></div>");
+        html.push("<div class='record-row'><div class='chip'>Домашняя арена: " + current.city + "</div><div class='chip gold'>Деньги x1.20</div><div class='chip'>Известность x1.00</div></div>");
       }
-      html.push("<div>" + meter("Р—РґРѕСЂРѕРІСЊРµ", fighter.health) + "</div>");
-      html.push("<div>" + meter("РЎС‚СЂРµСЃСЃ", fighter.stress) + "</div>");
-      html.push("<div>" + meter("РњРѕСЂР°Р»СЊ", fighter.morale) + "</div>");
-      html.push("<div>" + meter("Р›РёС‡РЅР°СЏ Р¶РёР·РЅСЊ", fighter.relationship) + "</div>");
+      html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
+      html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
+      html.push("<div>" + meter("Мораль", fighter.morale) + "</div>");
+      html.push("<div>" + meter("Личная жизнь", fighter.relationship) + "</div>");
       html.push("</div>");
-      html.push("<div class='panel'><h2 class='panel-title'>РЎС‚Р°С‚С‹</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ</h2><div class='record-row'><div class='chip'>РќРµРґРµР»СЊ " + fighter.week + "</div><div class='chip'>РџРѕР±РµРґ " + fighter.wins + "</div><div class='chip'>РџРѕСЂР°Р¶РµРЅРёР№ " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>РЎРјРµСЂС‚РµР№ РІ Р±РѕСЏС… " + fighter.deathsCaused + "</div></div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Статы</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
       return html.join("");
     }
 
     function renderFightResultPanel() {
       var fight = state.fight;
-      var resultLabel = fight.result === "win" ? "РџРѕР±РµРґР°" : (fight.result === "loss" ? "РџРѕСЂР°Р¶РµРЅРёРµ" : "РќРёС‡СЊСЏ");
+      var resultLabel = fight.result === "win" ? "Победа" : (fight.result === "loss" ? "Поражение" : "Ничья");
       var html = [];
       var i;
       html.push("<div class='battle-shell'><div class='battle-result'>");
-      html.push("<div class='result-banner'><div class='eyebrow'>РС‚РѕРі Р±РѕСЏ</div><div class='title' style='font-size:24px'>" + resultLabel + " С‡РµСЂРµР· " + fight.method + "</div>");
-      html.push("<div class='subtitle'>Р Р°СѓРЅРґРѕРІ РїСЂРѕС€Р»Рѕ: " + fight.roundsCompleted + ".</div></div>");
+      html.push("<div class='result-banner'><div class='eyebrow'>Итог боя</div><div class='title' style='font-size:24px'>" + resultLabel + " через " + fight.method + "</div>");
+      html.push("<div class='subtitle'>Раундов прошло: " + fight.roundsCompleted + ".</div></div>");
       html.push("<div class='battle-bottom' style='margin-top:12px'>");
-      html.push("<div class='battle-column'><div class='battle-panel'><strong>РўС‹ РІ Р±РѕСЋ</strong>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>РўСЂР°РІРјР° " + fight.playerState.trauma + "</div><div class='chip'>РќРѕРєРґР°СѓРЅС‹ " + fight.playerState.knockdowns + "</div></div></div></div>");
-      html.push("<div class='battle-column right'><div class='battle-panel'><strong>РЎРѕРїРµСЂРЅРёРє</strong>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>РўСЂР°РІРјР° " + fight.opponentState.trauma + "</div><div class='chip'>РќРѕРєРґР°СѓРЅС‹ " + fight.opponentState.knockdowns + "</div></div></div></div>");
+      html.push("<div class='battle-column'><div class='battle-panel'><strong>Ты в бою</strong>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("Стамина", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Травма " + fight.playerState.trauma + "</div><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div></div></div></div>");
+      html.push("<div class='battle-column right'><div class='battle-panel'><strong>Соперник</strong>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("Стамина", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Травма " + fight.opponentState.trauma + "</div><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div></div></div></div>");
       html.push("</div>");
       if (fight.roundCards.length) {
-        html.push("<div class='battle-panel' style='margin-top:12px'><strong>РљР°СЂС‚РѕС‡РєРё СЃСѓРґРµР№</strong>");
+        html.push("<div class='battle-panel' style='margin-top:12px'><strong>Карточки судей</strong>");
         for (i = 0; i < Math.min(8, fight.roundCards.length); i += 1) {
           html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
         }
         html.push("</div>");
       }
-      html.push("<div class='battle-panel' style='margin-top:12px'><strong>РџРѕСЃР»РµРґРЅРёРµ СЃРѕР±С‹С‚РёСЏ</strong><div class='battle-log'>");
+      html.push("<div class='battle-panel' style='margin-top:12px'><strong>Последние события</strong><div class='battle-log'>");
       for (i = 0; i < Math.min(10, fight.lines.length); i += 1) {
         html.push("<div class='log-entry'>" + fight.lines[i] + "</div>");
       }
       html.push("</div></div>");
-      html.push("<div class='footer-actions'><button class='button' onclick='closeFightResult()'>Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РєР°СЂСЊРµСЂСѓ</button></div>");
+      html.push("<div class='footer-actions'><button class='button' onclick='closeFightResult()'>Вернуться в карьеру</button></div>");
       html.push("</div></div>");
       return html.join("");
     }
@@ -3091,11 +3303,11 @@
     function renderRetirePanel() {
       return "" +
         "<div class='panel'>" +
-          "<h2 class='panel-title'>Р—Р°РІРµСЂС€РёС‚СЊ РєР°СЂСЊРµСЂСѓ?</h2>" +
-          "<div class='empty-state'>Р•СЃР»Рё РЅР°Р¶РјРµС€СЊ СЃРµР№С‡Р°СЃ, Р·Р°Р±РµРі Р·Р°РєРѕРЅС‡РёС‚СЃСЏ, Р° РёРіСЂР° РїРѕРєР°Р¶РµС‚ РёС‚РѕРі С‚РІРѕРµР№ РёСЃС‚РѕСЂРёРё. Р­С‚Рѕ Р±РµР·РѕРїР°СЃРЅС‹Р№ РІС‹С…РѕРґ Р±РµР· СЃР»СѓС‡Р°Р№РЅРѕР№ СЃРјРµСЂС‚Рё, РЅРѕ РєР°СЂСЊРµСЂСѓ СѓР¶Рµ РЅРµ РїСЂРѕРґРѕР»Р¶РёС‚СЊ.</div>" +
+          "<h2 class='panel-title'>Завершить карьеру?</h2>" +
+          "<div class='empty-state'>Если нажмешь сейчас, забег закончится, а игра покажет итог твоей истории. Это безопасный выход без случайной смерти, но карьеру уже не продолжить.</div>" +
           "<div class='footer-actions'>" +
-            "<button class='danger' onclick='retireCareer()'>Р”Р°, РІС‹Р№С‚Рё РёР· РёРіСЂС‹</button>" +
-            "<button class='ghost' onclick='openPanel(\"home\")'>РќРµС‚, РїСЂРѕРґРѕР»Р¶Р°С‚СЊ</button>" +
+            "<button class='danger' onclick='retireCareer()'>Да, выйти из игры</button>" +
+            "<button class='ghost' onclick='openPanel(\"home\")'>Нет, продолжать</button>" +
           "</div>" +
         "</div>";
     }
@@ -3106,16 +3318,16 @@
       var i;
       var country;
       var cost;
-      html.push("<div class='panel'><h2 class='panel-title'>РџСѓС‚РµС€РµСЃС‚РІРёРµ</h2><div class='card-grid' style='margin-top:16px'>");
+      html.push("<div class='panel'><h2 class='panel-title'>Путешествие</h2><div class='card-grid' style='margin-top:16px'>");
       for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
         country = COUNTRY_DATA.countries[i];
         if (country.key === fighter.currentCountry) {
           continue;
         }
         cost = flightCost(fighter.currentCountry, country.key);
-        html.push("<div class='card'><div class='meta'>РџРµСЂРµР»РµС‚ $" + cost + "</div><h3>" + country.name + "</h3><div class='chip'>Р“РѕСЂРѕРґ: " + country.city + "</div><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Р›РµС‚РµС‚СЊ</button></div>");
+        html.push("<div class='card'><div class='meta'>Перелет $" + cost + "</div><h3>" + country.name + "</h3><div class='chip'>Город: " + country.city + "</div><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Лететь</button></div>");
       }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>РќР°Р·Р°Рґ</button></div></div>");
+      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
       return html.join("");
     }
 
@@ -3226,10 +3438,10 @@
         victim.hp = 12 + victimStats.heart * 2;
         victim.stamina = clamp(victim.stamina - 12, 0, 100);
         resetRingPositions(fight);
-        pushFightLine(fight, victimName + " РїР°РґР°РµС‚, РІСЃС‚Р°РµС‚ РЅР° СЃС‡РµС‚ Рё Р±РѕР№ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ РІ С†РµРЅС‚СЂ СЂРёРЅРіР°.");
+        pushFightLine(fight, victimName + " падает, встает на счет и бой возвращается в центр ринга.");
         return false;
       }
-      pushFightLine(fight, victimName + " Р±РѕР»СЊС€Рµ РЅРµ РїРѕРґРЅРёРјР°РµС‚СЃСЏ РїРѕСЃР»Рµ РѕС‚СЃС‡РµС‚Р°.");
+      pushFightLine(fight, victimName + " больше не поднимается после отсчета.");
       finalizeFight(victimSide === "player" ? "loss" : "win", "KO/TKO", [], "");
       return true;
     }
@@ -3249,7 +3461,7 @@
       var bodyDrain;
       attacker.stamina = clamp(attacker.stamina - (action.stamina + (zone === "line" ? 1 : 0)), 0, 100);
       if (!canUseFightAction(fight, side, actionKey)) {
-        pushFightLine(fight, attackerName + " РІС‹Р±СЂР°СЃС‹РІР°РµС‚ " + action.label.toLowerCase() + ", РЅРѕ РґРёСЃС‚Р°РЅС†РёСЏ РЅРµ РїРѕР·РІРѕР»СЏРµС‚ РїРѕРїР°СЃС‚СЊ.");
+        pushFightLine(fight, attackerName + " выбрасывает " + action.label.toLowerCase() + ", но дистанция не позволяет попасть.");
         setFightAnimation(side, "miss");
         return false;
       }
@@ -3261,7 +3473,7 @@
       }
       hitChance = clamp(Math.round(hitChance), 24, 90);
       if (!chance(hitChance)) {
-        pushFightLine(fight, attackerName + " РЅРµ РґРѕРЅРѕСЃРёС‚ " + action.label.toLowerCase() + ", Рё " + defenderName + " СѓС…РѕРґРёС‚ СЃ Р»РёРЅРёРё Р°С‚Р°РєРё.");
+        pushFightLine(fight, attackerName + " не доносит " + action.label.toLowerCase() + ", и " + defenderName + " уходит с линии атаки.");
         setFightAnimation(side, "miss");
         return false;
       }
@@ -3291,12 +3503,12 @@
         defender.bodyDamage += damage;
       }
       if (critical) {
-        pushFightLine(fight, attackerName + " Р»РѕРІРёС‚ РјРѕРјРµРЅС‚ Рё С‚СЏР¶РµР»Рѕ РїРѕРїР°РґР°РµС‚: " + action.label + " РїСЂРѕС…РѕРґРёС‚ РЅР° " + damage + " СѓСЂРѕРЅР°.");
+        pushFightLine(fight, attackerName + " ловит момент и тяжело попадает: " + action.label + " проходит на " + damage + " урона.");
       } else {
-        pushFightLine(fight, attackerName + " РїРѕРїР°РґР°РµС‚ СѓРґР°СЂРѕРј '" + action.label + "' Рё СЃРЅРёРјР°РµС‚ " + damage + " РїСЂРѕС‡РЅРѕСЃС‚Рё.");
+        pushFightLine(fight, attackerName + " попадает ударом '" + action.label + "' и снимает " + damage + " прочности.");
       }
       if (action.body) {
-        pushFightLine(fight, defenderName + " С‚РµСЂСЏРµС‚ С‚РµРјРї РїРѕСЃР»Рµ СЂР°Р±РѕС‚С‹ РїРѕ РєРѕСЂРїСѓСЃСѓ.");
+        pushFightLine(fight, defenderName + " теряет темп после работы по корпусу.");
       }
       setFightAnimation(side, "hit");
       if (defender.hp <= 0) {
@@ -3423,7 +3635,7 @@
           return;
         }
         fight.aiActionsLeft = 0;
-        pushFightLine(fight, fullOpponentName(fight.opponent) + " С‚РµСЂСЏРµС‚ С‚РµРјРї Рё РЅРµ РЅР°С…РѕРґРёС‚ С‡РёСЃС‚РѕРіРѕ РґРµР№СЃС‚РІРёСЏ.");
+        pushFightLine(fight, fullOpponentName(fight.opponent) + " теряет темп и не находит чистого действия.");
       }
       finalizeFightTurn();
     }
@@ -3435,7 +3647,7 @@
         return;
       }
       if (!canUseFightAction(fight, "player", actionKey)) {
-        pushFightLine(fight, "Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРЅРѕ РїРѕ РїРѕР·РёС†РёРё РЅР° СЂРёРЅРіРµ.");
+        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
         render();
         return;
       }
@@ -3467,7 +3679,7 @@
     }
 
     function renderFightStatsPanel(fight) {
-      return "<div class='battle-panel'><strong>РЎС‚Р°С‚РёСЃС‚РёРєР°</strong><div class='battle-chip-line'><div class='chip'>РўРІРѕРё РЅРѕРєРґР°СѓРЅС‹ " + fight.playerState.knockdowns + "</div><div class='chip'>РўРІРѕСЏ РїРѕР·РёС†РёСЏ " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Р•РіРѕ РЅРѕРєРґР°СѓРЅС‹ " + fight.opponentState.knockdowns + "</div><div class='chip'>Р•РіРѕ РїРѕР·РёС†РёСЏ " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
+      return "<div class='battle-panel'><strong>Статистика</strong><div class='battle-chip-line'><div class='chip'>Твои нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Твоя позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Его нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Его позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>";
     }
 
     function renderFightLivePanel() {
@@ -3482,27 +3694,27 @@
       html.push("<div class='battle-shell'>");
       html.push("<div class='battle-topbar'>");
       html.push("<div class='battle-health-card'>");
-      html.push("<div class='chip gold'>РўС‹</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.playerState.stamina)) + "</div>");
+      html.push("<div class='chip gold'>Ты</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
       html.push("</div>");
       html.push("<div class='battle-health-card right'>");
       html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.opponentState.stamina)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
       html.push("</div>");
       html.push("</div>");
       html.push("<div class='battle-stage'>");
-      html.push("<div class='eyebrow'>Р Р°СѓРЅРґ " + fight.round + " / " + fight.opponent.rounds + " вЂў РћС‚СЂРµР·РѕРє " + fight.segment + " / 10</div>");
-      html.push("<div class='title' style='font-size:22px'>Р РёРЅРі 5x5</div>");
-      html.push("<div class='subtitle'>РЈ С‚РµР±СЏ " + fight.playerActionsLeft + " РґРµР№СЃС‚РІРёСЏ, Сѓ СЃРѕРїРµСЂРЅРёРєР° " + fight.aiActionsLeft + ".</div>");
+      html.push("<div class='eyebrow'>Раунд " + fight.round + " / " + fight.opponent.rounds + " • Отрезок " + fight.segment + " / 10</div>");
+      html.push("<div class='title' style='font-size:22px'>Ринг 5x5</div>");
+      html.push("<div class='subtitle'>У тебя " + fight.playerActionsLeft + " действия, у соперника " + fight.aiActionsLeft + ".</div>");
       html.push("<div class='ring-board'>");
       for (y = 0; y < RING_SIZE; y += 1) {
         html.push("<div class='ring-row'>");
         for (x = 0; x < RING_SIZE; x += 1) {
           playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
           opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='" + tokenClassFor("player") + "'>РўС‹</div>" : (opponentCell ? "<div class='" + tokenClassFor("opponent") + "'>РћРЅ</div>" : "")) + "</div>");
+          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='" + tokenClassFor("player") + "'>Ты</div>" : (opponentCell ? "<div class='" + tokenClassFor("opponent") + "'>Он</div>" : "")) + "</div>");
         }
         html.push("</div>");
       }
@@ -3510,14 +3722,14 @@
       html.push("</div>");
       html.push("<div class='battle-bottom'>");
       html.push("<div class='battle-tabs'>");
-      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>РЈРїСЂР°РІР»РµРЅРёРµ</button>");
-      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>РЎС‚Р°С‚РёСЃС‚РёРєР°</button>");
-      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Р›РµРЅС‚Р°</button>");
+      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>");
+      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>");
+      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>");
       html.push("</div>");
       if (activeTab === "stats") {
         html.push(renderFightStatsPanel(fight));
         if (fight.roundCards.length) {
-          html.push("<div class='battle-panel'><strong>РљР°СЂС‚РѕС‡РєРё</strong>");
+          html.push("<div class='battle-panel'><strong>Карточки</strong>");
           for (i = 0; i < Math.min(5, fight.roundCards.length); i += 1) {
             html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
           }
@@ -3534,29 +3746,29 @@
 
     function renderFightResultPanel() {
       var fight = state.fight;
-      var resultLabel = fight.result === "win" ? "РџРѕР±РµРґР°" : (fight.result === "loss" ? "РџРѕСЂР°Р¶РµРЅРёРµ" : "РќРёС‡СЊСЏ");
+      var resultLabel = fight.result === "win" ? "Победа" : (fight.result === "loss" ? "Поражение" : "Ничья");
       var html = [];
       var i;
       html.push("<div class='battle-shell'><div class='battle-result'>");
-      html.push("<div class='result-banner'><div class='eyebrow'>РС‚РѕРі Р±РѕСЏ</div><div class='title' style='font-size:24px'>" + resultLabel + " С‡РµСЂРµР· " + fight.method + "</div>");
-      html.push("<div class='subtitle'>Р Р°СѓРЅРґРѕРІ РїСЂРѕС€Р»Рѕ: " + fight.roundsCompleted + ".</div></div>");
+      html.push("<div class='result-banner'><div class='eyebrow'>Итог боя</div><div class='title' style='font-size:24px'>" + resultLabel + " через " + fight.method + "</div>");
+      html.push("<div class='subtitle'>Раундов прошло: " + fight.roundsCompleted + ".</div></div>");
       html.push("<div class='battle-bottom' style='margin-top:12px'>");
-      html.push("<div class='battle-column'><div class='battle-panel'><strong>РўС‹ РІ Р±РѕСЋ</strong>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>РќРѕРєРґР°СѓРЅС‹ " + fight.playerState.knockdowns + "</div></div></div></div>");
-      html.push("<div class='battle-column right'><div class='battle-panel'><strong>РЎРѕРїРµСЂРЅРёРє</strong>" + meter("РџСЂРѕС‡РЅРѕСЃС‚СЊ", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("РЎС‚Р°РјРёРЅР°", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>РќРѕРєРґР°СѓРЅС‹ " + fight.opponentState.knockdowns + "</div></div></div></div>");
+      html.push("<div class='battle-column'><div class='battle-panel'><strong>Ты в бою</strong>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("Стамина", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div></div></div></div>");
+      html.push("<div class='battle-column right'><div class='battle-panel'><strong>Соперник</strong>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("Стамина", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div></div></div></div>");
       html.push("</div>");
       if (fight.roundCards.length) {
-        html.push("<div class='battle-panel' style='margin-top:12px'><strong>РљР°СЂС‚РѕС‡РєРё СЃСѓРґРµР№</strong>");
+        html.push("<div class='battle-panel' style='margin-top:12px'><strong>Карточки судей</strong>");
         for (i = 0; i < Math.min(8, fight.roundCards.length); i += 1) {
           html.push("<div class='log-entry'>" + fight.roundCards[i] + "</div>");
         }
         html.push("</div>");
       }
-      html.push("<div class='battle-panel' style='margin-top:12px'><strong>РџРѕСЃР»РµРґРЅРёРµ СЃРѕР±С‹С‚РёСЏ</strong><div class='battle-log'>");
+      html.push("<div class='battle-panel' style='margin-top:12px'><strong>Последние события</strong><div class='battle-log'>");
       for (i = 0; i < Math.min(10, fight.lines.length); i += 1) {
         html.push("<div class='log-entry'>" + fight.lines[i] + "</div>");
       }
       html.push("</div></div>");
-      html.push("<div class='footer-actions'><button class='button' onclick='closeFightResult()'>Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РєР°СЂСЊРµСЂСѓ</button></div>");
+      html.push("<div class='footer-actions'><button class='button' onclick='closeFightResult()'>Вернуться в карьеру</button></div>");
       html.push("</div></div>");
       return html.join("");
     }
@@ -3577,7 +3789,7 @@
         if (fight.method.indexOf("KO") !== -1) {
           fighter.kos += 1;
         }
-        pushLog("РџРѕР±РµРґР°. РўС‹ Р·Р°Р±РёСЂР°РµС€СЊ $" + opponent.purse + " Рё +" + opponent.fameReward + " Рє РёР·РІРµСЃС‚РЅРѕСЃС‚Рё.", "good");
+        pushLog("Победа. Ты забираешь $" + opponent.purse + " и +" + opponent.fameReward + " к известности.", "good");
       } else if (fight.result === "loss") {
         fameGain = Math.max(2, Math.floor(opponent.fameReward / 3));
         fighter.losses += 1;
@@ -3585,13 +3797,13 @@
         fighter.fame += fameGain;
         fighter.morale -= 12;
         fighter.stress += 6;
-        pushLog("РџРѕСЂР°Р¶РµРЅРёРµ. Р”Р°Р¶Рµ РѕРЅРѕ РїСЂРёРЅРѕСЃРёС‚ С‡Р°СЃС‚СЊ РґРµРЅРµРі Рё РѕСЃС‚Р°РІР»СЏРµС‚ С€СѓРј РІРѕРєСЂСѓРі РёРјРµРЅРё.", "bad");
+        pushLog("Поражение. Даже оно приносит часть денег и оставляет шум вокруг имени.", "bad");
       } else {
         fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
         fighter.money += Math.floor(opponent.purse * 0.55);
         fighter.fame += fameGain;
         fighter.morale += 1;
-        pushLog("РќРёС‡СЊСЏ. РўС‹ РІС‹Р¶РёР» РІ СЂСѓР±РєРµ Рё СѓС€РµР» СЃ РґРµРЅСЊРіР°РјРё Рё РёР·РІРµСЃС‚РЅРѕСЃС‚СЊСЋ.", "warn");
+        pushLog("Ничья. Ты выжил в рубке и ушел с деньгами и известностью.", "warn");
       }
       applyBounds(fighter);
     }
@@ -3615,7 +3827,7 @@
     function renderLogPanel() {
       var html = [];
       var i;
-      html.push("<div class='log-panel'><h2 class='panel-title'>Р›РµРЅС‚Р° РєР°СЂСЊРµСЂС‹</h2><div class='log-list'>");
+      html.push("<div class='log-panel'><h2 class='panel-title'>Лента карьеры</h2><div class='log-list'>");
       for (i = 0; i < state.log.length; i += 1) {
         html.push("<div class='log-entry " + state.log[i].tone + "'>" + state.log[i].text + "</div>");
       }
@@ -3626,7 +3838,7 @@
     function renderLogPanelInner() {
       var html = [];
       var i;
-      html.push("<h2 class='panel-title'>Р›РµРЅС‚Р° РєР°СЂСЊРµСЂС‹</h2><div class='log-list'>");
+      html.push("<h2 class='panel-title'>Лента карьеры</h2><div class='log-list'>");
       for (i = 0; i < state.log.length; i += 1) {
         html.push("<div class='log-entry " + state.log[i].tone + "'>" + state.log[i].text + "</div>");
       }
@@ -3641,7 +3853,7 @@
       return "" +
         "<div class='shell'>" +
           "<div class='topbar'>" +
-            "<div class='week-chip'>РќРµРґРµР»СЏ " + state.fighter.week + "</div>" +
+            "<div class='week-chip'>Неделя " + state.fighter.week + "</div>" +
           "</div>" +
           renderNavigationTabs() +
           "<div class='panel'>" + renderMainPanel() + "</div>" +
@@ -3652,41 +3864,41 @@
       var fighter = state.fighter;
       var reasonText = "";
       if (state.endingReason === "death") {
-        reasonText = "РСЃС‚РѕСЂРёСЏ Р·Р°РєРѕРЅС‡РёР»Р°СЃСЊ СЃР»РёС€РєРѕРј СЂР°РЅРѕ Рё СЃР»РёС€РєРѕРј Р¶РµСЃС‚РєРѕ. РџРѕРІСЂРµР¶РґРµРЅРёСЏ РѕРєР°Р·Р°Р»РёСЃСЊ РєСЂРёС‚РёС‡РµСЃРєРёРјРё.";
+        reasonText = "История закончилась слишком рано и слишком жестко. Повреждения оказались критическими.";
       } else if (state.endingReason === "body") {
-        reasonText = "РћСЂРіР°РЅРёР·Рј РѕРєР°Р·Р°Р»СЃСЏ РїСЂРµРґРµР»РѕРј, РєРѕС‚РѕСЂС‹Р№ РЅРµР»СЊР·СЏ РїСЂРѕРґР°РІРёС‚СЊ Р±РµСЃРєРѕРЅРµС‡РЅРѕ.";
+        reasonText = "Организм оказался пределом, который нельзя продавить бесконечно.";
       } else if (state.endingReason === "stress") {
-        reasonText = "РџСЃРёС…РёРєР° РЅРµ РІС‹РґРµСЂР¶Р°Р»Р° РїРѕСЃС‚РѕСЏРЅРЅРѕРіРѕ РґР°РІР»РµРЅРёСЏ. РРіСЂР° Р·Р°РєРѕРЅС‡РёР»Р°СЃСЊ РЅРµСЂРІРЅС‹Рј СЃСЂС‹РІРѕРј.";
+        reasonText = "Психика не выдержала постоянного давления. Игра закончилась нервным срывом.";
       } else {
-        reasonText = "РўС‹ РІРѕРІСЂРµРјСЏ РІС‹С€РµР» РёР· РёРіСЂС‹ Рё СЃРѕС…СЂР°РЅРёР», С‡С‚Рѕ СѓСЃРїРµР» РїРѕСЃС‚СЂРѕРёС‚СЊ.";
+        reasonText = "Ты вовремя вышел из игры и сохранил, что успел построить.";
       }
       return "" +
         "<div class='shell'>" +
           "<div class='hero'>" +
-            "<div class='eyebrow'>Р¤РёРЅР°Р» Р·Р°Р±РµРіР°</div>" +
+            "<div class='eyebrow'>Финал забега</div>" +
             "<div class='title'>" + fighter.name + "</div>" +
             "<div class='subtitle'>" + legacyRank(fighter) + ". " + reasonText + "</div>" +
             "<div class='record-row'>" +
-              "<div class='chip gold'>Р РµРєРѕСЂРґ " + recordText(fighter) + "</div>" +
-              "<div class='chip'>РЎР»Р°РІР° " + fighter.fame + "</div>" +
-              "<div class='chip'>РќРµРґРµР»СЊ РїСЂРѕР¶РёС‚Рѕ " + fighter.week + "</div>" +
-              "<div class='chip red'>РЎРјРµСЂС‚РµР№ РІ Р±РѕСЏС…: " + fighter.deathsCaused + "</div>" +
+              "<div class='chip gold'>Рекорд " + recordText(fighter) + "</div>" +
+              "<div class='chip'>Слава " + fighter.fame + "</div>" +
+              "<div class='chip'>Недель прожито " + fighter.week + "</div>" +
+              "<div class='chip red'>Смертей в боях: " + fighter.deathsCaused + "</div>" +
             "</div>" +
             "<div class='fight-grid'>" +
               "<div class='summary-box'>" +
-                "<strong>Р¤РёРЅР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ</strong>" +
-                meter("Р—РґРѕСЂРѕРІСЊРµ", fighter.health) +
-                meter("РЎС‚СЂРµСЃСЃ", fighter.stress) +
-                meter("РњРѕСЂР°Р»СЊ", fighter.morale) +
-                meter("Р›РёС‡РЅР°СЏ Р¶РёР·РЅСЊ", fighter.relationship) +
+                "<strong>Финальное состояние</strong>" +
+                meter("Здоровье", fighter.health) +
+                meter("Стресс", fighter.stress) +
+                meter("Мораль", fighter.morale) +
+                meter("Личная жизнь", fighter.relationship) +
               "</div>" +
               "<div class='summary-box'>" +
-                "<strong>РЎР±РѕСЂРєР°</strong>" +
-                "<div class='empty-state'>РќР°РІС‹РєРё Рё Р°СЂС…РµС‚РёРїС‹ Р±С‹Р»Рё РѕС‚РєР»СЋС‡РµРЅС‹ РЅР° РІСЂРµРјСЏ Р±РѕР»СЊС€РѕР№ РїРµСЂРµРґРµР»РєРё Р±РѕРµРІРєРё. Р­С‚РѕС‚ Р·Р°Р±РµРі С†РµР»РёРєРѕРј РґРµСЂР¶Р°Р»СЃСЏ РЅР° СЃС‚Р°С‚Р°С…, РјР°СЂС€СЂСѓС‚Р°С… РїРѕ СЃС‚СЂР°РЅР°Рј Рё СѓРїСЂР°РІР»РµРЅРёРё Р±РѕР№С†РѕРј РЅР° СЂРёРЅРіРµ 5x5.</div>" +
+                "<strong>Сборка</strong>" +
+                "<div class='empty-state'>Навыки и архетипы были отключены на время большой переделки боевки. Этот забег целиком держался на статах, маршрутах по странам и управлении бойцом на ринге 5x5.</div>" +
               "</div>" +
             "</div>" +
             "<div class='footer-actions'>" +
-              "<button class='button' onclick='resetCreate(); render();'>РќРѕРІС‹Р№ Р±РѕРµС†</button>" +
+              "<button class='button' onclick='resetCreate(); render();'>Новый боец</button>" +
             "</div>" +
           "</div>" +
         "</div>";
