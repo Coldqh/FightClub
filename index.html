@@ -39,7 +39,6 @@
 
     .topbar,
     .panel,
-    .log-panel,
     .hero,
     .card,
     .create-card,
@@ -55,7 +54,6 @@
 
     .topbar,
     .panel,
-    .log-panel,
     .hero,
     .battle-topbar,
     .battle-stage,
@@ -206,7 +204,6 @@
       margin-bottom: 12px;
     }
 
-    .nav-tabs,
     .footer-actions,
     .record-row,
     .battle-tabs,
@@ -215,7 +212,6 @@
       display: block;
     }
 
-    .nav-tabs:after,
     .footer-actions:after,
     .record-row:after,
     .battle-tabs:after,
@@ -769,17 +765,6 @@
       return { power: 5, speed: 5, endurance: 5, technique: 5, heart: 5, charisma: 4 };
     }
 
-    function cloneStats(source) {
-      return {
-        power: source.power,
-        speed: source.speed,
-        endurance: source.endurance,
-        technique: source.technique,
-        heart: source.heart,
-        charisma: source.charisma
-      };
-    }
-
     function applyBounds(fighter) {
       var key;
       for (key in fighter.stats) {
@@ -830,7 +815,6 @@
         maxHp: maxHp,
         stamina: stamina,
         knockdowns: 0,
-        score: 0,
         damageTaken: 0,
         bodyDamage: 0,
         position: { x: position.x, y: position.y }
@@ -873,7 +857,6 @@
       }
       state.fighter = {
         name: state.create.identity.fullName,
-        identity: state.create.identity,
         stats: stats,
         skills: [],
         money: 120,
@@ -888,9 +871,7 @@
         kos: 0,
         deathsCaused: 0,
         homeCountry: state.create.country,
-        currentCountry: state.create.country,
-        alive: true,
-        retired: false
+        currentCountry: state.create.country
       };
       applyBounds(state.fighter);
       state.screen = "game";
@@ -1040,12 +1021,6 @@
       if (!fighter) {
         return false;
       }
-      if (!fighter.alive) {
-        state.screen = "end";
-        state.endingReason = "death";
-        render();
-        return true;
-      }
       if (fighter.health <= 0) {
         state.screen = "end";
         state.endingReason = "body";
@@ -1062,7 +1037,6 @@
     }
 
     function retireCareer() {
-      state.fighter.retired = true;
       state.screen = "end";
       state.endingReason = "retired";
       render();
@@ -1119,11 +1093,6 @@
       applyBounds(fighter);
       pushLog(fighter.name + " качает '" + DATA.statLabels[statKey] + "' на +" + gain + ".", "good");
       spendWeek();
-    }
-
-    function learnSkill(skillKey) {
-      pushLog("Дерево навыков временно на паузе. Сейчас важнее позиция на ринге и выбор удара.", "warn");
-      render();
     }
 
     function actionRecover(kind) {
@@ -1373,7 +1342,6 @@
 
     function awardFightPressure(fight, side, amount) {
       fight.roundPoints[side] += amount;
-      fightStateBySide(fight, side).score += amount;
     }
 
     function moveActor(fight, side, actionKey) {
@@ -1453,12 +1421,11 @@
       return html.join("");
     }
 
-    function finalizeFight(result, method, lines, fatality) {
+    function finalizeFight(result, method, lines) {
       var fight = state.fight;
       var extraLines = lines || [];
       fight.result = result;
       fight.method = method;
-      fight.fatality = fatality;
       fight.roundsCompleted = Math.max(fight.roundsCompleted, fight.round);
       fight.lines = extraLines.concat(fight.lines);
       applyFightResults();
@@ -1853,7 +1820,7 @@
       victimName = fightNameBySide(fight, victimSide);
       fight.knockdown = null;
       pushFightLine(fight, victimName + " больше не поднимается после отсчета.");
-      finalizeFight(victimSide === "player" ? "loss" : "win", "KO/TKO", [], "");
+      finalizeFight(victimSide === "player" ? "loss" : "win", "KO/TKO", []);
     }
 
     function advanceKnockdownSequence() {
@@ -2135,9 +2102,7 @@
     function renderEnding() {
       var fighter = state.fighter;
       var reasonText = "";
-      if (state.endingReason === "death") {
-        reasonText = "История закончилась слишком рано и слишком жестко. Повреждения оказались критическими.";
-      } else if (state.endingReason === "body") {
+      if (state.endingReason === "body") {
         reasonText = "Организм оказался пределом, который нельзя продавить бесконечно.";
       } else if (state.endingReason === "stress") {
         reasonText = "Психика не выдержала постоянного давления. Игра закончилась нервным срывом.";
@@ -2186,7 +2151,6 @@
         uiTab: "controls",
         actionGroup: "move",
         actionLock: false,
-        playerActionsLeft: 1,
         aiActionsLeft: 1,
         playerState: buildFightState(state.fighter.stats, state.fighter.health, startRingPosition("player")),
         opponentState: buildFightState(opponent.stats, opponent.condition, startRingPosition("opponent")),
@@ -2195,7 +2159,6 @@
         ],
         result: null,
         method: null,
-        fatality: "",
         roundsCompleted: 0,
         judges: { player: 0, opponent: 0 },
         roundPoints: { player: 0, opponent: 0 },
@@ -2241,8 +2204,7 @@
         finalizeFight(
           fight.judges.player > fight.judges.opponent ? "win" : (fight.judges.player < fight.judges.opponent ? "loss" : "draw"),
           "Решение судей " + fight.judges.player + ":" + fight.judges.opponent,
-          ["Судейские записки: " + fight.roundCards.slice(0).reverse().join(", ") + "."],
-          ""
+          ["Судейские записки: " + fight.roundCards.slice(0).reverse().join(", ") + "."]
         );
         return;
       }
@@ -2277,7 +2239,6 @@
         return;
       }
       fight.turn += 1;
-      fight.playerActionsLeft = 1;
       fight.aiActionsLeft = 1;
       fight.playerState.stamina = clamp(fight.playerState.stamina + 2, 0, 100);
       fight.opponentState.stamina = clamp(fight.opponentState.stamina + 2, 0, 100);
@@ -2292,7 +2253,6 @@
       }
       fight.round += 1;
       fight.turn = 1;
-      fight.playerActionsLeft = 1;
       fight.aiActionsLeft = 1;
       fight.roundPoints = { player: 0, opponent: 0 };
       fight.breakSummary = null;
@@ -2396,7 +2356,6 @@
         return;
       }
       fight.actionLock = true;
-      fight.playerActionsLeft = 0;
       if (action.type === "move") {
         moveActor(fight, "player", actionKey);
         render();
