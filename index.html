@@ -746,16 +746,191 @@
       }
     };
 
+    var SAVE_KEY = "street_boxer_save_v1";
+
     var state = {
-      screen: "create",
+      screen: "menu",
       panel: "home",
       create: null,
       fighter: null,
       opponents: [],
       fight: null,
       log: [],
-      endingReason: ""
+      endingReason: "",
+      savedPreview: null
     };
+
+    function storageRef() {
+      try {
+        if (window.localStorage) {
+          return window.localStorage;
+        }
+      } catch (error) {}
+      return null;
+    }
+
+    function buildSavePreview(sourceState) {
+      if (!sourceState || !sourceState.fighter) {
+        return null;
+      }
+      return {
+        name: sourceState.fighter.name,
+        week: sourceState.fighter.week,
+        money: sourceState.fighter.money,
+        fame: sourceState.fighter.fame,
+        country: sourceState.fighter.currentCountry
+      };
+    }
+
+    function sanitizeFightForSave(fight) {
+      if (!fight) {
+        return null;
+      }
+      if (fight.actionLock || fight.knockdown || fight.pendingTimeout || fight.animationTimeout) {
+        return null;
+      }
+      return {
+        opponent: fight.opponent,
+        round: fight.round,
+        turn: fight.turn,
+        turnsPerRound: fight.turnsPerRound,
+        uiTab: fight.uiTab || "controls",
+        actionGroup: fight.actionGroup || "move",
+        actionLock: false,
+        lines: fight.lines || [],
+        playerState: fight.playerState,
+        opponentState: fight.opponentState,
+        result: fight.result,
+        method: fight.method,
+        roundsCompleted: fight.roundsCompleted,
+        judges: fight.judges,
+        roundPoints: fight.roundPoints,
+        roundCards: fight.roundCards,
+        breakSummary: fight.breakSummary,
+        knockdown: null,
+        skipTurnRecovery: fight.skipTurnRecovery,
+        pendingTimeout: null,
+        animation: null,
+        animationTimeout: null
+      };
+    }
+
+    function buildSaveSnapshot() {
+      var sanitizedFight;
+      if (!state.fighter) {
+        return null;
+      }
+      sanitizedFight = sanitizeFightForSave(state.fight);
+      if (state.fight && !sanitizedFight) {
+        return null;
+      }
+      return {
+        version: 1,
+        screen: state.screen,
+        panel: state.panel,
+        create: state.create,
+        fighter: state.fighter,
+        opponents: state.opponents,
+        fight: sanitizedFight,
+        log: state.log,
+        endingReason: state.endingReason
+      };
+    }
+
+    function saveGameState() {
+      var storage = storageRef();
+      var snapshot;
+      if (!storage) {
+        return false;
+      }
+      snapshot = buildSaveSnapshot();
+      if (!snapshot) {
+        return false;
+      }
+      try {
+        storage.setItem(SAVE_KEY, JSON.stringify(snapshot));
+        state.savedPreview = buildSavePreview(snapshot);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function loadSavedSnapshot() {
+      var storage = storageRef();
+      var raw;
+      if (!storage) {
+        return null;
+      }
+      try {
+        raw = storage.getItem(SAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function refreshSavedPreview() {
+      state.savedPreview = buildSavePreview(loadSavedSnapshot());
+    }
+
+    function normalizeLoadedFight(fight) {
+      if (!fight) {
+        return null;
+      }
+      fight.uiTab = fight.uiTab || "controls";
+      fight.actionGroup = fight.actionGroup || "move";
+      fight.actionLock = false;
+      fight.pendingTimeout = null;
+      fight.animationTimeout = null;
+      fight.animation = null;
+      fight.knockdown = null;
+      if (fight.playerState && fight.opponentState && fight.playerState.hp > 0 && fight.opponentState.hp > 0 && !fight.result) {
+        return fight;
+      }
+      return null;
+    }
+
+    function continueSavedGame() {
+      var saved = loadSavedSnapshot();
+      if (!saved || !saved.fighter) {
+        refreshSavedPreview();
+        render();
+        return;
+      }
+      clearFightTimers();
+      state.screen = saved.screen === "end" ? "end" : "game";
+      state.panel = saved.panel || "home";
+      state.create = saved.create || null;
+      state.fighter = saved.fighter;
+      state.opponents = saved.opponents || [];
+      state.fight = normalizeLoadedFight(saved.fight);
+      state.log = saved.log || [];
+      state.endingReason = saved.endingReason || "";
+      state.savedPreview = buildSavePreview(saved);
+      if (!state.fight && (state.panel === "fightLive" || state.panel === "fightBreak" || state.panel === "fightResult" || state.panel === "fightSelect")) {
+        state.panel = "home";
+        state.log.unshift({ text: "Активный бой не был сохранен полностью, поэтому карьера продолжена с главного экрана.", tone: "warn" });
+      }
+      if (state.screen === "game" && !state.panel) {
+        state.panel = "home";
+      }
+      render();
+    }
+
+    function openMainMenu() {
+      clearFightTimers();
+      state.screen = "menu";
+      state.panel = "home";
+      state.create = null;
+      state.fighter = null;
+      state.opponents = [];
+      state.fight = null;
+      state.endingReason = "";
+      state.log = [];
+      refreshSavedPreview();
+      render();
+    }
 
     function clamp(value, low, high) {
       return Math.max(low, Math.min(high, value));
@@ -1640,6 +1815,32 @@
         html.push("</div>");
       }
       html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
+      return html.join("");
+    }
+
+    function renderMainMenu() {
+      var preview = state.savedPreview;
+      var previewCountry = preview ? getCountryInfo(preview.country) : null;
+      var html = [];
+      html.push("<div class='shell'>");
+      html.push("<div class='hero'>");
+      html.push("<div class='eyebrow'>Street Boxer Career</div>");
+      html.push("<div class='title'>Подпольная карьера уличного боксера</div>");
+      html.push("<div class='subtitle'>Запускай новую карьеру или продолжай сохраненный забег прямо с iPhone. Игра теперь держится на автосохранении и стартовом меню.</div>");
+      html.push("<div class='panel inset-panel' style='margin-top:18px'>");
+      html.push("<h2 class='panel-title'>Продолжить</h2>");
+      if (preview) {
+        html.push("<div class='fighter-name' style='font-size:26px'>" + preview.name + "</div>");
+        html.push("<div class='record-row'><div class='chip'>Неделя " + preview.week + "</div><div class='chip'>Деньги $" + preview.money + "</div><div class='chip'>Слава " + preview.fame + "</div>" + (previewCountry ? "<div class='chip'>Страна " + previewCountry.name + "</div>" : "") + "</div>");
+      } else {
+        html.push("<div class='empty-state'>Сохранение пока не найдено. Начни новый забег, и дальше игра будет сохраняться автоматически.</div>");
+      }
+      html.push("</div>");
+      html.push("<div class='footer-actions'>");
+      html.push("<button class='button' " + (preview ? "" : "disabled='disabled'") + " onclick='continueSavedGame()'>Продолжить</button>");
+      html.push("<button class='ghost' onclick='resetCreate(); render();'>Начать новую игру</button>");
+      html.push("</div>");
+      html.push("</div></div>");
       return html.join("");
     }
 
@@ -2733,22 +2934,30 @@
 
     function render() {
       var app = document.getElementById("app");
-      if (state.screen === "create") {
+      if (state.screen === "menu") {
+        app.innerHTML = renderMainMenu();
+      } else if (state.screen === "create") {
         app.innerHTML = renderCreate();
       } else if (state.screen === "end") {
         app.innerHTML = renderEnding();
       } else {
         app.innerHTML = renderGame();
       }
+      saveGameState();
     }
 
     window.onload = function () {
-      resetCreate();
+      refreshSavedPreview();
+      state.screen = "menu";
       render();
     };
 
     window.onresize = function () {
       render();
+    };
+
+    window.onbeforeunload = function () {
+      saveGameState();
     };
   </script>
 </head>
