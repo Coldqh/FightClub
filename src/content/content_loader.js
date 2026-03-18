@@ -36,6 +36,9 @@ var ContentLoader = (function () {
     var trainerType;
     var contractTemplate;
     var fightOfferTemplate;
+    var housingOption;
+    var socialAction;
+    var contextEvents = [];
     if (cache) {
       return cache;
     }
@@ -55,9 +58,20 @@ var ContentLoader = (function () {
       contractTemplatesById: {},
       fightOfferTemplates: clone((typeof CAREER_ECOSYSTEM_DATA !== "undefined" && CAREER_ECOSYSTEM_DATA.fightOfferTemplates) || []),
       fightOfferTemplatesById: {},
+      housingOptions: clone((typeof LIFE_DATA !== "undefined" && LIFE_DATA.housingOptions) || []),
+      housingOptionsById: {},
+      socialActions: clone((typeof LIFE_DATA !== "undefined" && LIFE_DATA.socialActions) || []),
+      socialActionsById: {},
       contextEventTriggerChance: typeof EVENT_DATA !== "undefined" && typeof EVENT_DATA.triggerChance === "number" ? EVENT_DATA.triggerChance : 0,
-      contextEvents: typeof EVENT_DATA !== "undefined" && EVENT_DATA.events instanceof Array ? EVENT_DATA.events : []
+      contextEvents: []
     };
+    if (typeof EVENT_DATA !== "undefined" && EVENT_DATA.events instanceof Array) {
+      contextEvents = contextEvents.concat(clone(EVENT_DATA.events));
+    }
+    if (typeof LIFE_EVENT_DATA !== "undefined" && LIFE_EVENT_DATA.events instanceof Array) {
+      contextEvents = contextEvents.concat(clone(LIFE_EVENT_DATA.events));
+    }
+    cache.contextEvents = contextEvents;
     for (i = 0; i < CONTENT_DATA.countries.length; i += 1) {
       country = buildCountry(CONTENT_DATA.countries[i]);
       cache.countries.push(country);
@@ -85,6 +99,14 @@ var ContentLoader = (function () {
     for (i = 0; i < cache.fightOfferTemplates.length; i += 1) {
       fightOfferTemplate = cache.fightOfferTemplates[i];
       cache.fightOfferTemplatesById[fightOfferTemplate.id] = fightOfferTemplate;
+    }
+    for (i = 0; i < cache.housingOptions.length; i += 1) {
+      housingOption = cache.housingOptions[i];
+      cache.housingOptionsById[housingOption.id] = housingOption;
+    }
+    for (i = 0; i < cache.socialActions.length; i += 1) {
+      socialAction = cache.socialActions[i];
+      cache.socialActionsById[socialAction.id] = socialAction;
     }
     return cache;
   }
@@ -192,6 +214,22 @@ var ContentLoader = (function () {
     return ensureCache().fightOfferTemplatesById[templateId] || null;
   }
 
+  function listHousingOptions() {
+    return ensureCache().housingOptions;
+  }
+
+  function getHousingOption(housingId) {
+    return ensureCache().housingOptionsById[housingId] || null;
+  }
+
+  function listSocialActions() {
+    return ensureCache().socialActions;
+  }
+
+  function getSocialAction(actionId) {
+    return ensureCache().socialActionsById[actionId] || null;
+  }
+
   function listNpcRoles() {
     return ensureCache().npcRoles;
   }
@@ -219,6 +257,10 @@ var ContentLoader = (function () {
     getContractTemplate: getContractTemplate,
     listFightOfferTemplates: listFightOfferTemplates,
     getFightOfferTemplate: getFightOfferTemplate,
+    listHousingOptions: listHousingOptions,
+    getHousingOption: getHousingOption,
+    listSocialActions: listSocialActions,
+    getSocialAction: getSocialAction,
     listNpcRoles: listNpcRoles,
     getNpcRole: getNpcRole,
     getContextEventTriggerChance: getContextEventTriggerChance,

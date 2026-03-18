@@ -53,6 +53,7 @@ var LEGAL_JOB = {
 var NAV_TABS = [
   { key: "home", label: "Основное" },
   { key: "character", label: "Персонаж" },
+  { key: "life", label: "Быт" },
   { key: "people", label: "Люди" },
   { key: "skills", label: "Навыки" },
   { key: "careerLog", label: "Лента" }

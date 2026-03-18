@@ -1,4 +1,4 @@
-var SAVE_VERSION = 8;
+var SAVE_VERSION = 9;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -20,6 +20,13 @@ function basePlayerConditionsSchema() {
     wear: 0,
     morale: 55,
     startingAge: 22
+  };
+}
+
+function basePlayerLifeSchema() {
+  return {
+    housingId: "normal",
+    support: 50
   };
 }
 
@@ -210,6 +217,7 @@ function createGameState(options) {
         fame: 0
       },
       conditions: basePlayerConditionsSchema(),
+      life: basePlayerLifeSchema(),
       biography: basePlayerBiographySchema(),
       record: {
         wins: 0,
@@ -368,6 +376,10 @@ function normalizeGameState(gameState, options) {
       if (typeof source.player.conditions.morale === "number") { normalized.player.conditions.morale = source.player.conditions.morale; }
       if (typeof source.player.conditions.startingAge === "number") { normalized.player.conditions.startingAge = source.player.conditions.startingAge; }
     }
+    if (source.player.life) {
+      normalized.player.life.housingId = source.player.life.housingId || normalized.player.life.housingId;
+      if (typeof source.player.life.support === "number") { normalized.player.life.support = source.player.life.support; }
+    }
     if (source.player.biography) {
       normalized.player.biography.flags = source.player.biography.flags instanceof Array ? clonePlainData(source.player.biography.flags) : [];
       normalized.player.biography.history = source.player.biography.history instanceof Array ? clonePlainData(source.player.biography.history) : [];
@@ -458,6 +470,8 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.player.conditions.wear = typeof fighter.wear === "number" ? fighter.wear : gameState.player.conditions.wear;
     gameState.player.conditions.morale = typeof fighter.morale === "number" ? fighter.morale : gameState.player.conditions.morale;
     gameState.player.conditions.startingAge = typeof fighter.startingAge === "number" ? fighter.startingAge : gameState.player.conditions.startingAge;
+    gameState.player.life.housingId = fighter.housingId || gameState.player.life.housingId;
+    gameState.player.life.support = typeof fighter.support === "number" ? fighter.support : gameState.player.life.support;
     gameState.player.biography.flags = fighter.bioFlags instanceof Array ? clonePlainData(fighter.bioFlags) : [];
     gameState.player.biography.history = fighter.bioHistory instanceof Array ? clonePlainData(fighter.bioHistory) : [];
     gameState.player.record.wins = fighter.wins || 0;
@@ -533,6 +547,8 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     fatigue: normalized.player.conditions.fatigue,
     wear: normalized.player.conditions.wear,
     morale: normalized.player.conditions.morale,
+    housingId: normalized.player.life.housingId,
+    support: normalized.player.life.support,
     startingAge: normalized.player.conditions.startingAge,
     bioFlags: clonePlainData(normalized.player.biography.flags),
     bioHistory: clonePlainData(normalized.player.biography.history),

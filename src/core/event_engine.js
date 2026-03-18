@@ -79,6 +79,21 @@ var EventEngine = (function () {
     return null;
   }
 
+  function deriveDiscipline(conditions, life) {
+    var morale = typeof conditions.morale === "number" ? conditions.morale : 55;
+    var fatigue = typeof conditions.fatigue === "number" ? conditions.fatigue : 0;
+    var wear = typeof conditions.wear === "number" ? conditions.wear : 0;
+    var stress = typeof life.stress === "number" ? life.stress : 0;
+    var support = typeof life.support === "number" ? life.support : 50;
+    var housingBonus = 0;
+    if (life.housingId === "rough") {
+      housingBonus = -6;
+    } else if (life.housingId === "comfortable") {
+      housingBonus = 6;
+    }
+    return Math.max(0, Math.min(100, Math.round(20 + morale * 0.3 + support * 0.2 - stress * 0.15 - fatigue * 0.12 - wear * 0.08 + housingBonus)));
+  }
+
   function buildContext(gameState) {
     var world = gameState && gameState.world ? gameState.world : {};
     var eventState = world.eventState || {};
@@ -87,6 +102,7 @@ var EventEngine = (function () {
     var profile = player.profile || {};
     var resources = player.resources || {};
     var conditions = player.conditions || {};
+    var life = player.life || {};
     var biography = player.biography || {};
     var calendar = gameState && gameState.career ? gameState.career.calendar : null;
     var ageView = TimeSystem.getAgeView(conditions.startingAge, calendar);
@@ -124,6 +140,13 @@ var EventEngine = (function () {
       fatigue: typeof conditions.fatigue === "number" ? conditions.fatigue : 0,
       wear: typeof conditions.wear === "number" ? conditions.wear : 0,
       morale: typeof conditions.morale === "number" ? conditions.morale : 55,
+      housingId: life.housingId || "normal",
+      support: typeof life.support === "number" ? life.support : 50,
+      discipline: deriveDiscipline(conditions, {
+        stress: typeof resources.stress === "number" ? resources.stress : 0,
+        support: typeof life.support === "number" ? life.support : 50,
+        housingId: life.housingId || "normal"
+      }),
       biographyFlags: bioFlags,
       roles: uniqueStrings(roles),
       npcs: npcs,
@@ -252,10 +275,16 @@ var EventEngine = (function () {
     if (typeof conditions.maxWear === "number" && context.wear > conditions.maxWear) { return false; }
     if (typeof conditions.minMorale === "number" && context.morale < conditions.minMorale) { return false; }
     if (typeof conditions.maxMorale === "number" && context.morale > conditions.maxMorale) { return false; }
+    if (typeof conditions.minSupport === "number" && context.support < conditions.minSupport) { return false; }
+    if (typeof conditions.maxSupport === "number" && context.support > conditions.maxSupport) { return false; }
+    if (typeof conditions.minDiscipline === "number" && context.discipline < conditions.minDiscipline) { return false; }
+    if (typeof conditions.maxDiscipline === "number" && context.discipline > conditions.maxDiscipline) { return false; }
     if (conditions.homeOnly && context.abroad) { return false; }
     if (conditions.abroadOnly && !context.abroad) { return false; }
     if (typeof conditions.country === "string" && context.currentCountry !== conditions.country) { return false; }
     if (conditions.countryAny instanceof Array && !hasAny(conditions.countryAny, [context.currentCountry])) { return false; }
+    if (typeof conditions.housingIs === "string" && context.housingId !== conditions.housingIs) { return false; }
+    if (conditions.housingAny instanceof Array && !hasAny(conditions.housingAny, [context.housingId])) { return false; }
     if (conditions.requiresRolesAll instanceof Array && !hasAll(context.roles, conditions.requiresRolesAll)) { return false; }
     if (conditions.requiresRolesAny instanceof Array && !hasAny(context.roles, conditions.requiresRolesAny)) { return false; }
     if (conditions.biographyFlagsAny instanceof Array && !hasAny(context.biographyFlags, conditions.biographyFlagsAny)) { return false; }

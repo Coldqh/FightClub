@@ -16,6 +16,17 @@ function __condition(key, delta) {
   return { type: "condition", key: key, delta: delta };
 }
 
+function __life(key, delta, value) {
+  var effect = { type: "life", key: key };
+  if (typeof delta === "number") {
+    effect.delta = delta;
+  }
+  if (typeof value !== "undefined") {
+    effect.value = value;
+  }
+  return effect;
+}
+
 function __relation(slot, affinity, respect, trust, tension) {
   return {
     type: "relation",

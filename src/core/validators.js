@@ -57,6 +57,17 @@ function validateState(gameState) {
     }
   }
 
+  if (!gameState.player || !gameState.player.life) {
+    errors.push("player.life отсутствует.");
+  } else {
+    if (typeof gameState.player.life.housingId !== "string") {
+      errors.push("player.life.housingId должен быть строкой.");
+    }
+    if (typeof gameState.player.life.support !== "number") {
+      errors.push("player.life.support должен быть числом.");
+    }
+  }
+
   if (!gameState.player || !gameState.player.biography) {
     errors.push("player.biography отсутствует.");
   } else {
