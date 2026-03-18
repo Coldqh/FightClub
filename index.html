@@ -871,11 +871,12 @@
   <script type="text/javascript" src="src/content/content_loader.js"></script>
   <script type="text/javascript" src="src/core/rng_manager.js"></script>
   <script type="text/javascript" src="src/core/save_manager.js"></script>
+  <script type="text/javascript" src="src/core/time_system.js"></script>
   <script type="text/javascript" src="src/core/state_factory.js"></script>
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.18.6";
+    var APP_VERSION = "2026.03.18.7";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -970,9 +971,13 @@
     }
 
     function debugInfo() {
+      var calendar = state.fighter ? currentCalendarView(state.fighter) : null;
+      var age = state.fighter ? currentAgeView(state.fighter) : null;
       syncGameStateFromRuntime();
       return {
         week: state.fighter ? state.fighter.week : "-",
+        month: calendar ? calendar.monthName + " " + calendar.year : "-",
+        age: age ? age.label : "-",
         seed: RNG.describe(state.rng),
         saveVersion: state.game && state.game.meta ? state.game.meta.saveVersion : SAVE_VERSION,
         screen: state.screen,
@@ -1000,6 +1005,8 @@
             "<div class='debug-panel'>" +
               "<strong>Debug</strong>" +
               "<div class='debug-row'>Неделя: " + info.week + "</div>" +
+              "<div class='debug-row'>Время: " + info.month + "</div>" +
+              "<div class='debug-row'>Возраст: " + info.age + "</div>" +
               "<div class='debug-row'>Seed: " + info.seed + "</div>" +
               "<div class='debug-row'>Save version: " + info.saveVersion + "</div>" +
               "<div class='debug-row'>Экран: " + info.screen + " / " + info.panel + "</div>" +
@@ -1198,6 +1205,10 @@
       if (state.screen === "game" && !state.panel) {
         state.panel = "home";
       }
+      ensureLifeState();
+      if (!state.world.offers.available.length) {
+        refreshWorldState();
+      }
       if (!validation.valid) {
         state.log.unshift({ text: "Сохранение было частично восстановлено через адаптер совместимости.", tone: "warn" });
       }
@@ -1275,6 +1286,250 @@
       return ContentLoader.listCountries();
     }
 
+    function defaultWorldState() {
+      return {
+        opponents: [],
+        offers: {
+          weekStamp: 0,
+          available: [],
+          headline: ""
+        },
+        npcs: [],
+        relationships: [],
+        contracts: [],
+        lastWeekAction: {
+          type: "idle",
+          label: "",
+          meta: null
+        },
+        scene: {
+          updatedWeek: 0,
+          buzz: 0,
+          temperature: 50
+        }
+      };
+    }
+
+    function ensureLifeState() {
+      var worldDefaults;
+      var fighter = state.fighter;
+      if (!state.world || typeof state.world !== "object") {
+        state.world = defaultWorldState();
+      }
+      worldDefaults = defaultWorldState();
+      if (!(state.world.opponents instanceof Array)) {
+        state.world.opponents = state.opponents || [];
+      }
+      if (!state.world.offers || typeof state.world.offers !== "object") {
+        state.world.offers = worldDefaults.offers;
+      }
+      if (!(state.world.offers.available instanceof Array)) {
+        state.world.offers.available = [];
+      }
+      if (typeof state.world.offers.weekStamp !== "number") {
+        state.world.offers.weekStamp = 0;
+      }
+      state.world.offers.headline = state.world.offers.headline || "";
+      if (!(state.world.npcs instanceof Array)) {
+        state.world.npcs = [];
+      }
+      if (!(state.world.relationships instanceof Array)) {
+        state.world.relationships = [];
+      }
+      if (!(state.world.contracts instanceof Array)) {
+        state.world.contracts = [];
+      }
+      if (!state.world.lastWeekAction || typeof state.world.lastWeekAction !== "object") {
+        state.world.lastWeekAction = worldDefaults.lastWeekAction;
+      }
+      state.world.lastWeekAction.type = state.world.lastWeekAction.type || "idle";
+      state.world.lastWeekAction.label = state.world.lastWeekAction.label || "";
+      if (!state.world.scene || typeof state.world.scene !== "object") {
+        state.world.scene = worldDefaults.scene;
+      }
+      if (typeof state.world.scene.updatedWeek !== "number") {
+        state.world.scene.updatedWeek = 0;
+      }
+      if (typeof state.world.scene.buzz !== "number") {
+        state.world.scene.buzz = 0;
+      }
+      if (typeof state.world.scene.temperature !== "number") {
+        state.world.scene.temperature = 50;
+      }
+      if (!fighter) {
+        return;
+      }
+      if (!fighter.calendar) {
+        fighter.calendar = TimeSystem.createCalendar({
+          totalWeeks: Math.max(0, (fighter.week || 1) - 1)
+        });
+      } else {
+        fighter.calendar = TimeSystem.normalizeCalendar(fighter.calendar);
+      }
+      if (typeof fighter.startingAge !== "number") {
+        fighter.startingAge = 22;
+      }
+      if (typeof fighter.fatigue !== "number") {
+        fighter.fatigue = 0;
+      }
+      if (typeof fighter.wear !== "number") {
+        fighter.wear = 0;
+      }
+      if (typeof fighter.morale !== "number") {
+        fighter.morale = 55;
+      }
+      fighter.week = TimeSystem.getCalendarView(fighter.calendar).weekNumber;
+      state.world.opponents = state.opponents || state.world.opponents;
+    }
+
+    function currentCalendarView(fighter) {
+      if (!fighter) {
+        return {
+          weekNumber: 1,
+          year: 2026,
+          monthIndex: 2,
+          monthName: "Март",
+          weekOfMonth: 1
+        };
+      }
+      ensureLifeState();
+      return TimeSystem.getCalendarView(fighter.calendar);
+    }
+
+    function currentAgeView(fighter) {
+      if (!fighter) {
+        return {
+          years: 22,
+          months: 0,
+          label: "22 г. 0 мес."
+        };
+      }
+      ensureLifeState();
+      return TimeSystem.getAgeView(fighter.startingAge, fighter.calendar);
+    }
+
+    function careerTimeLabel(fighter) {
+      var calendar = currentCalendarView(fighter);
+      return calendar.monthName + " " + calendar.year + " · " + calendar.weekOfMonth + "-я неделя месяца";
+    }
+
+    function applyConditionDelta(fighter, delta) {
+      var changes = delta || {};
+      if (!fighter) {
+        return;
+      }
+      ensureLifeState();
+      fighter.fatigue += changes.fatigue || 0;
+      fighter.wear += changes.wear || 0;
+      fighter.morale += changes.morale || 0;
+      applyBounds(fighter);
+    }
+
+    function registerWeeklyAction(type, label, delta, meta) {
+      ensureLifeState();
+      applyConditionDelta(state.fighter, delta);
+      state.world.lastWeekAction = {
+        type: type || "idle",
+        label: label || "",
+        meta: meta ? clonePlainData(meta) : null
+      };
+    }
+
+    function buildWeeklyOffers() {
+      var fighter = state.fighter;
+      var country = getCountryInfo(fighter.currentCountry);
+      var city = country ? country.city : "районе";
+      var pool = [
+        { id: "sparring", type: "gym", title: "Закрытый спарринг", text: "В " + city + " ищут жесткого партнера на закрытую сессию." },
+        { id: "promoter", type: "contract", title: "Внимание промоутера", text: "Местный промоутер присматривается к тем, кто держит темп без шума." },
+        { id: "contact", type: "relationship", title: "Новый контакт", text: "В зале появился человек, который может открыть дорогу к будущим контрактам." },
+        { id: "short_notice", type: "contract", title: "Бой на коротком уведомлении", text: "По району пошел слух о возможном шорт-нотис бое в ближайшие недели." },
+        { id: "district", type: "npc", title: "Гудит район", text: "Разговоры о тебе снова расходятся по дворам и залам " + city + "." }
+      ];
+      var offers = [];
+      var used = {};
+      var pick;
+      while (offers.length < 2 && offers.length < pool.length) {
+        pick = choice(pool);
+        if (!used[pick.id]) {
+          used[pick.id] = true;
+          offers.push(clonePlainData(pick));
+        }
+      }
+      return {
+        weekStamp: state.fighter.week,
+        available: offers,
+        headline: offers.length ? offers[0].text : ""
+      };
+    }
+
+    function refreshWorldState() {
+      var fighter = state.fighter;
+      ensureLifeState();
+      state.world.offers = buildWeeklyOffers();
+      state.world.scene.updatedWeek = fighter.week;
+      state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
+      state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
+    }
+
+    function runWorldTick() {
+      var fighter = state.fighter;
+      var previousCalendar;
+      var nextCalendar;
+      var previousAge;
+      var nextAge;
+      var action;
+      ensureLifeState();
+      previousCalendar = currentCalendarView(fighter);
+      previousAge = currentAgeView(fighter);
+      fighter.calendar = TimeSystem.advanceWeek(fighter.calendar);
+      nextCalendar = currentCalendarView(fighter);
+      nextAge = currentAgeView(fighter);
+      fighter.money -= WEEKLY_EXPENSE;
+      pushLog("Обязательные расходы недели: -$" + WEEKLY_EXPENSE + ".", "warn");
+      if (previousCalendar.monthIndex !== nextCalendar.monthIndex || previousCalendar.year !== nextCalendar.year) {
+        pushLog("Начинается " + nextCalendar.monthName + " " + nextCalendar.year + ".", "warn");
+      }
+      if (previousAge.years !== nextAge.years) {
+        pushLog("Новый возраст: " + nextAge.label + ".", "good");
+      }
+      action = state.world.lastWeekAction || { type: "idle" };
+      fighter.fatigue = clamp(fighter.fatigue - 3, 0, 100);
+      if (action.type === "recover") {
+        fighter.fatigue = clamp(fighter.fatigue - 4, 0, 100);
+      }
+      if (fighter.stress > 70) {
+        fighter.health -= 1;
+      }
+      if (fighter.stress >= 75) {
+        fighter.fatigue += 2;
+        fighter.morale -= 2;
+      }
+      if (fighter.health <= 35) {
+        fighter.morale -= 1;
+      }
+      if (fighter.fatigue >= 75) {
+        fighter.health -= 1;
+      }
+      if (fighter.wear >= 70) {
+        fighter.health -= 1;
+      }
+      if (fighter.morale >= 70 && fighter.stress > 0) {
+        fighter.stress -= 1;
+      }
+      if (fighter.morale <= 30) {
+        fighter.stress += 1;
+      }
+      applyBounds(fighter);
+      refreshWorldState();
+      state.world.lastWeekAction = {
+        type: "idle",
+        label: "",
+        meta: null
+      };
+      weeklyEvent();
+    }
+
     function applyBounds(fighter) {
       var key;
       for (key in fighter.stats) {
@@ -1287,6 +1542,10 @@
       fighter.stress = clamp(fighter.stress, 0, 100);
       fighter.fame = Math.max(0, fighter.fame);
       fighter.skillPoints = Math.max(0, fighter.skillPoints || 0);
+      fighter.fatigue = clamp(fighter.fatigue || 0, 0, 100);
+      fighter.wear = clamp(fighter.wear || 0, 0, 100);
+      fighter.morale = clamp(typeof fighter.morale === "number" ? fighter.morale : 55, 0, 100);
+      fighter.startingAge = Math.max(16, Math.min(40, typeof fighter.startingAge === "number" ? fighter.startingAge : 22));
     }
 
     function recordText(fighter) {
@@ -1349,6 +1608,7 @@
       };
       state.fighter = null;
       state.opponents = [];
+      state.world = defaultWorldState();
       state.fight = null;
       state.endingReason = "";
       state.log = [
@@ -1357,18 +1617,25 @@
     }
 
     function startCareer() {
+      var startingAge;
       var stats = baseStats();
       if (!state.create.country || !state.create.identity) {
         return;
       }
+      startingAge = rand(18, 32);
       state.fighter = {
         name: state.create.identity.fullName,
         stats: stats,
         skillPoints: 0,
         money: 120,
         week: 1,
+        calendar: TimeSystem.createCalendar(),
+        startingAge: startingAge,
         health: 100,
         stress: 12,
+        fatigue: 8,
+        wear: 0,
+        morale: 56,
         fame: 0,
         wins: 0,
         losses: 0,
@@ -1377,7 +1644,9 @@
         homeCountry: state.create.country,
         currentCountry: state.create.country
       };
+      state.world = defaultWorldState();
       applyBounds(state.fighter);
+      refreshWorldState();
       state.screen = "game";
       state.panel = "home";
       state.log.unshift({
@@ -1455,15 +1724,7 @@
     }
 
     function advanceWeek() {
-      var fighter = state.fighter;
-      fighter.week += 1;
-      fighter.money -= WEEKLY_EXPENSE;
-      pushLog("Обязательные расходы недели: -$" + WEEKLY_EXPENSE + ".", "warn");
-      if (fighter.stress > 70) {
-        fighter.health -= 1;
-      }
-      applyBounds(fighter);
-      weeklyEvent();
+      runWorldTick();
     }
 
     function weeklyEvent() {
@@ -1566,6 +1827,13 @@
       fighter.money -= cost;
       fighter.currentCountry = countryKey;
       fighter.stress += 4;
+      registerWeeklyAction("travel", "Перелет в " + destination.name, {
+        fatigue: 8,
+        wear: 0,
+        morale: 1
+      }, {
+        country: countryKey
+      });
       applyBounds(fighter);
       pushLog("Перелет в " + destination.name + " обошелся в $" + cost + ". Новая арена: " + destination.city + ".", "warn");
       spendWeek();
@@ -1574,12 +1842,19 @@
     function actionTrain(kind) {
       var fighter = state.fighter;
       var option = TRAINING_OPTIONS[kind];
+      var trainDelta;
       if (!option) {
         return;
       }
+      trainDelta = {
+        light: { fatigue: 8, wear: 1, morale: 2 },
+        medium: { fatigue: 14, wear: 2, morale: 1 },
+        hard: { fatigue: 20, wear: 3, morale: -2 }
+      }[kind] || { fatigue: 10, wear: 1, morale: 0 };
       fighter.skillPoints += option.points;
       fighter.health += option.health;
       fighter.stress += option.stress;
+      registerWeeklyAction("train", option.label, trainDelta, { kind: kind });
       applyBounds(fighter);
       pushLog(fighter.name + " проводит " + option.label.toLowerCase() + " тренировку и получает +" + option.points + " очков навыков.", "good");
       spendWeek();
@@ -1588,9 +1863,15 @@
     function actionRecover(kind) {
       var fighter = state.fighter;
       var option = RECOVERY_OPTIONS[kind];
+      var recoveryDelta;
       if (!option) {
         return;
       }
+      recoveryDelta = {
+        home: { fatigue: -12, wear: 0, morale: 3 },
+        doctor: { fatigue: -18, wear: -1, morale: 2 },
+        therapy: { fatigue: -15, wear: -1, morale: 6 }
+      }[kind] || { fatigue: -10, wear: 0, morale: 2 };
       if (fighter.money < option.cost) {
         pushLog("На вариант восстановления '" + option.label + "' сейчас не хватает денег.", "bad");
         render();
@@ -1599,6 +1880,7 @@
       fighter.money -= option.cost;
       fighter.health += option.health;
       fighter.stress += option.stress;
+      registerWeeklyAction("recover", option.label, recoveryDelta, { kind: kind });
       applyBounds(fighter);
       pushLog(option.label + " возвращает " + option.health + " здоровья и меняет стресс на " + option.stress + ".", "good");
       spendWeek();
@@ -1609,6 +1891,11 @@
       fighter.money += LEGAL_JOB.money;
       fighter.health += LEGAL_JOB.health;
       fighter.stress += LEGAL_JOB.stress;
+      registerWeeklyAction("work", LEGAL_JOB.label, {
+        fatigue: 16,
+        wear: 1,
+        morale: -4
+      }, null);
       pushLog(LEGAL_JOB.label + " приносит $" + LEGAL_JOB.money + ", здоровье " + LEGAL_JOB.health + " и стресс +" + LEGAL_JOB.stress + ".", "warn");
       applyBounds(fighter);
       spendWeek();
@@ -1705,6 +1992,8 @@
 
     function openFightSelect() {
       state.opponents = [generateOpponent("safe"), generateOpponent("even"), generateOpponent("danger")];
+      ensureLifeState();
+      state.world.opponents = state.opponents;
       state.panel = "fightSelect";
       render();
     }
@@ -1935,11 +2224,16 @@
     function renderHomeSummaryPanel() {
       var current = getCountryInfo(state.fighter.currentCountry);
       var home = getCountryInfo(state.fighter.homeCountry);
+      var calendar = currentCalendarView(state.fighter);
+      var age = currentAgeView(state.fighter);
+      var offerHeadline = state.world && state.world.offers ? state.world.offers.headline : "";
       return "" +
         "<div class='panel fill-panel'>" +
           "<div class='eyebrow'>Основное</div>" +
-          "<h2 class='panel-title'>Неделя " + state.fighter.week + "</h2>" +
+          "<h2 class='panel-title'>Неделя " + state.fighter.week + " · " + calendar.monthName + " " + calendar.year + "</h2>" +
           "<div class='subtitle'>" + current.name + ", арена " + current.city + ".</div>" +
+          "<div class='muted'>" + calendar.weekOfMonth + "-я неделя месяца · Возраст " + age.label + "</div>" +
+          (offerHeadline ? "<div class='muted'>На этой неделе: " + offerHeadline + "</div>" : "") +
           "<div class='record-row' style='margin-top:14px'>" +
             "<div class='chip'>Слава " + state.fighter.fame + "</div>" +
             "<div class='chip'>Деньги $" + state.fighter.money + "</div>" +
@@ -1949,6 +2243,9 @@
           "</div>" +
           meter("Здоровье лагеря", state.fighter.health) +
           meter("Стресс", state.fighter.stress) +
+          meter("Краткосрочная усталость", state.fighter.fatigue) +
+          meter("Накопленный износ", state.fighter.wear) +
+          meter("Настроение", state.fighter.morale) +
           "<div class='footer-actions' style='margin-top:18px'>" +
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
             "<button class='button' onclick='openFightSelect()'>Найти соперника</button>" +
@@ -2096,7 +2393,7 @@
       for (i = 0; i < countries.length; i += 1) {
         country = countries[i];
         html.push("<div class='create-card" + (state.create.country === country.id ? " selected" : "") + "'>");
-        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ".</p><p>" + country.effectSummary + "</p><p>" + country.schoolStyle + "</p>");
+        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ".</p><p>" + country.schoolStyle + "</p>");
         html.push("<button class='button' onclick='setCreateCountry(\"" + country.id + "\")'>" + (state.create.country === country.id ? "Выбрана" : "Выбрать") + "</button>");
         html.push("</div>");
       }
@@ -2114,6 +2411,8 @@
       var fighter = state.fighter;
       var home = getCountryInfo(fighter.homeCountry);
       var current = getCountryInfo(fighter.currentCountry);
+      var calendar = currentCalendarView(fighter);
+      var age = currentAgeView(fighter);
       var bonus = currentTravelBonus(fighter);
       var html = [];
       html.push("<div class='panel'>");
@@ -2126,6 +2425,7 @@
       html.push("<div class='chip'>Дом " + (home ? home.name : "-") + "</div>");
       html.push("<div class='chip'>Сейчас " + (current ? current.name : "-") + "</div>");
       html.push("</div>");
+      html.push("<div class='record-row'><div class='chip'>Время " + calendar.monthName + " " + calendar.year + "</div><div class='chip'>Неделя " + fighter.week + "</div><div class='chip'>Возраст " + age.label + "</div></div>");
       if (current) {
         html.push("<div class='muted'>Школа: " + current.schoolStyle + " Жизнь в городе: ~$" + current.baseLivingCost + "/нед. Арена: " + current.city + ".</div>");
       }
@@ -2136,9 +2436,12 @@
       }
       html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
       html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
+      html.push("<div>" + meter("Краткосрочная усталость", fighter.fatigue) + "</div>");
+      html.push("<div>" + meter("Накопленный износ", fighter.wear) + "</div>");
+      html.push("<div>" + meter("Настроение", fighter.morale) + "</div>");
       html.push("</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Прокачка</h2><div class='record-row' style='margin-top:18px'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div><div class='muted'>Цена роста идёт ступенями: 0-9 стоит 1 очко, 10-19 стоит 2, 20-29 стоит 3 и дальше по той же схеме.</div>" + renderStatUpgradeCards() + "</div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div></div></div>");
       return html.join("");
     }
 
@@ -2727,6 +3030,11 @@
       var injury = Math.floor(fight.playerState.damageTaken * 0.1 + fight.playerState.knockdowns * 10);
       var fameGain;
       var pointReward = 0;
+      var fightDelta = {
+        fatigue: 12 + fight.roundsCompleted * 2 + fight.playerState.knockdowns * 4,
+        wear: 2 + fight.playerState.knockdowns + Math.floor(fight.playerState.damageTaken / 40),
+        morale: 0
+      };
       fighter.health -= injury;
       fighter.stress += 6 + fight.playerState.knockdowns * 3;
       if (fight.result === "win") {
@@ -2734,13 +3042,16 @@
         fighter.money += opponent.purse;
         fighter.fame += opponent.fameReward;
         pointReward = 40;
+        fightDelta.morale = 6;
         if (fight.method.indexOf("KO") !== -1) {
           fighter.kos += 1;
           pointReward = 60;
+          fightDelta.morale = 8;
         }
         if (fight.method.indexOf("Смерть") !== -1 || fight.method.indexOf("Убийство") !== -1) {
           fighter.deathsCaused += 1;
           pointReward = 80;
+          fightDelta.morale = 10;
         }
         fighter.skillPoints += pointReward;
         pushLog("Победа. Ты забираешь $" + opponent.purse + ", +" + opponent.fameReward + " к известности и +" + pointReward + " очков навыков.", "good");
@@ -2751,14 +3062,21 @@
         fighter.fame += fameGain;
         fighter.stress += 6;
         fighter.skillPoints += 30;
+        fightDelta.morale = -7;
         pushLog("Поражение. Ты всё равно получаешь часть денег, немного известности и +30 очков навыков.", "bad");
       } else {
         fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
         fighter.money += Math.floor(opponent.purse * 0.55);
         fighter.fame += fameGain;
         fighter.skillPoints += 35;
+        fightDelta.morale = 1;
         pushLog("Ничья. Ты уходишь с деньгами, известностью и +35 очками навыков.", "warn");
       }
+      registerWeeklyAction("fight", fight.method || "Бой", fightDelta, {
+        result: fight.result,
+        method: fight.method,
+        rounds: fight.roundsCompleted
+      });
       applyBounds(fighter);
     }
 
@@ -2790,6 +3108,7 @@
     }
 
     function renderGame() {
+      var calendar = currentCalendarView(state.fighter);
       if (state.panel === "fightLive" || state.panel === "fightBreak" || state.panel === "fightResult") {
         return renderMainPanel();
       }
@@ -2797,7 +3116,7 @@
         "<div class='shell'>" +
           "<div class='topbar'>" +
             "<div class='brand'><div class='eyebrow'>Street Boxer Simulator</div><div class='title'>" + state.fighter.name + "</div></div>" +
-            "<div class='week-chip'>Неделя " + state.fighter.week + "</div>" +
+            "<div class='week-chip'>Неделя " + state.fighter.week + " · " + calendar.monthName + " " + calendar.year + "</div>" +
           "</div>" +
           renderNavigationTabs() +
           "<div class='tab-screen'>" + renderMainPanel() + "</div>" +
@@ -2824,18 +3143,12 @@
               "<div class='chip gold'>Рекорд " + recordText(fighter) + "</div>" +
               "<div class='chip'>Слава " + fighter.fame + "</div>" +
               "<div class='chip'>Недель прожито " + fighter.week + "</div>" +
-              "<div class='chip red'>Смертей в боях: " + fighter.deathsCaused + "</div>" +
             "</div>" +
             "<div class='fight-grid'>" +
               "<div class='summary-box'>" +
                 "<strong>Финальное состояние</strong>" +
                 meter("Здоровье", fighter.health) +
                 meter("Стресс", fighter.stress) +
-                "<div class='record-row'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div>" +
-              "</div>" +
-              "<div class='summary-box'>" +
-                "<strong>Сборка</strong>" +
-                "<div class='empty-state'>Этот забег строился на пяти характеристиках, очках навыков, тренировках и новой боевой системе со стаминой, защитой и критами.</div>" +
               "</div>" +
             "</div>" +
             "<div class='footer-actions'>" +
