@@ -900,6 +900,7 @@
 
   <script type="text/javascript" src="country_data.js"></script>
   <script type="text/javascript" src="src/content/content_data.js"></script>
+  <script type="text/javascript" src="src/content/career_ecosystem_data.js"></script>
   <script type="text/javascript" src="src/content/event_data.js"></script>
   <script type="text/javascript" src="src/content/content_loader.js"></script>
   <script type="text/javascript" src="src/core/rng_manager.js"></script>
@@ -910,7 +911,7 @@
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.18.10";
+    var APP_VERSION = "2026.03.18.11";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -1091,6 +1092,7 @@
         return null;
       }
       return {
+        offer: fight.offer ? clonePlainData(fight.offer) : null,
         opponent: fight.opponent,
         round: fight.round,
         turn: fight.turn,
@@ -1244,7 +1246,7 @@
       }
       ensureLifeState();
       ensureNpcWorld();
-      if (!state.world.offers.available.length) {
+      if (!state.world.offers.available.length || !(state.world.offers.fightOffers instanceof Array) || !(state.world.offers.contractOffers instanceof Array)) {
         refreshWorldState();
       }
       if (!validation.valid) {
@@ -1324,17 +1326,42 @@
       return ContentLoader.listCountries();
     }
 
+    function listCountryGyms(countryKey) {
+      return ContentLoader.listGymsByCountry ? ContentLoader.listGymsByCountry(countryKey) : [];
+    }
+
+    function getGym(gymId) {
+      return ContentLoader.getGym ? ContentLoader.getGym(gymId) : null;
+    }
+
+    function getTrainerType(typeId) {
+      return ContentLoader.getTrainerType ? ContentLoader.getTrainerType(typeId) : null;
+    }
+
+    function getContractTemplate(templateId) {
+      return ContentLoader.getContractTemplate ? ContentLoader.getContractTemplate(templateId) : null;
+    }
+
+    function getFightOfferTemplate(templateId) {
+      return ContentLoader.getFightOfferTemplate ? ContentLoader.getFightOfferTemplate(templateId) : null;
+    }
+
     function defaultWorldState() {
       return {
         opponents: [],
         offers: {
           weekStamp: 0,
           available: [],
-          headline: ""
+          headline: "",
+          fightOffers: [],
+          contractOffers: []
         },
         npcs: [],
         relationships: [],
         contracts: [],
+        gymMembership: null,
+        trainerAssignment: null,
+        activeContract: null,
         eventState: {
           cooldowns: {},
           onceResolved: [],
@@ -1370,6 +1397,12 @@
       if (!(state.world.offers.available instanceof Array)) {
         state.world.offers.available = [];
       }
+      if (!(state.world.offers.fightOffers instanceof Array)) {
+        state.world.offers.fightOffers = [];
+      }
+      if (!(state.world.offers.contractOffers instanceof Array)) {
+        state.world.offers.contractOffers = [];
+      }
       if (typeof state.world.offers.weekStamp !== "number") {
         state.world.offers.weekStamp = 0;
       }
@@ -1382,6 +1415,15 @@
       }
       if (!(state.world.contracts instanceof Array)) {
         state.world.contracts = [];
+      }
+      if (state.world.gymMembership != null && typeof state.world.gymMembership !== "object") {
+        state.world.gymMembership = null;
+      }
+      if (state.world.trainerAssignment != null && typeof state.world.trainerAssignment !== "object") {
+        state.world.trainerAssignment = null;
+      }
+      if (state.world.activeContract != null && typeof state.world.activeContract !== "object") {
+        state.world.activeContract = null;
       }
       if (!state.world.eventState || typeof state.world.eventState !== "object") {
         state.world.eventState = clonePlainData(worldDefaults.eventState);
@@ -1900,6 +1942,660 @@
       syncAllNpcRelationSnapshots();
     }
 
+    function containsTag(list, tag) {
+      var i;
+      if (!(list instanceof Array)) {
+        return false;
+      }
+      for (i = 0; i < list.length; i += 1) {
+        if (list[i] === tag) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function findNpcByRole(roleId) {
+      var i;
+      ensureNpcWorld();
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        if (state.world.npcs[i].role === roleId) {
+          return state.world.npcs[i];
+        }
+      }
+      return null;
+    }
+
+    function findNpcByRoleInCountry(roleId, countryKey) {
+      var i;
+      var fallback = null;
+      ensureNpcWorld();
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        if (state.world.npcs[i].role !== roleId) {
+          continue;
+        }
+        if (!fallback) {
+          fallback = state.world.npcs[i];
+        }
+        if (state.world.npcs[i].country === countryKey) {
+          return state.world.npcs[i];
+        }
+      }
+      return fallback;
+    }
+
+    function currentPromoterNpc() {
+      return findNpcByRoleInCountry("promoter", state.fighter ? state.fighter.currentCountry : "");
+    }
+
+    function currentGymMembership() {
+      ensureLifeState();
+      return state.world.gymMembership;
+    }
+
+    function currentGym() {
+      var membership = currentGymMembership();
+      return membership && membership.gymId ? getGym(membership.gymId) : null;
+    }
+
+    function currentTrainerAssignment() {
+      ensureLifeState();
+      return state.world.trainerAssignment;
+    }
+
+    function currentTrainerNpc() {
+      var assignment = currentTrainerAssignment();
+      return assignment && assignment.npcId ? findNpcById(assignment.npcId) : null;
+    }
+
+    function currentTrainerType() {
+      var assignment = currentTrainerAssignment();
+      return assignment && assignment.trainerTypeId ? getTrainerType(assignment.trainerTypeId) : null;
+    }
+
+    function currentContract() {
+      ensureLifeState();
+      return state.world.activeContract;
+    }
+
+    function trainerSupportScale() {
+      var assignment = currentTrainerAssignment();
+      var relation = assignment ? findRelationship(assignment.npcId) : null;
+      if (!assignment || !relation) {
+        return 0;
+      }
+      if (relation.tension >= 75 || relation.trust <= 20) {
+        return 0.2;
+      }
+      if (relation.tension >= 55 || relation.trust <= 35) {
+        return 0.55;
+      }
+      if (relation.respect >= 65 && relation.trust >= 60) {
+        return 1;
+      }
+      return 0.8;
+    }
+
+    function gymBonusValue(key) {
+      var gym = currentGym();
+      if (!gym || !gym.bonuses) {
+        return 0;
+      }
+      return typeof gym.bonuses[key] === "number" ? gym.bonuses[key] : 0;
+    }
+
+    function trainerBonusValue(key) {
+      var trainerType = currentTrainerType();
+      var scale = trainerSupportScale();
+      var baseValue;
+      if (!trainerType || !trainerType.bonuses) {
+        return 0;
+      }
+      baseValue = typeof trainerType.bonuses[key] === "number" ? trainerType.bonuses[key] : 0;
+      if (baseValue === 0) {
+        return 0;
+      }
+      return Math.round(baseValue * scale);
+    }
+
+    function promoterInfluence() {
+      var promoter = currentPromoterNpc();
+      var relation = promoter ? findRelationship(promoter.id) : null;
+      var respect = relation ? relation.respect : 35;
+      var trust = relation ? relation.trust : 30;
+      var tension = relation ? relation.tension : 10;
+      return {
+        npc: promoter,
+        purseBonus: Math.round((respect + trust - tension) / 7),
+        offerBonus: clamp(Math.round((respect + trust) / 55) - 1, 0, 2),
+        toxicShift: Math.round((tension - trust) / 3),
+        repGuard: Math.round((respect - tension) / 10)
+      };
+    }
+
+    function ensureTrainerNpcForGym(gym, trainerTypeId) {
+      var i;
+      var trainerType = getTrainerType(trainerTypeId);
+      var npc;
+      if (!gym || !trainerType) {
+        return null;
+      }
+      ensureNpcWorld();
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        npc = state.world.npcs[i];
+        if (npc.role === "trainer" && containsTag(npc.flags, gym.id) && containsTag(npc.flags, trainerTypeId)) {
+          return npc;
+        }
+      }
+      npc = makeNpc(gym.country, "trainer", {
+        status: trainerType.label + " в " + gym.name,
+        flags: [gym.id, trainerTypeId, "trainer_offer"],
+        age: rand(29, 58)
+      });
+      npc.history = appendHistoryEntry(npc.history, {
+        week: relationWeekStamp(),
+        type: "career",
+        text: "Доступен для найма в " + gym.name + "."
+      }, 12);
+      return npc;
+    }
+
+    function releaseTrainer(reason, silent) {
+      var assignment = currentTrainerAssignment();
+      var trainerNpc = currentTrainerNpc();
+      if (!assignment) {
+        return;
+      }
+      if (trainerNpc) {
+        trainerNpc.status = reason || "больше не ведёт твой лагерь";
+        trainerNpc.history = appendHistoryEntry(trainerNpc.history, {
+          week: relationWeekStamp(),
+          type: "career",
+          text: reason || "Сотрудничество остановлено."
+        }, 12);
+      }
+      state.world.trainerAssignment = null;
+      if (!silent) {
+        pushLog("Тренерский штаб изменился: " + (reason || "тренер ушёл из лагеря") + ".", "warn");
+      }
+    }
+
+    function joinGym(gymId) {
+      var gym = getGym(gymId);
+      var previous = currentGym();
+      var ownerRelation;
+      if (!gym) {
+        return;
+      }
+      ensureLifeState();
+      state.world.gymMembership = {
+        gymId: gym.id,
+        joinedWeek: state.fighter.week,
+        country: gym.country,
+        city: gym.city,
+        weeklyCost: gym.cost,
+        reputation: gym.reputation,
+        specialization: gym.specialization,
+        bonuses: clonePlainData(gym.bonuses || {})
+      };
+      if (state.world.trainerAssignment && state.world.trainerAssignment.gymId !== gym.id) {
+        releaseTrainer("смена зала оборвала прежний лагерь", true);
+      }
+      ownerRelation = findRelationship(findNpcByRoleInCountry("gym_owner", gym.country) ? findNpcByRoleInCountry("gym_owner", gym.country).id : "");
+      if (ownerRelation) {
+        ownerRelation.respect = clampRelationValue(ownerRelation.respect + 2);
+        ownerRelation.trust = clampRelationValue(ownerRelation.trust + 1);
+      }
+      pushLog(previous ? ("Ты переходишь из " + previous.name + " в " + gym.name + ".") : ("Ты вступаешь в зал " + gym.name + "."), "good");
+      refreshWorldState();
+      render();
+    }
+
+    function hireTrainer(trainerTypeId) {
+      var gym = currentGym();
+      var trainerType = getTrainerType(trainerTypeId);
+      var trainerNpc;
+      var relation;
+      if (!gym) {
+        pushLog("Сначала нужен зал, чтобы собрать тренерский штаб.", "bad");
+        render();
+        return;
+      }
+      if (!trainerType || !containsTag(gym.trainerTypeIds || [], trainerTypeId)) {
+        pushLog("Этот тренер не работает в текущем зале.", "bad");
+        render();
+        return;
+      }
+      trainerNpc = ensureTrainerNpcForGym(gym, trainerTypeId);
+      if (!trainerNpc) {
+        return;
+      }
+      if (state.world.trainerAssignment && state.world.trainerAssignment.npcId === trainerNpc.id) {
+        pushLog(trainerNpc.name + " уже ведёт твой лагерь.", "warn");
+        render();
+        return;
+      }
+      if (state.world.trainerAssignment) {
+        releaseTrainer("тренерский штаб был заменён", true);
+      }
+      state.world.trainerAssignment = {
+        npcId: trainerNpc.id,
+        trainerTypeId: trainerType.id,
+        gymId: gym.id,
+        hiredWeek: state.fighter.week,
+        weeklyFee: trainerType.weeklyFee,
+        status: "active"
+      };
+      relation = ensureRelationshipForNpc(trainerNpc);
+      relation.respect = clampRelationValue(relation.respect + 6);
+      relation.trust = clampRelationValue(relation.trust + 4);
+      trainerNpc.status = "ведёт твой лагерь в " + gym.name;
+      syncNpcRelationSnapshot(trainerNpc.id);
+      pushLog(trainerNpc.name + " становится твоим тренером. Тип: " + trainerType.label + ".", "good");
+      refreshWorldState();
+      render();
+    }
+
+    function buildContractOffer(templateId) {
+      var template = getContractTemplate(templateId);
+      var promoterInfo = promoterInfluence();
+      var promoter = promoterInfo.npc;
+      var offer;
+      if (!template || !promoter) {
+        return null;
+      }
+      offer = {
+        id: template.id + "_" + state.fighter.week + "_" + rand(100, 999),
+        templateId: template.id,
+        promoterId: promoter.id,
+        label: template.label,
+        durationWeeks: template.durationWeeks,
+        guaranteedPurse: Math.max(50, template.guaranteedPurse + promoterInfo.purseBonus),
+        winBonus: Math.max(10, template.winBonus + Math.round(promoterInfo.purseBonus * 0.5)),
+        koBonus: Math.max(10, template.koBonus + trainerBonusValue("koBonus")),
+        fameMultiplier: Math.max(0.85, template.fameMultiplier + (promoterInfo.repGuard * 0.01)),
+        fightFrequency: Math.max(1, template.fightFrequency + promoterInfo.offerBonus),
+        toxicRisk: clamp(template.toxicRisk + promoterInfo.toxicShift - gymBonusValue("toxicGuard") - trainerBonusValue("toxicGuard"), 0, 90),
+        reputationDelta: template.reputationDelta + Math.max(0, promoterInfo.repGuard),
+        conditionsText: template.conditionsText,
+        description: template.description,
+        promoterName: promoter.name
+      };
+      return offer;
+    }
+
+    function buildContractOffers() {
+      var templates = [];
+      var fighter = state.fighter;
+      var promoter = currentPromoterNpc();
+      var i;
+      var offer;
+      if (!fighter || !promoter || currentContract()) {
+        return [];
+      }
+      templates.push("local_handshake");
+      if (fighter.fame >= 8 || promoter.relationToPlayer.respect >= 45) {
+        templates.push("road_grinder");
+      }
+      if (fighter.fame >= 16 || promoter.relationToPlayer.affinity >= 55) {
+        templates.push("spotlight_push");
+      }
+      if (fighter.fame >= 24 || promoter.relationToPlayer.tension >= 40) {
+        templates.push("shark_clause");
+      }
+      templates = uniqueList(templates);
+      for (i = templates.length - 1; i >= 0; i -= 1) {
+        offer = buildContractOffer(templates[i]);
+        if (!offer) {
+          templates.splice(i, 1);
+        } else {
+          templates[i] = offer;
+        }
+      }
+      return templates.slice(0, 3);
+    }
+
+    function acceptContract(templateId) {
+      var offer;
+      var i;
+      var promoter;
+      var relation;
+      if (currentContract()) {
+        pushLog("Сначала нужно закрыть или дождаться конца текущего контракта.", "bad");
+        render();
+        return;
+      }
+      for (i = 0; i < state.world.offers.contractOffers.length; i += 1) {
+        if (state.world.offers.contractOffers[i].templateId === templateId) {
+          offer = state.world.offers.contractOffers[i];
+          break;
+        }
+      }
+      if (!offer) {
+        return;
+      }
+      state.world.activeContract = {
+        id: "contract_" + state.fighter.week + "_" + rand(1000, 9999),
+        templateId: offer.templateId,
+        promoterId: offer.promoterId,
+        label: offer.label,
+        signedWeek: state.fighter.week,
+        endsWeek: state.fighter.week + offer.durationWeeks - 1,
+        guaranteedPurse: offer.guaranteedPurse,
+        winBonus: offer.winBonus,
+        koBonus: offer.koBonus,
+        fameMultiplier: offer.fameMultiplier,
+        fightFrequency: offer.fightFrequency,
+        toxicRisk: offer.toxicRisk,
+        reputationDelta: offer.reputationDelta,
+        conditionsText: offer.conditionsText,
+        status: "active"
+      };
+      state.world.contracts.unshift(clonePlainData(state.world.activeContract));
+      promoter = findNpcById(offer.promoterId);
+      relation = promoter ? findRelationship(promoter.id) : null;
+      if (relation) {
+        relation.respect = clampRelationValue(relation.respect + 5);
+        relation.trust = clampRelationValue(relation.trust + (offer.toxicRisk >= 35 ? 1 : 3));
+        relation.tension = clampRelationValue(relation.tension + (offer.toxicRisk >= 35 ? 4 : 0));
+        syncNpcRelationSnapshot(promoter.id);
+      }
+      pushLog("Подписан контракт '" + offer.label + "'. Гарантия $" + offer.guaranteedPurse + ", бонус за победу $" + offer.winBonus + ".", offer.toxicRisk >= 35 ? "warn" : "good");
+      refreshWorldState();
+      render();
+    }
+
+    function endActiveContract(reason, tone) {
+      var contract = currentContract();
+      var i;
+      if (!contract) {
+        return;
+      }
+      contract.status = "ended";
+      for (i = 0; i < state.world.contracts.length; i += 1) {
+        if (state.world.contracts[i].id === contract.id) {
+          state.world.contracts[i].status = "ended";
+        }
+      }
+      state.world.activeContract = null;
+      pushLog(reason || ("Контракт '" + contract.label + "' завершён."), tone || "warn");
+    }
+
+    function activeContractFightFrequency() {
+      var contract = currentContract();
+      return contract ? Math.max(1, contract.fightFrequency || 1) : 1;
+    }
+
+    function latestFightActionMeta() {
+      var history = state.world && state.world.eventState ? state.world.eventState.actionHistory : [];
+      var i;
+      for (i = 0; i < history.length; i += 1) {
+        if (history[i] && history[i].type === "fight" && typeof history[i].week === "number" && history[i].week >= state.fighter.week - 3) {
+          return history[i].meta || null;
+        }
+      }
+      return null;
+    }
+
+    function pickAwayCountry() {
+      var countries = listCountries();
+      var pool = [];
+      var i;
+      for (i = 0; i < countries.length; i += 1) {
+        if (countries[i].id !== state.fighter.currentCountry) {
+          pool.push(countries[i].id);
+        }
+      }
+      return pool.length ? choice(pool) : state.fighter.currentCountry;
+    }
+
+    function effectiveTravelBonusForCountry(countryKey) {
+      var effects = ContentLoader.getCountryEffects(countryKey);
+      if (!effects) {
+        return { money: 1.0, fame: 1.0 };
+      }
+      if (countryKey === state.fighter.homeCountry) {
+        return { money: effects.homeMoneyMultiplier, fame: effects.homeFameMultiplier };
+      }
+      return { money: 1.0, fame: effects.abroadFameMultiplier };
+    }
+
+    function buildOpponentSnapshot(opponent) {
+      return opponent ? clonePlainData(opponent) : null;
+    }
+
+    function generateConfiguredOpponent(tier, countryKeyOverride, snapshotOverride) {
+      var fighter = state.fighter;
+      var opponentCountryKey;
+      var country;
+      var arena;
+      var identity;
+      var bonus;
+      var tierData;
+      var tierBonus;
+      var base;
+      var stats;
+      if (snapshotOverride) {
+        return clonePlainData(snapshotOverride);
+      }
+      opponentCountryKey = countryKeyOverride || fighter.currentCountry;
+      country = getCountryInfo(opponentCountryKey);
+      arena = ContentLoader.getRandomArena(opponentCountryKey);
+      identity = makeIdentity(opponentCountryKey);
+      bonus = effectiveTravelBonusForCountry(opponentCountryKey);
+      tierData = ContentLoader.getOpponentTier(tier);
+      tierBonus = tierData.tierBonus;
+      base = clamp(Math.round(combatRating(fighter)) + tierBonus + rand(-1, 1), 1, 40);
+      stats = {
+        str: clamp(base + rand(-1, 2), 1, 45),
+        tec: clamp(base + rand(-1, 2), 1, 45),
+        spd: clamp(base + rand(-1, 2), 1, 45),
+        end: clamp(base + rand(-1, 2), 1, 45),
+        vit: clamp(base + rand(-1, 2), 1, 45)
+      };
+      return {
+        firstName: identity.firstName,
+        lastName: identity.lastName,
+        nickname: identity.nickname,
+        fullName: identity.fullName,
+        countryKey: opponentCountryKey,
+        profile: choice(ContentLoader.getOpponentTypeLabels()),
+        stats: stats,
+        purse: Math.round((tierData.purseBase + base * 8 + rand(0, 24)) * bonus.money),
+        fameReward: Math.round((tierData.fameBase + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
+        condition: rand(72, 100),
+        rounds: choice(tierData.rounds),
+        danger: tierData.danger,
+        venue: arena ? arena.name : (country ? country.venueName : "")
+      };
+    }
+
+    function buildFightOffer(templateId, rematchSnapshot) {
+      var template = getFightOfferTemplate(templateId);
+      var promoter = promoterInfluence();
+      var contract = currentContract();
+      var countryKey;
+      var country;
+      var arena;
+      var opponent;
+      var contractPurse = contract ? contract.guaranteedPurse : 0;
+      var contractWin = contract ? contract.winBonus : 0;
+      var contractKo = contract ? contract.koBonus : 0;
+      var contractFame = contract ? contract.fameMultiplier : 1;
+      var gym;
+      var offer;
+      var reputationSwing;
+      if (!template) {
+        return null;
+      }
+      if (template.travel === "away") {
+        countryKey = pickAwayCountry();
+      } else if (template.travel === "rematch" && rematchSnapshot) {
+        countryKey = rematchSnapshot.countryKey || state.fighter.currentCountry;
+      } else {
+        countryKey = state.fighter.currentCountry;
+      }
+      country = getCountryInfo(countryKey);
+      arena = ContentLoader.getRandomArena(countryKey);
+      opponent = generateOpponent(template.tier, countryKey, rematchSnapshot || null);
+      if (arena) {
+        opponent.venue = arena.name;
+      }
+      gym = currentGym();
+      reputationSwing = template.acceptRep + (promoter.repGuard > 0 ? 1 : 0);
+      offer = {
+        id: template.id + "_" + state.fighter.week + "_" + rand(100, 999),
+        templateId: template.id,
+        label: template.label,
+        description: template.description,
+        travel: template.travel,
+        tier: template.tier,
+        countryKey: countryKey,
+        countryName: country ? country.name : countryKey,
+        city: arena ? arena.city : (country ? country.city : ""),
+        venue: arena ? arena.name : (country ? country.venueName : ""),
+        guaranteedPurse: Math.max(40, template.purseBase + contractPurse + promoter.purseBonus + gymBonusValue("purseBonus") + trainerBonusValue("purseBonus")),
+        winBonus: Math.max(10, template.winBonus + contractWin + Math.round(promoter.purseBonus * 0.5)),
+        koBonus: Math.max(10, template.koBonus + contractKo + trainerBonusValue("koBonus")),
+        fameReward: Math.max(2, Math.round((template.fameBase + gymBonusValue("fameBonus") + trainerBonusValue("fameBonus")) * contractFame)),
+        toxicRisk: clamp(template.toxicBase + (contract ? contract.toxicRisk : 0) + promoter.toxicShift - gymBonusValue("toxicGuard") - trainerBonusValue("toxicGuard"), 0, 95),
+        reputationOnAccept: reputationSwing,
+        reputationOnDecline: template.declineRep,
+        contractLabel: contract ? contract.label : "Без контракта",
+        promoterId: promoter.npc ? promoter.npc.id : "",
+        promoterName: promoter.npc ? promoter.npc.name : "Свободный матчмейкер",
+        gymName: gym ? gym.name : "Уличная база",
+        opponent: opponent
+      };
+      return offer;
+    }
+
+    function buildFightOffers() {
+      var ids = ["home_safe", "home_even", "home_danger"];
+      var promoter = promoterInfluence();
+      var contract = currentContract();
+      var maxExtra = promoter.offerBonus + Math.max(0, activeContractFightFrequency() - 1) + gymBonusValue("awayBias") + trainerBonusValue("awayBias");
+      var safeBias = gymBonusValue("safeBias") + trainerBonusValue("safeBias");
+      var dangerBias = gymBonusValue("dangerBias") + trainerBonusValue("dangerBias");
+      var lastFight = latestFightActionMeta();
+      var offers = [];
+      var i;
+      var builtOffer;
+      if (maxExtra >= 1) {
+        ids.push("away_even");
+      }
+      if (maxExtra >= 2) {
+        ids.push("away_safe");
+      }
+      if ((contract && contract.fightFrequency >= 3) || state.fighter.fame >= 22 || dangerBias >= 2) {
+        ids.push("away_danger");
+      }
+      if (safeBias >= 3) {
+        ids.push("away_safe");
+      }
+      ids = uniqueList(ids);
+      for (i = 0; i < ids.length; i += 1) {
+        builtOffer = buildFightOffer(ids[i], null);
+        if (builtOffer) {
+          offers.push(builtOffer);
+        }
+      }
+      if (lastFight && lastFight.opponentSnapshot && lastFight.result !== "draw") {
+        builtOffer = buildFightOffer("rematch_offer", lastFight.opponentSnapshot);
+        if (builtOffer) {
+          offers.unshift(builtOffer);
+        }
+      }
+      return offers;
+    }
+
+    function buildWeeklyOffers() {
+      var fightOffers = buildFightOffers();
+      var contractOffers = buildContractOffers();
+      var summaries = [];
+      var headline = "";
+      if (fightOffers.length) {
+        headline = fightOffers[0].label + ": $" + fightOffers[0].guaranteedPurse + " гарантии";
+        summaries.push({
+          id: fightOffers[0].id,
+          type: "fight",
+          title: fightOffers[0].label,
+          text: fightOffers[0].description
+        });
+      }
+      if (contractOffers.length) {
+        summaries.push({
+          id: contractOffers[0].id,
+          type: "contract",
+          title: contractOffers[0].label,
+          text: "Контракт от " + contractOffers[0].promoterName + " с гарантией $" + contractOffers[0].guaranteedPurse + "."
+        });
+        if (!headline) {
+          headline = contractOffers[0].label + " от " + contractOffers[0].promoterName;
+        }
+      }
+      if (!headline) {
+        headline = "Неделя тише обычного, но рынок всё ещё смотрит на твой лагерь.";
+      }
+      return {
+        weekStamp: state.fighter.week,
+        available: summaries,
+        headline: headline,
+        fightOffers: fightOffers,
+        contractOffers: contractOffers
+      };
+    }
+
+    function payGymAndTrainerUpkeep() {
+      var membership = currentGymMembership();
+      var gym = currentGym();
+      var assignment;
+      var trainerType;
+      var trainerRelation;
+      if (membership && gym) {
+        if (state.fighter.money >= membership.weeklyCost) {
+          state.fighter.money -= membership.weeklyCost;
+          pushLog("Взнос за зал " + gym.name + ": -$" + membership.weeklyCost + ".", "warn");
+        } else {
+          pushLog("Не хватило денег на взнос за " + gym.name + ". Ты теряешь место в зале.", "bad");
+          state.world.gymMembership = null;
+          releaseTrainer("зал потерян из-за долгов", true);
+        }
+      }
+      assignment = currentTrainerAssignment();
+      trainerType = currentTrainerType();
+      if (assignment && trainerType) {
+        trainerRelation = findRelationship(assignment.npcId);
+        if (state.fighter.money >= assignment.weeklyFee) {
+          state.fighter.money -= assignment.weeklyFee;
+          pushLog("Гонорар тренеру (" + trainerType.label + "): -$" + assignment.weeklyFee + ".", "warn");
+        } else {
+          releaseTrainer("не удалось оплатить гонорар тренеру", false);
+        }
+        if (trainerRelation && trainerRelation.tension >= 80 && trainerRelation.trust <= 25) {
+          releaseTrainer("плохие отношения разорвали сотрудничество", false);
+        }
+      }
+    }
+
+    function updateContractsForWeek() {
+      var contract = currentContract();
+      var promoter;
+      var relation;
+      if (!contract) {
+        return;
+      }
+      if (state.fighter.week > contract.endsWeek) {
+        promoter = findNpcById(contract.promoterId);
+        relation = promoter ? findRelationship(promoter.id) : null;
+        if (relation) {
+          relation.respect = clampRelationValue(relation.respect + 2);
+          syncNpcRelationSnapshot(promoter.id);
+        }
+        endActiveContract("Контракт '" + contract.label + "' завершён.", "warn");
+      }
+    }
+
     function updateNpcWorldForWeek(action) {
       var fighter = state.fighter;
       var currentWeek = relationWeekStamp();
@@ -2054,6 +2750,16 @@
       ensureLifeState();
       ensureNpcWorld();
       state.world.offers = buildWeeklyOffers();
+      state.opponents = [];
+      if (state.world.offers.fightOffers instanceof Array) {
+        var i;
+        for (i = 0; i < state.world.offers.fightOffers.length; i += 1) {
+          if (state.world.offers.fightOffers[i] && state.world.offers.fightOffers[i].opponent) {
+            state.opponents.push(state.world.offers.fightOffers[i].opponent);
+          }
+        }
+      }
+      state.world.opponents = state.opponents;
       state.world.scene.updatedWeek = fighter.week;
       state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
       state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
@@ -2196,6 +2902,8 @@
       nextAge = currentAgeView(fighter);
       fighter.money -= WEEKLY_EXPENSE;
       pushLog("Обязательные расходы недели: -$" + WEEKLY_EXPENSE + ".", "warn");
+      payGymAndTrainerUpkeep();
+      updateContractsForWeek();
       if (previousCalendar.monthIndex !== nextCalendar.monthIndex || previousCalendar.year !== nextCalendar.year) {
         pushLog("Начинается " + nextCalendar.monthName + " " + nextCalendar.year + ".", "warn");
       }
@@ -2520,6 +3228,7 @@
       var fighter = state.fighter;
       var option = TRAINING_OPTIONS[kind];
       var trainDelta;
+      var bonusPoints;
       if (!option) {
         return;
       }
@@ -2528,12 +3237,13 @@
         medium: { fatigue: 14, wear: 2, morale: 1 },
         hard: { fatigue: 20, wear: 3, morale: -2 }
       }[kind] || { fatigue: 10, wear: 1, morale: 0 };
-      fighter.skillPoints += option.points;
+      bonusPoints = gymBonusValue("trainingPoints") + trainerBonusValue("trainingPoints");
+      fighter.skillPoints += option.points + bonusPoints;
       fighter.health += option.health;
       fighter.stress += option.stress;
       registerWeeklyAction("train", option.label, trainDelta, { kind: kind });
       applyBounds(fighter);
-      pushLog(fighter.name + " проводит " + option.label.toLowerCase() + " тренировку и получает +" + option.points + " очков навыков.", "good");
+      pushLog(fighter.name + " проводит " + option.label.toLowerCase() + " тренировку и получает +" + (option.points + bonusPoints) + " очков навыков.", "good");
       spendWeek();
     }
 
@@ -2541,6 +3251,8 @@
       var fighter = state.fighter;
       var option = RECOVERY_OPTIONS[kind];
       var recoveryDelta;
+      var bonusHealth;
+      var stressShift;
       if (!option) {
         return;
       }
@@ -2554,12 +3266,14 @@
         render();
         return;
       }
+      bonusHealth = gymBonusValue("recoveryHealth") + trainerBonusValue("recoveryHealth");
+      stressShift = option.stress - trainerBonusValue("stressRelief");
       fighter.money -= option.cost;
-      fighter.health += option.health;
-      fighter.stress += option.stress;
+      fighter.health += option.health + bonusHealth;
+      fighter.stress += stressShift;
       registerWeeklyAction("recover", option.label, recoveryDelta, { kind: kind });
       applyBounds(fighter);
-      pushLog(option.label + " возвращает " + option.health + " здоровья и меняет стресс на " + option.stress + ".", "good");
+      pushLog(option.label + " возвращает " + (option.health + bonusHealth) + " здоровья и меняет стресс на " + stressShift + ".", "good");
       spendWeek();
     }
 
@@ -2630,37 +3344,8 @@
       }());
     }
 
-    function generateOpponent(tier) {
-      var fighter = state.fighter;
-      var country = getCountryInfo(fighter.currentCountry);
-      var arena = ContentLoader.getRandomArena(fighter.currentCountry);
-      var identity = makeIdentity(fighter.currentCountry);
-      var bonus = currentTravelBonus(fighter);
-      var tierData = ContentLoader.getOpponentTier(tier);
-      var tierBonus = tierData.tierBonus;
-      var base = clamp(Math.round(combatRating(fighter)) + tierBonus + rand(-1, 1), 1, 40);
-      var stats = {
-        str: clamp(base + rand(-1, 2), 1, 45),
-        tec: clamp(base + rand(-1, 2), 1, 45),
-        spd: clamp(base + rand(-1, 2), 1, 45),
-        end: clamp(base + rand(-1, 2), 1, 45),
-        vit: clamp(base + rand(-1, 2), 1, 45)
-      };
-      return {
-        firstName: identity.firstName,
-        lastName: identity.lastName,
-        nickname: identity.nickname,
-        fullName: identity.fullName,
-        countryKey: fighter.currentCountry,
-        profile: choice(ContentLoader.getOpponentTypeLabels()),
-        stats: stats,
-        purse: Math.round((tierData.purseBase + base * 8 + rand(0, 24)) * bonus.money),
-        fameReward: Math.round((tierData.fameBase + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
-        condition: rand(72, 100),
-        rounds: choice(tierData.rounds),
-        danger: tierData.danger,
-        venue: arena ? arena.name : (country ? country.venueName : "")
-      };
+    function generateOpponent(tier, countryKeyOverride, snapshotOverride) {
+      return generateConfiguredOpponent(tier, countryKeyOverride, snapshotOverride);
     }
 
     function fullOpponentName(opponent) {
@@ -2668,8 +3353,19 @@
     }
 
     function openFightSelect() {
-      state.opponents = [generateOpponent("safe"), generateOpponent("even"), generateOpponent("danger")];
       ensureLifeState();
+      if (!state.world.offers || state.world.offers.weekStamp !== state.fighter.week || !(state.world.offers.fightOffers instanceof Array) || !state.world.offers.fightOffers.length) {
+        refreshWorldState();
+      }
+      state.opponents = [];
+      if (state.world.offers && state.world.offers.fightOffers) {
+        var i;
+        for (i = 0; i < state.world.offers.fightOffers.length; i += 1) {
+          if (state.world.offers.fightOffers[i] && state.world.offers.fightOffers[i].opponent) {
+            state.opponents.push(state.world.offers.fightOffers[i].opponent);
+          }
+        }
+      }
       state.world.opponents = state.opponents;
       state.panel = "fightSelect";
       render();
@@ -2898,12 +3594,37 @@
       render();
     }
 
+    function summarizeBonuses(bonuses) {
+      var parts = [];
+      if (!bonuses) {
+        return "Без заметных бонусов.";
+      }
+      if (bonuses.trainingPoints) { parts.push("очки +" + bonuses.trainingPoints); }
+      if (bonuses.recoveryHealth) { parts.push("восстановление +" + bonuses.recoveryHealth); }
+      if (bonuses.purseBonus) { parts.push("гонорар +" + bonuses.purseBonus); }
+      if (bonuses.fameBonus) { parts.push("слава +" + bonuses.fameBonus); }
+      if (bonuses.safeBias) { parts.push("безопасные офферы +" + bonuses.safeBias); }
+      if (bonuses.dangerBias) { parts.push("опасные офферы +" + bonuses.dangerBias); }
+      if (bonuses.awayBias) { parts.push("выездные бои +" + bonuses.awayBias); }
+      if (bonuses.toxicGuard) { parts.push("защита от токсичности +" + bonuses.toxicGuard); }
+      if (bonuses.koBonus) { parts.push("KO бонус +" + bonuses.koBonus); }
+      if (!parts.length) {
+        return "Без заметных бонусов.";
+      }
+      return parts.join(", ");
+    }
+
     function renderHomeSummaryPanel() {
       var current = getCountryInfo(state.fighter.currentCountry);
       var home = getCountryInfo(state.fighter.homeCountry);
       var calendar = currentCalendarView(state.fighter);
       var age = currentAgeView(state.fighter);
       var offerHeadline = state.world && state.world.offers ? state.world.offers.headline : "";
+      var gym = currentGym();
+      var trainerNpc = currentTrainerNpc();
+      var trainerType = currentTrainerType();
+      var contract = currentContract();
+      var fightOfferCount = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers.length : 0;
       return "" +
         "<div class='panel fill-panel'>" +
           "<div class='eyebrow'>Основное</div>" +
@@ -2924,9 +3645,15 @@
           meter("Краткосрочная усталость", state.fighter.fatigue) +
           meter("Накопленный износ", state.fighter.wear) +
           meter("Настроение", state.fighter.morale) +
+          "<div class='card-grid' style='margin-top:18px'>" +
+            "<div class='card'><h3>Текущий зал</h3><p>" + (gym ? (gym.name + ", " + gym.city + ". $" + gym.cost + "/нед.") : "Ты пока без зала и работаешь на уличной базе.") + "</p><div class='muted'>" + (gym ? summarizeBonuses(gym.bonuses) : "Без бонусов лагеря.") + "</div></div>" +
+            "<div class='card'><h3>Тренер</h3><p>" + (trainerNpc ? (trainerNpc.name + " · " + (trainerType ? trainerType.label : "Тренер") + ". $" + (trainerType ? trainerType.weeklyFee : 0) + "/нед.") : "Тренер пока не нанят.") + "</p><div class='muted'>" + (trainerNpc ? trainerNpc.relationToPlayer.summary : "Без штаба бонусы тренера не работают.") + "</div></div>" +
+            "<div class='card'><h3>Активный контракт</h3><p>" + (contract ? (contract.label + ". До недели " + contract.endsWeek + ".") : "Пока без контракта.") + "</p><div class='muted'>" + (contract ? ("Гарантия $" + contract.guaranteedPurse + ", победа $" + contract.winBonus + ", KO $" + contract.koBonus + ".") : "Новые условия ищи во вкладке персонажа.") + "</div></div>" +
+            "<div class='card'><h3>Предложения боёв</h3><p>На этой неделе доступно " + fightOfferCount + " оффер(ов).</p><div class='muted'>" + offerHeadline + "</div></div>" +
+          "</div>" +
           "<div class='footer-actions' style='margin-top:18px'>" +
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
-            "<button class='button' onclick='openFightSelect()'>Найти соперника</button>" +
+            "<button class='button' onclick='openFightSelect()'>Офферы боёв</button>" +
             "<button class='ghost' onclick='openPanel(\"work\")'>Заработать</button>" +
             "<button class='ghost' onclick='openPanel(\"recover\")'>Восстановиться</button>" +
             "<button class='ghost' onclick='openPanel(\"travel\")'>Путешествие</button>" +
@@ -3102,16 +3829,26 @@
 
     function renderFightSelectPanel() {
       var html = [];
+      var offers = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers : [];
       var i;
-      html.push("<div class='panel'><h2 class='panel-title'>Выбор соперника</h2><div class='muted'>Все бойцы на этом экране принадлежат текущей стране: " + getCountryInfo(state.fighter.currentCountry).name + ". Арена недели: " + getCountryInfo(state.fighter.currentCountry).city + ".</div><div class='card-grid' style='margin-top:16px'>");
-      for (i = 0; i < state.opponents.length; i += 1) {
-        var opponent = state.opponents[i];
+      var offer;
+      var opponent;
+      html.push("<div class='panel'><h2 class='panel-title'>Предложения боёв</h2><div class='muted'>Домашние, выездные, опасные и реванши теперь приходят как полноценные офферы с условиями, бонусами и риском.</div><div class='card-grid' style='margin-top:16px'>");
+      if (!offers.length) {
+        html.push("<div class='empty-state'>На этой неделе матчмейкеры молчат. Попробуй обновить неделю через тренировку, работу, восстановление или поездку.</div>");
+      }
+      for (i = 0; i < offers.length; i += 1) {
+        offer = offers[i];
+        opponent = offer.opponent;
         html.push("<div class='card'>");
-        html.push("<div class='meta'>" + opponent.danger + "</div>");
+        html.push("<div class='meta'>" + offer.label + "</div>");
         html.push("<h3>" + fullOpponentName(opponent) + "</h3>");
-        html.push("<p>" + opponent.profile + ". " + getCountryInfo(opponent.countryKey).name + ", " + opponent.venue + ". Кошелек $" + opponent.purse + ", слава +" + opponent.fameReward + ", форма " + opponent.condition + "/100, раундов " + opponent.rounds + ".</p>");
+        html.push("<p>" + offer.description + " " + opponent.profile + ". " + offer.countryName + ", " + offer.venue + ".</p>");
+        html.push("<div class='record-row'><div class='chip gold'>Гарантия $" + offer.guaranteedPurse + "</div><div class='chip'>Победа $" + offer.winBonus + "</div><div class='chip'>KO $" + offer.koBonus + "</div></div>");
+        html.push("<div class='record-row'><div class='chip'>Известность +" + offer.fameReward + "</div><div class='chip'>Токсичность " + offer.toxicRisk + "%</div><div class='chip'>Контракт: " + offer.contractLabel + "</div></div>");
+        html.push("<div class='record-row'><div class='chip'>Форма " + opponent.condition + "/100</div><div class='chip'>Раундов " + opponent.rounds + "</div><div class='chip'>" + opponent.danger + "</div></div>");
         html.push("<div class='split-row'><div class='chip'>Сила " + opponent.stats.str + "</div><div class='chip'>Техника " + opponent.stats.tec + "</div><div class='chip'>Скорость " + opponent.stats.spd + "</div><div class='chip'>Выносливость " + opponent.stats.end + "</div><div class='chip'>Здоровье " + opponent.stats.vit + "</div></div>");
-        html.push("<button class='button' onclick='startFight(" + i + ")'>Принять бой</button>");
+        html.push("<button class='button' onclick='startFight(" + i + ")'>Принять оффер</button>");
         html.push("</div>");
       }
       html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
@@ -3170,6 +3907,17 @@
       var calendar = currentCalendarView(fighter);
       var age = currentAgeView(fighter);
       var bonus = currentTravelBonus(fighter);
+      var gyms = listCountryGyms(fighter.currentCountry);
+      var gym = currentGym();
+      var trainerNpc = currentTrainerNpc();
+      var trainerType = currentTrainerType();
+      var contract = currentContract();
+      var contractOffers = state.world && state.world.offers && state.world.offers.contractOffers ? state.world.offers.contractOffers : [];
+      var i;
+      var gymOption;
+      var trainerOption;
+      var trainerNpcOption;
+      var offer;
       var html = [];
       html.push("<div class='panel'>");
       html.push("<h2 class='panel-title'>Персонаж</h2>");
@@ -3198,6 +3946,47 @@
       html.push("<div>" + meter("Настроение", fighter.morale) + "</div>");
       html.push("</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Прокачка</h2><div class='record-row' style='margin-top:18px'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div><div class='muted'>Цена роста идёт ступенями: 0-9 стоит 1 очко, 10-19 стоит 2, 20-29 стоит 3 и дальше по той же схеме.</div>" + renderStatUpgradeCards() + "</div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Зал</h2>");
+      html.push("<div class='muted'>" + (gym ? (gym.name + " · " + gym.city + " · $" + gym.cost + "/нед. " + gym.specialization + ".") : "Ты пока не закрепился ни в одном зале. Членство списывается автоматически каждую неделю.") + "</div>");
+      if (gym) {
+        html.push("<div class='record-row'><div class='chip gold'>Репутация зала " + gym.reputation + "</div><div class='chip'>" + summarizeBonuses(gym.bonuses) + "</div></div>");
+      }
+      html.push("<div class='choice-grid'>");
+      for (i = 0; i < gyms.length; i += 1) {
+        gymOption = gyms[i];
+        html.push("<div class='card'><h3>" + gymOption.name + "</h3><p>" + gymOption.city + ". $" + gymOption.cost + "/нед. " + gymOption.specialization + ".</p><div class='muted'>" + summarizeBonuses(gymOption.bonuses) + "</div><button class='" + (gym && gym.id === gymOption.id ? "ghost" : "button") + "' onclick='joinGym(\"" + gymOption.id + "\")'>" + (gym && gym.id === gymOption.id ? "Текущий зал" : (gym ? "Сменить зал" : "Вступить")) + "</button></div>");
+      }
+      html.push("</div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Тренер</h2>");
+      html.push("<div class='muted'>" + (trainerNpc ? (trainerNpc.name + " · " + (trainerType ? trainerType.label : "Тренер") + ". $" + (trainerType ? trainerType.weeklyFee : 0) + "/нед. " + (trainerType ? trainerType.specialization : "") + ".") : "Тренер пока не нанят. Бонусы тренера зависят и от типа специалиста, и от отношений с ним.") + "</div>");
+      if (trainerNpc) {
+        html.push("<div class='record-row'><div class='chip gold'>" + trainerNpc.relationToPlayer.summary + "</div><div class='chip'>Уважение " + trainerNpc.relationToPlayer.respect + "</div><div class='chip'>Доверие " + trainerNpc.relationToPlayer.trust + "</div><div class='chip red'>Напряжение " + trainerNpc.relationToPlayer.tension + "</div></div>");
+        html.push("<div class='footer-actions'><button class='danger' onclick='releaseTrainer(\"ты решил сменить тренерский штаб\", false)'>Убрать тренера</button></div>");
+      }
+      if (gym) {
+        html.push("<div class='choice-grid'>");
+        for (i = 0; i < (gym.trainerTypeIds || []).length; i += 1) {
+          trainerOption = getTrainerType(gym.trainerTypeIds[i]);
+          trainerNpcOption = ensureTrainerNpcForGym(gym, gym.trainerTypeIds[i]);
+          html.push("<div class='card'><h3>" + trainerOption.label + "</h3><p>" + trainerNpcOption.name + ". $" + trainerOption.weeklyFee + "/нед. " + trainerOption.specialization + ".</p><div class='muted'>" + summarizeBonuses(trainerOption.bonuses) + "</div><button class='" + (trainerType && trainerType.id === trainerOption.id ? "ghost" : "button") + "' onclick='hireTrainer(\"" + trainerOption.id + "\")'>" + (trainerType && trainerType.id === trainerOption.id ? "Текущий тренер" : "Нанять") + "</button></div>");
+        }
+        html.push("</div>");
+      }
+      html.push("</div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Контракт</h2>");
+      html.push("<div class='muted'>" + (contract ? (contract.label + ". До недели " + contract.endsWeek + ". Условия: " + contract.conditionsText) : "Активного контракта пока нет. Ниже лежат текущие предложения рынка.") + "</div>");
+      if (contract) {
+        html.push("<div class='record-row'><div class='chip gold'>Гарантия $" + contract.guaranteedPurse + "</div><div class='chip'>Победа $" + contract.winBonus + "</div><div class='chip'>KO $" + contract.koBonus + "</div><div class='chip red'>Риск " + contract.toxicRisk + "%</div></div>");
+      }
+      if (!contract && contractOffers.length) {
+        html.push("<div class='choice-grid'>");
+        for (i = 0; i < contractOffers.length; i += 1) {
+          offer = contractOffers[i];
+          html.push("<div class='card'><h3>" + offer.label + "</h3><p>" + offer.description + "</p><div class='muted'>Промоутер: " + offer.promoterName + ". " + offer.conditionsText + "</div><div class='record-row'><div class='chip gold'>Гарантия $" + offer.guaranteedPurse + "</div><div class='chip'>Победа $" + offer.winBonus + "</div><div class='chip'>KO $" + offer.koBonus + "</div><div class='chip red'>Риск " + offer.toxicRisk + "%</div></div><button class='button' onclick='acceptContract(\"" + offer.templateId + "\")'>Подписать</button></div>");
+        }
+        html.push("</div>");
+      }
+      html.push("</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div></div></div>");
       return html.join("");
     }
@@ -3784,24 +4573,36 @@
       var fight = state.fight;
       var fighter = state.fighter;
       var opponent = fight.opponent;
+      var offer = fight.offer || null;
+      var contract = currentContract();
+      var trainer = currentTrainerNpc();
+      var promoter = offer && offer.promoterId ? findNpcById(offer.promoterId) : currentPromoterNpc();
+      var trainerRelation = trainer ? findRelationship(trainer.id) : null;
+      var promoterRelation = promoter ? findRelationship(promoter.id) : null;
       var injury = Math.floor(fight.playerState.damageTaken * 0.1 + fight.playerState.knockdowns * 10);
       var fameGain;
       var pointReward = 0;
+      var guarantee = offer ? offer.guaranteedPurse : opponent.purse;
+      var winBonus = offer ? offer.winBonus : 0;
+      var koBonus = offer ? offer.koBonus : 0;
+      var toxicPenalty = offer ? Math.round(guarantee * (offer.toxicRisk || 0) / 220) : 0;
+      var repGain = offer ? offer.reputationOnAccept : 0;
       var fightDelta = {
         fatigue: 12 + fight.roundsCompleted * 2 + fight.playerState.knockdowns * 4,
         wear: 2 + fight.playerState.knockdowns + Math.floor(fight.playerState.damageTaken / 40),
         morale: 0
       };
       fighter.health -= injury;
-      fighter.stress += 6 + fight.playerState.knockdowns * 3;
+      fighter.stress += 6 + fight.playerState.knockdowns * 3 + (offer ? Math.round((offer.toxicRisk || 0) / 15) : 0);
       if (fight.result === "win") {
         fighter.wins += 1;
-        fighter.money += opponent.purse;
-        fighter.fame += opponent.fameReward;
+        fighter.money += Math.max(0, guarantee + winBonus - toxicPenalty);
+        fighter.fame += (offer ? offer.fameReward : opponent.fameReward) + Math.max(0, repGain) + (contract ? contract.reputationDelta : 0);
         pointReward = 40;
         fightDelta.morale = 6;
         if (fight.method.indexOf("KO") !== -1) {
           fighter.kos += 1;
+          fighter.money += koBonus;
           pointReward = 60;
           fightDelta.morale = 8;
         }
@@ -3811,19 +4612,39 @@
           fightDelta.morale = 10;
         }
         fighter.skillPoints += pointReward;
-        pushLog("Победа. Ты забираешь $" + opponent.purse + ", +" + opponent.fameReward + " к известности и +" + pointReward + " очков навыков.", "good");
+        if (trainerRelation) {
+          trainerRelation.respect = clampRelationValue(trainerRelation.respect + 3);
+          trainerRelation.trust = clampRelationValue(trainerRelation.trust + 2);
+        }
+        if (promoterRelation) {
+          promoterRelation.respect = clampRelationValue(promoterRelation.respect + 3);
+          promoterRelation.trust = clampRelationValue(promoterRelation.trust + (offer && offer.toxicRisk >= 35 ? 1 : 2));
+          syncNpcRelationSnapshot(promoter.id);
+        }
+        if (trainer) {
+          syncNpcRelationSnapshot(trainer.id);
+        }
+        pushLog("Победа. Ты забираешь $" + Math.max(0, guarantee + winBonus + (fight.method.indexOf("KO") !== -1 ? koBonus : 0) - toxicPenalty) + ", +" + ((offer ? offer.fameReward : opponent.fameReward) + Math.max(0, repGain)) + " к известности и +" + pointReward + " очков навыков.", "good");
       } else if (fight.result === "loss") {
-        fameGain = Math.max(2, Math.floor(opponent.fameReward / 3));
+        fameGain = Math.max(2, Math.floor((offer ? offer.fameReward : opponent.fameReward) / 2));
         fighter.losses += 1;
-        fighter.money += Math.floor(opponent.purse * 0.35);
+        fighter.money += Math.max(0, guarantee - toxicPenalty);
         fighter.fame += fameGain;
         fighter.stress += 6;
         fighter.skillPoints += 30;
         fightDelta.morale = -7;
-        pushLog("Поражение. Ты всё равно получаешь часть денег, немного известности и +30 очков навыков.", "bad");
+        if (trainerRelation) {
+          trainerRelation.trust = clampRelationValue(trainerRelation.trust - 1);
+          syncNpcRelationSnapshot(trainer.id);
+        }
+        if (promoterRelation) {
+          promoterRelation.tension = clampRelationValue(promoterRelation.tension + 3);
+          syncNpcRelationSnapshot(promoter.id);
+        }
+        pushLog("Поражение. Ты всё равно получаешь гарантированные $" + Math.max(0, guarantee - toxicPenalty) + ", немного известности и +30 очков навыков.", "bad");
       } else {
-        fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
-        fighter.money += Math.floor(opponent.purse * 0.55);
+        fameGain = Math.max(4, Math.floor((offer ? offer.fameReward : opponent.fameReward) * 0.75));
+        fighter.money += Math.max(0, guarantee + Math.floor(winBonus * 0.25) - toxicPenalty);
         fighter.fame += fameGain;
         fighter.skillPoints += 35;
         fightDelta.morale = 1;
@@ -3832,7 +4653,12 @@
       registerWeeklyAction("fight", fight.method || "Бой", fightDelta, {
         result: fight.result,
         method: fight.method,
-        rounds: fight.roundsCompleted
+        rounds: fight.roundsCompleted,
+        opponentSnapshot: buildOpponentSnapshot(opponent),
+        offerTemplateId: offer ? offer.templateId : "",
+        offerLabel: offer ? offer.label : "",
+        travel: offer ? offer.travel : "",
+        contractLabel: contract ? contract.label : ""
       });
       applyBounds(fighter);
     }
@@ -3918,9 +4744,17 @@
     }
 
     function startFight(index) {
-      var opponent = state.opponents[index];
+      var offer = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers[index] : null;
+      var opponent = offer ? offer.opponent : state.opponents[index];
       clearFightTimers();
+      if (!opponent) {
+        return;
+      }
+      if (offer && offer.reputationOnAccept) {
+        state.fighter.fame = Math.max(0, state.fighter.fame + offer.reputationOnAccept);
+      }
       state.fight = {
+        offer: offer ? clonePlainData(offer) : null,
         opponent: opponent,
         round: 1,
         turn: 1,
@@ -3932,7 +4766,7 @@
         playerState: buildFightState(state.fighter.stats, state.fighter.health, startRingPosition("player")),
         opponentState: buildFightState(opponent.stats, opponent.condition, startRingPosition("opponent")),
         lines: [
-          "Бой против " + fullOpponentName(opponent) + " начинается. Ринг 5x5, в каждом раунде 15 ходов."
+          (offer ? (offer.label + ": " + fullOpponentName(opponent) + ". Гарантия $" + offer.guaranteedPurse + ", победа $" + offer.winBonus + ", KO $" + offer.koBonus + ".") : ("Бой против " + fullOpponentName(opponent) + " начинается. Ринг 5x5, в каждом раунде 15 ходов."))
         ],
         result: null,
         method: null,

@@ -1,4 +1,4 @@
-var SAVE_VERSION = 7;
+var SAVE_VERSION = 8;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -30,17 +30,66 @@ function basePlayerBiographySchema() {
   };
 }
 
+function baseGymMembershipSchema() {
+  return {
+    gymId: "",
+    joinedWeek: 0,
+    country: "",
+    city: "",
+    weeklyCost: 0,
+    reputation: 0,
+    specialization: "",
+    bonuses: {}
+  };
+}
+
+function baseTrainerAssignmentSchema() {
+  return {
+    npcId: "",
+    trainerTypeId: "",
+    gymId: "",
+    hiredWeek: 0,
+    weeklyFee: 0,
+    status: "active"
+  };
+}
+
+function baseContractSchema() {
+  return {
+    id: "",
+    templateId: "",
+    promoterId: "",
+    label: "",
+    signedWeek: 0,
+    endsWeek: 0,
+    guaranteedPurse: 0,
+    winBonus: 0,
+    koBonus: 0,
+    fameMultiplier: 1,
+    fightFrequency: 1,
+    toxicRisk: 0,
+    reputationDelta: 0,
+    conditionsText: "",
+    status: "inactive"
+  };
+}
+
 function baseWorldSchema() {
   return {
     opponents: [],
     offers: {
       weekStamp: 0,
       available: [],
-      headline: ""
+      headline: "",
+      fightOffers: [],
+      contractOffers: []
     },
     npcs: [],
     relationships: [],
     contracts: [],
+    gymMembership: null,
+    trainerAssignment: null,
+    activeContract: null,
     eventState: {
       cooldowns: {},
       onceResolved: [],
@@ -206,6 +255,8 @@ function normalizeWorldState(sourceWorld) {
     normalized.offers.weekStamp = typeof sourceWorld.offers.weekStamp === "number" ? sourceWorld.offers.weekStamp : 0;
     normalized.offers.available = sourceWorld.offers.available instanceof Array ? clonePlainData(sourceWorld.offers.available) : [];
     normalized.offers.headline = sourceWorld.offers.headline || "";
+    normalized.offers.fightOffers = sourceWorld.offers.fightOffers instanceof Array ? clonePlainData(sourceWorld.offers.fightOffers) : [];
+    normalized.offers.contractOffers = sourceWorld.offers.contractOffers instanceof Array ? clonePlainData(sourceWorld.offers.contractOffers) : [];
   }
   if (sourceWorld.npcs instanceof Array) {
     normalized.npcs = [];
@@ -220,6 +271,44 @@ function normalizeWorldState(sourceWorld) {
     }
   }
   normalized.contracts = sourceWorld.contracts instanceof Array ? clonePlainData(sourceWorld.contracts) : [];
+  if (sourceWorld.gymMembership && typeof sourceWorld.gymMembership === "object") {
+    normalized.gymMembership = clonePlainData(baseGymMembershipSchema());
+    if (sourceWorld.gymMembership.gymId) { normalized.gymMembership.gymId = sourceWorld.gymMembership.gymId; }
+    if (typeof sourceWorld.gymMembership.joinedWeek === "number") { normalized.gymMembership.joinedWeek = sourceWorld.gymMembership.joinedWeek; }
+    normalized.gymMembership.country = sourceWorld.gymMembership.country || "";
+    normalized.gymMembership.city = sourceWorld.gymMembership.city || "";
+    if (typeof sourceWorld.gymMembership.weeklyCost === "number") { normalized.gymMembership.weeklyCost = sourceWorld.gymMembership.weeklyCost; }
+    if (typeof sourceWorld.gymMembership.reputation === "number") { normalized.gymMembership.reputation = sourceWorld.gymMembership.reputation; }
+    normalized.gymMembership.specialization = sourceWorld.gymMembership.specialization || "";
+    normalized.gymMembership.bonuses = sourceWorld.gymMembership.bonuses ? clonePlainData(sourceWorld.gymMembership.bonuses) : {};
+  }
+  if (sourceWorld.trainerAssignment && typeof sourceWorld.trainerAssignment === "object") {
+    normalized.trainerAssignment = clonePlainData(baseTrainerAssignmentSchema());
+    if (sourceWorld.trainerAssignment.npcId) { normalized.trainerAssignment.npcId = sourceWorld.trainerAssignment.npcId; }
+    if (sourceWorld.trainerAssignment.trainerTypeId) { normalized.trainerAssignment.trainerTypeId = sourceWorld.trainerAssignment.trainerTypeId; }
+    if (sourceWorld.trainerAssignment.gymId) { normalized.trainerAssignment.gymId = sourceWorld.trainerAssignment.gymId; }
+    if (typeof sourceWorld.trainerAssignment.hiredWeek === "number") { normalized.trainerAssignment.hiredWeek = sourceWorld.trainerAssignment.hiredWeek; }
+    if (typeof sourceWorld.trainerAssignment.weeklyFee === "number") { normalized.trainerAssignment.weeklyFee = sourceWorld.trainerAssignment.weeklyFee; }
+    normalized.trainerAssignment.status = sourceWorld.trainerAssignment.status || "active";
+  }
+  if (sourceWorld.activeContract && typeof sourceWorld.activeContract === "object") {
+    normalized.activeContract = clonePlainData(baseContractSchema());
+    normalized.activeContract.id = sourceWorld.activeContract.id || "";
+    normalized.activeContract.templateId = sourceWorld.activeContract.templateId || "";
+    normalized.activeContract.promoterId = sourceWorld.activeContract.promoterId || "";
+    normalized.activeContract.label = sourceWorld.activeContract.label || "";
+    if (typeof sourceWorld.activeContract.signedWeek === "number") { normalized.activeContract.signedWeek = sourceWorld.activeContract.signedWeek; }
+    if (typeof sourceWorld.activeContract.endsWeek === "number") { normalized.activeContract.endsWeek = sourceWorld.activeContract.endsWeek; }
+    if (typeof sourceWorld.activeContract.guaranteedPurse === "number") { normalized.activeContract.guaranteedPurse = sourceWorld.activeContract.guaranteedPurse; }
+    if (typeof sourceWorld.activeContract.winBonus === "number") { normalized.activeContract.winBonus = sourceWorld.activeContract.winBonus; }
+    if (typeof sourceWorld.activeContract.koBonus === "number") { normalized.activeContract.koBonus = sourceWorld.activeContract.koBonus; }
+    if (typeof sourceWorld.activeContract.fameMultiplier === "number") { normalized.activeContract.fameMultiplier = sourceWorld.activeContract.fameMultiplier; }
+    if (typeof sourceWorld.activeContract.fightFrequency === "number") { normalized.activeContract.fightFrequency = sourceWorld.activeContract.fightFrequency; }
+    if (typeof sourceWorld.activeContract.toxicRisk === "number") { normalized.activeContract.toxicRisk = sourceWorld.activeContract.toxicRisk; }
+    if (typeof sourceWorld.activeContract.reputationDelta === "number") { normalized.activeContract.reputationDelta = sourceWorld.activeContract.reputationDelta; }
+    normalized.activeContract.conditionsText = sourceWorld.activeContract.conditionsText || "";
+    normalized.activeContract.status = sourceWorld.activeContract.status || "active";
+  }
   if (sourceWorld.eventState && typeof sourceWorld.eventState === "object") {
     normalized.eventState.cooldowns = sourceWorld.eventState.cooldowns ? clonePlainData(sourceWorld.eventState.cooldowns) : {};
     normalized.eventState.onceResolved = sourceWorld.eventState.onceResolved instanceof Array ? clonePlainData(sourceWorld.eventState.onceResolved) : [];

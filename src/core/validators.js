@@ -76,8 +76,16 @@ function validateState(gameState) {
     errors.push("meta.rng имеет некорректную структуру.");
   }
 
-  if (gameState.world && gameState.world.offers && !(gameState.world.offers.available instanceof Array)) {
-    errors.push("world.offers.available должен быть массивом.");
+  if (gameState.world && gameState.world.offers) {
+    if (!(gameState.world.offers.available instanceof Array)) {
+      errors.push("world.offers.available должен быть массивом.");
+    }
+    if (!(gameState.world.offers.fightOffers instanceof Array)) {
+      errors.push("world.offers.fightOffers должен быть массивом.");
+    }
+    if (!(gameState.world.offers.contractOffers instanceof Array)) {
+      errors.push("world.offers.contractOffers должен быть массивом.");
+    }
   }
 
   if (gameState.world && !(gameState.world.npcs instanceof Array)) {
@@ -86,6 +94,22 @@ function validateState(gameState) {
 
   if (gameState.world && !(gameState.world.relationships instanceof Array)) {
     errors.push("world.relationships должен быть массивом.");
+  }
+
+  if (gameState.world && !(gameState.world.contracts instanceof Array)) {
+    errors.push("world.contracts должен быть массивом.");
+  }
+
+  if (gameState.world && gameState.world.gymMembership != null && typeof gameState.world.gymMembership !== "object") {
+    errors.push("world.gymMembership должен быть null или объектом.");
+  }
+
+  if (gameState.world && gameState.world.trainerAssignment != null && typeof gameState.world.trainerAssignment !== "object") {
+    errors.push("world.trainerAssignment должен быть null или объектом.");
+  }
+
+  if (gameState.world && gameState.world.activeContract != null && typeof gameState.world.activeContract !== "object") {
+    errors.push("world.activeContract должен быть null или объектом.");
   }
 
   if (gameState.world) {

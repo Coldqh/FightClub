@@ -32,6 +32,10 @@ var ContentLoader = (function () {
   function ensureCache() {
     var i;
     var country;
+    var gym;
+    var trainerType;
+    var contractTemplate;
+    var fightOfferTemplate;
     if (cache) {
       return cache;
     }
@@ -42,6 +46,15 @@ var ContentLoader = (function () {
       opponentTiers: clone(CONTENT_DATA.opponentTiers || {}),
       npcRoles: clone(CONTENT_DATA.npcRoles || []),
       npcRolesById: {},
+      gyms: clone((typeof CAREER_ECOSYSTEM_DATA !== "undefined" && CAREER_ECOSYSTEM_DATA.gyms) || []),
+      gymsById: {},
+      gymsByCountry: {},
+      trainerTypes: clone((typeof CAREER_ECOSYSTEM_DATA !== "undefined" && CAREER_ECOSYSTEM_DATA.trainerTypes) || []),
+      trainerTypesById: {},
+      contractTemplates: clone((typeof CAREER_ECOSYSTEM_DATA !== "undefined" && CAREER_ECOSYSTEM_DATA.contractTemplates) || []),
+      contractTemplatesById: {},
+      fightOfferTemplates: clone((typeof CAREER_ECOSYSTEM_DATA !== "undefined" && CAREER_ECOSYSTEM_DATA.fightOfferTemplates) || []),
+      fightOfferTemplatesById: {},
       contextEventTriggerChance: typeof EVENT_DATA !== "undefined" && typeof EVENT_DATA.triggerChance === "number" ? EVENT_DATA.triggerChance : 0,
       contextEvents: typeof EVENT_DATA !== "undefined" && EVENT_DATA.events instanceof Array ? EVENT_DATA.events : []
     };
@@ -52,6 +65,26 @@ var ContentLoader = (function () {
     }
     for (i = 0; i < cache.npcRoles.length; i += 1) {
       cache.npcRolesById[cache.npcRoles[i].id] = cache.npcRoles[i];
+    }
+    for (i = 0; i < cache.gyms.length; i += 1) {
+      gym = cache.gyms[i];
+      cache.gymsById[gym.id] = gym;
+      if (!cache.gymsByCountry[gym.country]) {
+        cache.gymsByCountry[gym.country] = [];
+      }
+      cache.gymsByCountry[gym.country].push(gym);
+    }
+    for (i = 0; i < cache.trainerTypes.length; i += 1) {
+      trainerType = cache.trainerTypes[i];
+      cache.trainerTypesById[trainerType.id] = trainerType;
+    }
+    for (i = 0; i < cache.contractTemplates.length; i += 1) {
+      contractTemplate = cache.contractTemplates[i];
+      cache.contractTemplatesById[contractTemplate.id] = contractTemplate;
+    }
+    for (i = 0; i < cache.fightOfferTemplates.length; i += 1) {
+      fightOfferTemplate = cache.fightOfferTemplates[i];
+      cache.fightOfferTemplatesById[fightOfferTemplate.id] = fightOfferTemplate;
     }
     return cache;
   }
@@ -123,6 +156,42 @@ var ContentLoader = (function () {
     return ensureCache().contextEvents;
   }
 
+  function listGyms() {
+    return ensureCache().gyms;
+  }
+
+  function getGym(gymId) {
+    return ensureCache().gymsById[gymId] || null;
+  }
+
+  function listGymsByCountry(countryId) {
+    return clone(ensureCache().gymsByCountry[countryId] || []);
+  }
+
+  function listTrainerTypes() {
+    return ensureCache().trainerTypes;
+  }
+
+  function getTrainerType(typeId) {
+    return ensureCache().trainerTypesById[typeId] || null;
+  }
+
+  function listContractTemplates() {
+    return ensureCache().contractTemplates;
+  }
+
+  function getContractTemplate(templateId) {
+    return ensureCache().contractTemplatesById[templateId] || null;
+  }
+
+  function listFightOfferTemplates() {
+    return ensureCache().fightOfferTemplates;
+  }
+
+  function getFightOfferTemplate(templateId) {
+    return ensureCache().fightOfferTemplatesById[templateId] || null;
+  }
+
   function listNpcRoles() {
     return ensureCache().npcRoles;
   }
@@ -141,6 +210,15 @@ var ContentLoader = (function () {
     getRandomArena: getRandomArena,
     getOpponentTypeLabels: getOpponentTypeLabels,
     getOpponentTier: getOpponentTier,
+    listGyms: listGyms,
+    getGym: getGym,
+    listGymsByCountry: listGymsByCountry,
+    listTrainerTypes: listTrainerTypes,
+    getTrainerType: getTrainerType,
+    listContractTemplates: listContractTemplates,
+    getContractTemplate: getContractTemplate,
+    listFightOfferTemplates: listFightOfferTemplates,
+    getFightOfferTemplate: getFightOfferTemplate,
     listNpcRoles: listNpcRoles,
     getNpcRole: getNpcRole,
     getContextEventTriggerChance: getContextEventTriggerChance,
