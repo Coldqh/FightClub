@@ -900,15 +900,17 @@
 
   <script type="text/javascript" src="country_data.js"></script>
   <script type="text/javascript" src="src/content/content_data.js"></script>
+  <script type="text/javascript" src="src/content/event_data.js"></script>
   <script type="text/javascript" src="src/content/content_loader.js"></script>
   <script type="text/javascript" src="src/core/rng_manager.js"></script>
   <script type="text/javascript" src="src/core/save_manager.js"></script>
+  <script type="text/javascript" src="src/core/event_engine.js"></script>
   <script type="text/javascript" src="src/core/time_system.js"></script>
   <script type="text/javascript" src="src/core/state_factory.js"></script>
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.18.9";
+    var APP_VERSION = "2026.03.18.10";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -1234,6 +1236,9 @@
         state.panel = "home";
         state.log.unshift({ text: "Активный бой не был сохранен полностью, поэтому карьера продолжена с главного экрана.", tone: "warn" });
       }
+      if (state.activeEvent && state.screen === "game") {
+        state.panel = "worldEvent";
+      }
       if (state.screen === "game" && !state.panel) {
         state.panel = "home";
       }
@@ -1330,6 +1335,12 @@
         npcs: [],
         relationships: [],
         contracts: [],
+        eventState: {
+          cooldowns: {},
+          onceResolved: [],
+          recentEvents: [],
+          actionHistory: []
+        },
         lastWeekAction: {
           type: "idle",
           label: "",
@@ -1372,6 +1383,21 @@
       if (!(state.world.contracts instanceof Array)) {
         state.world.contracts = [];
       }
+      if (!state.world.eventState || typeof state.world.eventState !== "object") {
+        state.world.eventState = clonePlainData(worldDefaults.eventState);
+      }
+      if (!state.world.eventState.cooldowns || typeof state.world.eventState.cooldowns !== "object") {
+        state.world.eventState.cooldowns = {};
+      }
+      if (!(state.world.eventState.onceResolved instanceof Array)) {
+        state.world.eventState.onceResolved = [];
+      }
+      if (!(state.world.eventState.recentEvents instanceof Array)) {
+        state.world.eventState.recentEvents = [];
+      }
+      if (!(state.world.eventState.actionHistory instanceof Array)) {
+        state.world.eventState.actionHistory = [];
+      }
       if (!state.world.lastWeekAction || typeof state.world.lastWeekAction !== "object") {
         state.world.lastWeekAction = worldDefaults.lastWeekAction;
       }
@@ -1411,8 +1437,17 @@
       if (typeof fighter.morale !== "number") {
         fighter.morale = 55;
       }
+      if (!(fighter.bioFlags instanceof Array)) {
+        fighter.bioFlags = [];
+      }
+      if (!(fighter.bioHistory instanceof Array)) {
+        fighter.bioHistory = [];
+      }
       fighter.week = TimeSystem.getCalendarView(fighter.calendar).weekNumber;
       state.world.opponents = state.opponents || state.world.opponents;
+      if (state.activeEvent != null && typeof state.activeEvent !== "object") {
+        state.activeEvent = null;
+      }
     }
 
     function currentCalendarView(fighter) {
@@ -1454,6 +1489,7 @@
     }
 
     function registerWeeklyAction(type, label, delta, meta) {
+      var entry;
       ensureLifeState();
       applyConditionDelta(state.fighter, delta);
       state.world.lastWeekAction = {
@@ -1461,6 +1497,71 @@
         label: label || "",
         meta: meta ? clonePlainData(meta) : null
       };
+      entry = {
+        week: state.fighter ? state.fighter.week : 1,
+        type: type || "idle",
+        label: label || "",
+        meta: meta ? clonePlainData(meta) : null
+      };
+      state.world.eventState.actionHistory.unshift(entry);
+      if (state.world.eventState.actionHistory.length > 24) {
+        state.world.eventState.actionHistory = state.world.eventState.actionHistory.slice(0, 24);
+      }
+    }
+
+    function addBiographyHistory(text, tag) {
+      if (!state.fighter || !text) {
+        return;
+      }
+      if (!(state.fighter.bioHistory instanceof Array)) {
+        state.fighter.bioHistory = [];
+      }
+      state.fighter.bioHistory.unshift({
+        week: state.fighter.week,
+        text: text,
+        tag: tag || ""
+      });
+      if (state.fighter.bioHistory.length > 24) {
+        state.fighter.bioHistory = state.fighter.bioHistory.slice(0, 24);
+      }
+    }
+
+    function addBiographyFlags(addList, removeList) {
+      var flags = uniqueList(state.fighter && state.fighter.bioFlags ? state.fighter.bioFlags : []);
+      var output = [];
+      var i;
+      var j;
+      var blocked;
+      if (addList instanceof Array) {
+        flags = uniqueList(flags.concat(addList));
+      }
+      if (removeList instanceof Array && removeList.length) {
+        for (i = 0; i < flags.length; i += 1) {
+          blocked = false;
+          for (j = 0; j < removeList.length; j += 1) {
+            if (flags[i] === removeList[j]) {
+              blocked = true;
+              break;
+            }
+          }
+          if (!blocked) {
+            output.push(flags[i]);
+          }
+        }
+        flags = output;
+      }
+      state.fighter.bioFlags = uniqueList(flags);
+    }
+
+    function findChoiceInActiveEvent(choiceId) {
+      var choices = state.activeEvent && state.activeEvent.choices ? state.activeEvent.choices : [];
+      var i;
+      for (i = 0; i < choices.length; i += 1) {
+        if (choices[i].id === choiceId) {
+          return choices[i];
+        }
+      }
+      return null;
     }
 
     function buildWeeklyOffers() {
@@ -1959,6 +2060,127 @@
       syncAllNpcRelationSnapshots();
     }
 
+    function resolveEventActor(slot) {
+      if (!state.activeEvent || !state.activeEvent.actors || !slot) {
+        return null;
+      }
+      return state.activeEvent.actors[slot] || null;
+    }
+
+    function applyRelationEffect(effect) {
+      var actor;
+      var relation;
+      if (!effect || !effect.slot) {
+        return;
+      }
+      actor = resolveEventActor(effect.slot);
+      if (!actor || !actor.id) {
+        return;
+      }
+      relation = findRelationship(actor.id);
+      if (!relation) {
+        return;
+      }
+      relation.affinity = clampRelationValue(relation.affinity + (effect.affinity || 0));
+      relation.respect = clampRelationValue(relation.respect + (effect.respect || 0));
+      relation.trust = clampRelationValue(relation.trust + (effect.trust || 0));
+      relation.tension = clampRelationValue(relation.tension + (effect.tension || 0));
+      relation.lastInteractionWeek = relationWeekStamp();
+      relation.historyEntries = appendHistoryEntry(relation.historyEntries, {
+        week: relationWeekStamp(),
+        type: "event",
+        text: state.activeEvent.title
+      }, 16);
+      syncNpcRelationSnapshot(actor.id);
+    }
+
+    function applyEventEffect(effect) {
+      var fighter = state.fighter;
+      if (!effect || !fighter) {
+        return;
+      }
+      if (effect.type === "resource") {
+        if (effect.key === "money" || effect.key === "health" || effect.key === "stress" || effect.key === "fame" || effect.key === "skillPoints") {
+          fighter[effect.key] += effect.delta || 0;
+        }
+      } else if (effect.type === "condition") {
+        if (effect.key === "fatigue" || effect.key === "wear" || effect.key === "morale") {
+          fighter[effect.key] += effect.delta || 0;
+        }
+      } else if (effect.type === "relation") {
+        applyRelationEffect(effect);
+      }
+    }
+
+    function recordResolvedEvent(activeEvent, choice) {
+      var eventState = state.world.eventState;
+      var eventEntry;
+      if (!activeEvent || !choice) {
+        return;
+      }
+      eventState.cooldowns[activeEvent.id] = state.fighter.week;
+      if (activeEvent.once || activeEvent.repeatable === false) {
+        eventState.onceResolved = uniqueList(eventState.onceResolved.concat([activeEvent.id]));
+      }
+      eventEntry = {
+        id: activeEvent.id,
+        title: activeEvent.title,
+        choiceId: choice.id,
+        week: state.fighter.week
+      };
+      eventState.recentEvents.unshift(eventEntry);
+      if (eventState.recentEvents.length > 20) {
+        eventState.recentEvents = eventState.recentEvents.slice(0, 20);
+      }
+      addBiographyHistory(activeEvent.title + ": " + choice.label + ".", "event");
+    }
+
+    function resolveActiveEventChoice(choiceId) {
+      var activeEvent = state.activeEvent;
+      var choice = findChoiceInActiveEvent(choiceId);
+      var i;
+      if (!activeEvent || !choice) {
+        return;
+      }
+      for (i = 0; i < choice.effects.length; i += 1) {
+        applyEventEffect(choice.effects[i]);
+      }
+      if (choice.tagChanges) {
+        addBiographyFlags(choice.tagChanges.add || [], choice.tagChanges.remove || []);
+      }
+      recordResolvedEvent(activeEvent, choice);
+      applyBounds(state.fighter);
+      refreshWorldState();
+      pushLog(activeEvent.title + ": " + choice.resultText, "warn");
+      state.activeEvent = null;
+      if (state.screen === "game") {
+        state.panel = "home";
+      }
+      if (evaluateEndState()) {
+        return;
+      }
+      render();
+    }
+
+    function weeklyEvent() {
+      var gameState;
+      var eventDef;
+      ensureLifeState();
+      if (state.activeEvent || !state.fighter) {
+        return;
+      }
+      if (!chance(ContentLoader.getContextEventTriggerChance())) {
+        return;
+      }
+      gameState = syncGameStateFromRuntime();
+      eventDef = EventEngine.pickEvent(gameState, ContentLoader.getContextEvents(), state.rng);
+      if (!eventDef) {
+        return;
+      }
+      state.activeEvent = eventDef;
+      state.panel = "worldEvent";
+    }
+
     function runWorldTick() {
       var fighter = state.fighter;
       var previousCalendar;
@@ -2196,6 +2418,11 @@
     }
 
     function openPanel(panel) {
+      if (state.activeEvent && panel !== "worldEvent") {
+        state.panel = "worldEvent";
+        render();
+        return;
+      }
       state.panel = panel;
       render();
     }
@@ -2208,51 +2435,12 @@
       if (evaluateEndState()) {
         return;
       }
-      state.panel = "home";
+      state.panel = state.activeEvent ? "worldEvent" : "home";
       render();
     }
 
     function advanceWeek() {
       runWorldTick();
-    }
-
-    function weeklyEvent() {
-      var fighter = state.fighter;
-      var available = [];
-      var totalWeight = 0;
-      var eventItem;
-      var roll;
-      var i;
-      var result;
-      if (!chance(ContentLoader.getWeeklyEventTriggerChance())) {
-        return;
-      }
-      for (i = 0; i < ContentLoader.getWeeklyEvents().length; i += 1) {
-        eventItem = ContentLoader.getWeeklyEvents()[i];
-        if (!eventItem.condition || eventItem.condition(fighter, state)) {
-          totalWeight += eventItem.weight || 1;
-          available.push({
-            item: eventItem,
-            total: totalWeight
-          });
-        }
-      }
-      if (!available.length) {
-        return;
-      }
-      roll = rand(1, totalWeight);
-      for (i = 0; i < available.length; i += 1) {
-        if (roll <= available[i].total) {
-          eventItem = available[i].item;
-          break;
-        }
-      }
-      if (!eventItem) {
-        return;
-      }
-      result = eventItem.effect ? (eventItem.effect(fighter, state) || {}) : {};
-      pushLog(typeof eventItem.text === "function" ? eventItem.text(result, fighter, state) : eventItem.text, eventItem.tone || "");
-      applyBounds(fighter);
     }
 
     function evaluateEndState() {
@@ -2749,6 +2937,35 @@
 
     function renderHomePanel() {
       return renderHomeSummaryPanel();
+    }
+
+    function renderWorldEventPanel() {
+      var activeEvent = state.activeEvent;
+      var html = [];
+      var i;
+      if (!activeEvent) {
+        return renderHomePanel();
+      }
+      html.push("<div class='panel fill-panel'>");
+      html.push("<div class='eyebrow'>Событие недели</div>");
+      html.push("<h2 class='panel-title'>" + activeEvent.title + "</h2>");
+      html.push("<div class='subtitle'>" + activeEvent.text + "</div>");
+      if (activeEvent.actors) {
+        html.push("<div class='record-row' style='margin-top:14px'>");
+        for (i in activeEvent.actors) {
+          if (activeEvent.actors.hasOwnProperty(i)) {
+            html.push("<div class='chip'>" + activeEvent.actors[i].name + " · " + npcRoleInfo(activeEvent.actors[i].role).label + "</div>");
+          }
+        }
+        html.push("</div>");
+      }
+      html.push("<div class='choice-grid' style='margin-top:18px'>");
+      for (i = 0; i < activeEvent.choices.length; i += 1) {
+        html.push("<div class='card'><h3>" + activeEvent.choices[i].label + "</h3><p>" + activeEvent.choices[i].resultText + "</p><button class='button' onclick='resolveActiveEventChoice(\"" + activeEvent.choices[i].id + "\")'>Выбрать</button></div>");
+      }
+      html.push("</div>");
+      html.push("</div>");
+      return html.join("");
     }
 
     function renderStatUpgradeCards() {
@@ -3621,6 +3838,7 @@
     }
 
     function renderMainPanel() {
+      if (state.panel === "worldEvent") { return wrapGamePanel("worldEvent", renderWorldEventPanel()); }
       if (state.panel === "character") { return wrapGamePanel("character", renderCharacterPanel()); }
       if (state.panel === "people") { return wrapGamePanel("people", renderPeoplePanel()); }
       if (state.panel === "careerLog") { return wrapGamePanel("careerLog", renderCareerLogPage()); }

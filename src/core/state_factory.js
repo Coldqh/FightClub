@@ -1,4 +1,4 @@
-var SAVE_VERSION = 5;
+var SAVE_VERSION = 7;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -23,6 +23,13 @@ function basePlayerConditionsSchema() {
   };
 }
 
+function basePlayerBiographySchema() {
+  return {
+    flags: [],
+    history: []
+  };
+}
+
 function baseWorldSchema() {
   return {
     opponents: [],
@@ -34,6 +41,12 @@ function baseWorldSchema() {
     npcs: [],
     relationships: [],
     contracts: [],
+    eventState: {
+      cooldowns: {},
+      onceResolved: [],
+      recentEvents: [],
+      actionHistory: []
+    },
     lastWeekAction: {
       type: "idle",
       label: "",
@@ -148,6 +161,7 @@ function createGameState(options) {
         fame: 0
       },
       conditions: basePlayerConditionsSchema(),
+      biography: basePlayerBiographySchema(),
       record: {
         wins: 0,
         losses: 0,
@@ -168,6 +182,7 @@ function createGameState(options) {
     ui: {
       screen: "menu",
       panel: "home",
+      activeEvent: null,
       savedPreview: null,
       debug: {
         enabled: debugEnabled,
@@ -205,6 +220,12 @@ function normalizeWorldState(sourceWorld) {
     }
   }
   normalized.contracts = sourceWorld.contracts instanceof Array ? clonePlainData(sourceWorld.contracts) : [];
+  if (sourceWorld.eventState && typeof sourceWorld.eventState === "object") {
+    normalized.eventState.cooldowns = sourceWorld.eventState.cooldowns ? clonePlainData(sourceWorld.eventState.cooldowns) : {};
+    normalized.eventState.onceResolved = sourceWorld.eventState.onceResolved instanceof Array ? clonePlainData(sourceWorld.eventState.onceResolved) : [];
+    normalized.eventState.recentEvents = sourceWorld.eventState.recentEvents instanceof Array ? clonePlainData(sourceWorld.eventState.recentEvents) : [];
+    normalized.eventState.actionHistory = sourceWorld.eventState.actionHistory instanceof Array ? clonePlainData(sourceWorld.eventState.actionHistory) : [];
+  }
   if (sourceWorld.lastWeekAction && typeof sourceWorld.lastWeekAction === "object") {
     normalized.lastWeekAction.type = sourceWorld.lastWeekAction.type || "idle";
     normalized.lastWeekAction.label = sourceWorld.lastWeekAction.label || "";
@@ -258,6 +279,10 @@ function normalizeGameState(gameState, options) {
       if (typeof source.player.conditions.morale === "number") { normalized.player.conditions.morale = source.player.conditions.morale; }
       if (typeof source.player.conditions.startingAge === "number") { normalized.player.conditions.startingAge = source.player.conditions.startingAge; }
     }
+    if (source.player.biography) {
+      normalized.player.biography.flags = source.player.biography.flags instanceof Array ? clonePlainData(source.player.biography.flags) : [];
+      normalized.player.biography.history = source.player.biography.history instanceof Array ? clonePlainData(source.player.biography.history) : [];
+    }
     if (source.player.record) {
       if (typeof source.player.record.wins === "number") { normalized.player.record.wins = source.player.record.wins; }
       if (typeof source.player.record.losses === "number") { normalized.player.record.losses = source.player.record.losses; }
@@ -288,6 +313,7 @@ function normalizeGameState(gameState, options) {
   if (source.ui) {
     normalized.ui.screen = source.ui.screen || normalized.ui.screen;
     normalized.ui.panel = source.ui.panel || normalized.ui.panel;
+    normalized.ui.activeEvent = source.ui.activeEvent ? clonePlainData(source.ui.activeEvent) : null;
     normalized.ui.savedPreview = source.ui.savedPreview || null;
     if (source.ui.debug) {
       normalized.ui.debug.enabled = !!source.ui.debug.enabled;
@@ -314,6 +340,7 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
   gameState.meta.remoteVersion = snapshot && snapshot.remoteVersion ? snapshot.remoteVersion : "";
   gameState.ui.screen = snapshot && snapshot.screen ? snapshot.screen : gameState.ui.screen;
   gameState.ui.panel = snapshot && snapshot.panel ? snapshot.panel : gameState.ui.panel;
+  gameState.ui.activeEvent = snapshot && snapshot.activeEvent ? clonePlainData(snapshot.activeEvent) : null;
   gameState.ui.savedPreview = snapshot && snapshot.savedPreview ? clonePlainData(snapshot.savedPreview) : null;
   if (snapshot && snapshot.debug) {
     gameState.ui.debug.enabled = !!snapshot.debug.enabled;
@@ -342,6 +369,8 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.player.conditions.wear = typeof fighter.wear === "number" ? fighter.wear : gameState.player.conditions.wear;
     gameState.player.conditions.morale = typeof fighter.morale === "number" ? fighter.morale : gameState.player.conditions.morale;
     gameState.player.conditions.startingAge = typeof fighter.startingAge === "number" ? fighter.startingAge : gameState.player.conditions.startingAge;
+    gameState.player.biography.flags = fighter.bioFlags instanceof Array ? clonePlainData(fighter.bioFlags) : [];
+    gameState.player.biography.history = fighter.bioHistory instanceof Array ? clonePlainData(fighter.bioHistory) : [];
     gameState.player.record.wins = fighter.wins || 0;
     gameState.player.record.losses = fighter.losses || 0;
     gameState.player.record.kos = fighter.kos || 0;
@@ -371,6 +400,7 @@ function buildGameStateFromRuntime(runtimeState, options) {
     world: runtimeState ? runtimeState.world : null,
     opponents: runtimeState ? runtimeState.opponents : [],
     fight: runtimeState ? runtimeState.fight : null,
+    activeEvent: runtimeState ? runtimeState.activeEvent : null,
     log: runtimeState ? runtimeState.log : [],
     endingReason: runtimeState ? runtimeState.endingReason : "",
     savedPreview: runtimeState ? runtimeState.savedPreview : null,
@@ -388,6 +418,7 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
   target.game = normalized;
   target.screen = normalized.ui.screen;
   target.panel = normalized.ui.panel;
+  target.activeEvent = normalized.ui.activeEvent ? clonePlainData(normalized.ui.activeEvent) : null;
   target.create = normalized.career.create ? clonePlainData(normalized.career.create) : null;
   target.opponents = clonePlainData(normalized.world.opponents);
   target.world = clonePlainData(normalized.world);
@@ -414,6 +445,8 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     wear: normalized.player.conditions.wear,
     morale: normalized.player.conditions.morale,
     startingAge: normalized.player.conditions.startingAge,
+    bioFlags: clonePlainData(normalized.player.biography.flags),
+    bioHistory: clonePlainData(normalized.player.biography.history),
     calendar: clonePlainData(normalized.career.calendar),
     wins: normalized.player.record.wins,
     losses: normalized.player.record.losses,

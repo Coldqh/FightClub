@@ -42,8 +42,8 @@ var ContentLoader = (function () {
       opponentTiers: clone(CONTENT_DATA.opponentTiers || {}),
       npcRoles: clone(CONTENT_DATA.npcRoles || []),
       npcRolesById: {},
-      weeklyEventTriggerChance: CONTENT_DATA.weeklyEventTriggerChance || 0,
-      weeklyEvents: CONTENT_DATA.weeklyEvents || []
+      contextEventTriggerChance: typeof EVENT_DATA !== "undefined" && typeof EVENT_DATA.triggerChance === "number" ? EVENT_DATA.triggerChance : 0,
+      contextEvents: typeof EVENT_DATA !== "undefined" && EVENT_DATA.events instanceof Array ? EVENT_DATA.events : []
     };
     for (i = 0; i < CONTENT_DATA.countries.length; i += 1) {
       country = buildCountry(CONTENT_DATA.countries[i]);
@@ -115,12 +115,12 @@ var ContentLoader = (function () {
     return ensureCache().opponentTiers[tierId] || ensureCache().opponentTiers.even;
   }
 
-  function getWeeklyEventTriggerChance() {
-    return ensureCache().weeklyEventTriggerChance;
+  function getContextEventTriggerChance() {
+    return ensureCache().contextEventTriggerChance;
   }
 
-  function getWeeklyEvents() {
-    return ensureCache().weeklyEvents;
+  function getContextEvents() {
+    return ensureCache().contextEvents;
   }
 
   function listNpcRoles() {
@@ -143,7 +143,7 @@ var ContentLoader = (function () {
     getOpponentTier: getOpponentTier,
     listNpcRoles: listNpcRoles,
     getNpcRole: getNpcRole,
-    getWeeklyEventTriggerChance: getWeeklyEventTriggerChance,
-    getWeeklyEvents: getWeeklyEvents
+    getContextEventTriggerChance: getContextEventTriggerChance,
+    getContextEvents: getContextEvents
   };
 }());
