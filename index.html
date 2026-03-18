@@ -632,15 +632,15 @@
       color: #fff4ef;
     }
 
-    .token.attack-right { animation: tokenAttackRight 1s ease-in-out; }
-    .token.attack-left { animation: tokenAttackLeft 1s ease-in-out; }
-    .token.attack-up { animation: tokenAttackUp 1s ease-in-out; }
-    .token.attack-down { animation: tokenAttackDown 1s ease-in-out; }
-    .token.hit-react { animation: tokenHitReact 0.34s linear 2; }
-    .token.dodge-right { animation: tokenDodgeRight 1s ease-in-out; }
-    .token.dodge-left { animation: tokenDodgeLeft 1s ease-in-out; }
-    .token.dodge-up { animation: tokenDodgeUp 1s ease-in-out; }
-    .token.dodge-down { animation: tokenDodgeDown 1s ease-in-out; }
+    .token.attack-right { animation: tokenAttackRight 0.32s ease-out; }
+    .token.attack-left { animation: tokenAttackLeft 0.32s ease-out; }
+    .token.attack-up { animation: tokenAttackUp 0.32s ease-out; }
+    .token.attack-down { animation: tokenAttackDown 0.32s ease-out; }
+    .token.hit-react { animation: tokenHitReact 0.26s linear 1; }
+    .token.dodge-right { animation: tokenDodgeRight 0.32s ease-out; }
+    .token.dodge-left { animation: tokenDodgeLeft 0.32s ease-out; }
+    .token.dodge-up { animation: tokenDodgeUp 0.32s ease-out; }
+    .token.dodge-down { animation: tokenDodgeDown 0.32s ease-out; }
 
     @keyframes tokenAttackRight {
       0% { transform: translateX(0); }
@@ -794,6 +794,8 @@
     var ACTION_DELAY_MS = 500;
     var COUNT_STEP_MS = 500;
     var KO_TEXT_MS = 1000;
+    var ACTION_ANIMATION_MS = 320;
+    var COUNT_SHAKE_MS = 260;
     var FIGHT_ACTIONS = {
       move_up: { type: "move", label: "Шаг вверх", dx: 0, dy: -1 },
       move_left: { type: "move", label: "Шаг влево", dx: -1, dy: 0 },
@@ -835,7 +837,7 @@
     }
 
     function resetCreate() {
-      clearFightStepTimeout();
+      clearFightTimers();
       state.screen = "create";
       state.panel = "home";
       state.create = {
@@ -1425,8 +1427,7 @@
     function finalizeFight(result, method, lines) {
       var fight = state.fight;
       var extraLines = lines || [];
-      clearFightStepTimeout();
-      clearFightAnimation();
+      clearFightTimers();
       fight.result = result;
       fight.method = method;
       fight.roundsCompleted = Math.max(fight.roundsCompleted, fight.round);
@@ -1444,7 +1445,7 @@
     }
 
     function closeFightResult() {
-      clearFightStepTimeout();
+      clearFightTimers();
       state.fight = null;
       state.panel = "home";
       render();
@@ -1715,29 +1716,38 @@
       return vector.dy >= 0 ? "down" : "up";
     }
 
-    function setFightAnimation(attackerSide, mode) {
-      var fight = state.fight;
-      var attacker = attackerSide === "player" ? fight.playerState : fight.opponentState;
-      var defender = attackerSide === "player" ? fight.opponentState : fight.playerState;
-      fight.animation = {
-        attackerSide: attackerSide,
-        defenderSide: attackerSide === "player" ? "opponent" : "player",
-        mode: mode,
-        direction: animationDirection(attacker.position, defender.position)
-      };
-    }
-
-    function clearFightAnimation() {
-      if (state.fight) {
-        state.fight.animation = null;
-      }
-    }
-
     function clearFightStepTimeout() {
       if (state.fight && state.fight.pendingTimeout) {
         window.clearTimeout(state.fight.pendingTimeout);
         state.fight.pendingTimeout = null;
       }
+    }
+
+    function clearFightAnimationTimeout() {
+      if (state.fight && state.fight.animationTimeout) {
+        window.clearTimeout(state.fight.animationTimeout);
+        state.fight.animationTimeout = null;
+      }
+    }
+
+    function clearFightAnimationState() {
+      if (state.fight) {
+        clearFightAnimationTimeout();
+        state.fight.animation = null;
+      }
+    }
+
+    function clearFightAnimation() {
+      var hadAnimation = state.fight && state.fight.animation;
+      clearFightAnimationState();
+      if (hadAnimation) {
+        render();
+      }
+    }
+
+    function clearFightTimers() {
+      clearFightStepTimeout();
+      clearFightAnimationState();
     }
 
     function scheduleFightStep(callbackName, delay) {
@@ -1754,25 +1764,54 @@
       }
     }
 
+    function setFightAnimationFrame(playerClass, opponentClass, duration) {
+      if (!state.fight) {
+        return;
+      }
+      clearFightAnimationState();
+      state.fight.animation = {
+        playerClass: playerClass || "",
+        opponentClass: opponentClass || ""
+      };
+      render();
+      state.fight.animationTimeout = window.setTimeout("clearFightAnimation()", duration || ACTION_ANIMATION_MS);
+    }
+
+    function setStrikeAnimation(attackerSide, mode) {
+      var fight = state.fight;
+      var attacker = attackerSide === "player" ? fight.playerState : fight.opponentState;
+      var defender = attackerSide === "player" ? fight.opponentState : fight.playerState;
+      var direction = animationDirection(attacker.position, defender.position);
+      var attackerClass = "attack-" + direction;
+      var defenderClass = mode === "hit" ? "hit-react" : "dodge-" + direction;
+      if (attackerSide === "player") {
+        setFightAnimationFrame(attackerClass, defenderClass, ACTION_ANIMATION_MS);
+      } else {
+        setFightAnimationFrame(defenderClass, attackerClass, ACTION_ANIMATION_MS);
+      }
+    }
+
+    function pulseKnockdownAnimation(victimSide) {
+      if (victimSide === "player") {
+        setFightAnimationFrame("hit-react", "", COUNT_SHAKE_MS);
+      } else {
+        setFightAnimationFrame("", "hit-react", COUNT_SHAKE_MS);
+      }
+    }
+
     function tokenClassFor(side) {
       var fight = state.fight;
       var tokenClass = "token " + (side === "player" ? "player" : "opponent");
-      var animation;
+      var sideClass;
       if (!fight) {
         return tokenClass;
-      }
-      if (fight.knockdown && fight.knockdown.victimSide === side && fight.knockdown.count > 0 && fight.knockdown.count <= 10) {
-        tokenClass += " hit-react";
       }
       if (!fight.animation) {
         return tokenClass;
       }
-      animation = fight.animation;
-      if (animation.attackerSide === side) {
-        tokenClass += " attack-" + animation.direction;
-      }
-      if (animation.defenderSide === side) {
-        tokenClass += animation.mode === "hit" ? " hit-react" : " dodge-" + animation.direction;
+      sideClass = side === "player" ? fight.animation.playerClass : fight.animation.opponentClass;
+      if (sideClass) {
+        tokenClass += " " + sideClass;
       }
       return tokenClass;
     }
@@ -1803,10 +1842,10 @@
       var victim = fightStateBySide(fight, victimSide);
       var victimStats = fightStatsBySide(fight, victimSide);
       var overkill = fight.knockdown ? fight.knockdown.overkill : 0;
-      var riseChance = 8 + count * 9 + victimStats.heart * 4 + victimStats.endurance * 2;
-      riseChance -= overkill * 7;
-      riseChance -= victim.knockdowns * 14;
-      return clamp(riseChance, 4, 92);
+      var riseChance = 9 + count * 8 + victimStats.heart * 4 + victimStats.endurance * 3;
+      riseChance -= overkill * 9;
+      riseChance -= victim.knockdowns * 12;
+      return clamp(riseChance, 3, 88);
     }
 
     function resolveKnockdown(fight, victimSide) {
@@ -1815,18 +1854,18 @@
       var victimName = fightNameBySide(fight, victimSide);
       var overkill = Math.max(0, 0 - victim.hp);
       awardFightPressure(fight, attackerSide, 12);
-      clearFightStepTimeout();
-      clearFightAnimation();
+      clearFightTimers();
       victim.hp = 0;
+      fight.actionLock = true;
       fight.knockdown = {
         victimSide: victimSide,
         victimName: victimName,
-        text: "Нокдаун!",
+        text: "Нокдаун",
         count: 0,
         overkill: overkill
       };
       pushFightLine(fight, victimName + " отправляется в нокдаун.");
-      render();
+      pulseKnockdownAnimation(victimSide);
       scheduleFightStep("advanceKnockdownSequence", COUNT_STEP_MS);
       return true;
     }
@@ -1837,6 +1876,7 @@
         return;
       }
       state.fight.knockdown.text = "Встал";
+      clearFightAnimationState();
       render();
       scheduleFightStep("finishKnockdownRecovery", COUNT_STEP_MS);
     }
@@ -1854,10 +1894,10 @@
       victim = fightStateBySide(fight, knockdown.victimSide);
       victimStats = fightStatsBySide(fight, knockdown.victimSide);
       victim.knockdowns += 1;
-      victim.hp = Math.max(6, 12 + victimStats.heart * 2 - knockdown.count);
-      victim.stamina = clamp(victim.stamina - 12, 0, 100);
+      victim.hp = clamp(8 + victimStats.heart * 2 + victimStats.endurance - knockdown.count - knockdown.overkill * 2, 4, victim.maxHp);
+      victim.stamina = clamp(victim.stamina - 14, 0, 100);
       resetRingPositions(fight);
-      clearFightAnimation();
+      clearFightAnimationState();
       pushFightLine(fight, knockdown.victimName + " поднимается на счет " + knockdown.count + " и бой продолжается.");
       fight.knockdown = null;
       render();
@@ -1870,6 +1910,7 @@
         return;
       }
       state.fight.knockdown.text = "Нокаут";
+      clearFightAnimationState();
       render();
       scheduleFightStep("finishKnockdownKnockout", KO_TEXT_MS);
     }
@@ -1882,7 +1923,7 @@
         return;
       }
       knockdown = fight.knockdown;
-      clearFightAnimation();
+      clearFightTimers();
       fight.knockdown = null;
       pushFightLine(fight, knockdown.victimName + " не поднимается к счету 10.");
       finalizeFight(knockdown.victimSide === "player" ? "loss" : "win", "KO/TKO", []);
@@ -1898,7 +1939,7 @@
       if (fight.knockdown.count < 10) {
         fight.knockdown.count += 1;
         fight.knockdown.text = String(fight.knockdown.count);
-        render();
+        pulseKnockdownAnimation(fight.knockdown.victimSide);
         if (fight.knockdown.count >= 10) {
           scheduleFightStep("startKnockdownKnockout", COUNT_STEP_MS);
           return;
@@ -1929,7 +1970,7 @@
       attacker.stamina = clamp(attacker.stamina - (action.stamina + (zone === "line" ? 1 : 0)), 0, 100);
       if (!canUseFightAction(fight, side, actionKey)) {
         pushFightLine(fight, attackerName + " выбрасывает " + action.label.toLowerCase() + ", но дистанция не позволяет попасть.");
-        setFightAnimation(side, "miss");
+        setStrikeAnimation(side, "miss");
         return false;
       }
       hitChance = action.accuracy + attackerStats.speed * 2 + attackerStats.technique * 2 + attackerStats.power * 0.4;
@@ -1941,7 +1982,7 @@
       hitChance = clamp(Math.round(hitChance), 24, 90);
       if (!chance(hitChance)) {
         pushFightLine(fight, attackerName + " не доносит " + action.label.toLowerCase() + ", и " + defenderName + " уходит с линии атаки.");
-        setFightAnimation(side, "miss");
+        setStrikeAnimation(side, "miss");
         return false;
       }
       damage = action.damage + attackerStats.power * 1.1 + attackerStats.technique * 0.5 + attackerStats.speed * 0.2;
@@ -1977,7 +2018,7 @@
       if (action.body) {
         pushFightLine(fight, defenderName + " теряет темп после работы по корпусу.");
       }
-      setFightAnimation(side, "hit");
+      setStrikeAnimation(side, "hit");
       if (defender.hp <= 0) {
         return resolveKnockdown(fight, otherSide(side));
       }
@@ -2051,11 +2092,6 @@
         return choice(attacks);
       }
       return pickAIMove(fight, retreat || zone === "close");
-    }
-
-    function applyFightAnimationResult() {
-      clearFightAnimation();
-      render();
     }
 
     function renderFightResultPanel() {
@@ -2210,7 +2246,7 @@
 
     function startFight(index) {
       var opponent = state.opponents[index];
-      clearFightStepTimeout();
+      clearFightTimers();
       state.fight = {
         opponent: opponent,
         round: 1,
@@ -2233,7 +2269,9 @@
         roundCards: [],
         breakSummary: null,
         knockdown: null,
-        pendingTimeout: null
+        pendingTimeout: null,
+        animation: null,
+        animationTimeout: null
       };
       state.panel = "fightLive";
       render();
@@ -2254,7 +2292,7 @@
       var opponentHeal;
       var playerStaminaGain;
       var opponentStaminaGain;
-      clearFightStepTimeout();
+      clearFightTimers();
       if (delta >= 14) {
         opponentCard = 8;
       } else if (delta > 0) {
@@ -2319,7 +2357,7 @@
 
     function startNextRound() {
       var fight = state.fight;
-      clearFightStepTimeout();
+      clearFightTimers();
       if (!fight || fight.result) {
         return;
       }
@@ -2329,6 +2367,7 @@
       fight.roundPoints = { player: 0, opponent: 0 };
       fight.breakSummary = null;
       fight.knockdown = null;
+      fight.animation = null;
       fight.actionLock = false;
       resetRingPositions(fight);
       pushFightLine(fight, "Начинается раунд " + fight.round + ". После перерыва бойцы снова сходятся в центре.");
@@ -2364,7 +2403,6 @@
       if (!state.fight) {
         return;
       }
-      applyFightAnimationResult();
       if (!state.fight || state.fight.result || state.fight.knockdown) {
         return;
       }
@@ -2376,7 +2414,6 @@
       if (!state.fight) {
         return;
       }
-      applyFightAnimationResult();
       if (!state.fight || state.fight.result || state.fight.knockdown) {
         return;
       }
