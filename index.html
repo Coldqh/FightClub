@@ -250,10 +250,8 @@
 
     .create-grid,
     .card-grid,
-    .skill-grid,
     .choice-grid,
     .action-grid,
-    .stat-grid,
     .fight-grid {
       display: block;
       margin-top: 14px;
@@ -367,24 +365,6 @@
       background: linear-gradient(135deg, #f4c56b, #dba647);
     }
 
-    .stat-line {
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.05);
-      margin-bottom: 10px;
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .stat-line span {
-      color: #dbe4ef;
-    }
-
-    .stat-line strong {
-      float: right;
-      color: #ffffff;
-    }
-
     .empty-state {
       padding: 18px;
       border-radius: 18px;
@@ -492,8 +472,9 @@
     .battle-actions-row .ghost,
     .battle-actions-row .danger {
       width: 100%;
-      min-height: 98px;
-      padding: 12px 12px 10px 12px;
+      min-height: 72px;
+      padding: 14px 12px;
+      margin-bottom: 6px;
     }
 
     .battle-mode-row .button,
@@ -510,48 +491,39 @@
       margin-right: 0;
     }
 
-    .battle-actions-row.move-grid .button,
-    .battle-actions-row.move-grid .ghost,
-    .battle-actions-row.move-grid .danger {
-      display: inline-block;
-      width: 48.5%;
-      margin-right: 3%;
+    .battle-actions-row .fight-action-item {
+      width: 100%;
+      margin-bottom: 12px;
       vertical-align: top;
     }
 
-    .battle-actions-row.move-grid .button:nth-child(2n),
-    .battle-actions-row.move-grid .ghost:nth-child(2n),
-    .battle-actions-row.move-grid .danger:nth-child(2n) {
+    .battle-actions-row.move-grid .fight-action-item {
+      display: inline-block;
+      width: 48.5%;
+      margin-right: 3%;
+    }
+
+    .battle-actions-row.move-grid .fight-action-item:nth-child(2n) {
       margin-right: 0;
     }
 
-    .battle-actions-row.attack-grid .button,
-    .battle-actions-row.attack-grid .ghost,
-    .battle-actions-row.attack-grid .danger {
+    .battle-actions-row.attack-grid .fight-action-item {
       display: inline-block;
       width: 32%;
       margin-right: 2%;
-      vertical-align: top;
     }
 
-    .battle-actions-row.attack-grid .button:nth-child(3n),
-    .battle-actions-row.attack-grid .ghost:nth-child(3n),
-    .battle-actions-row.attack-grid .danger:nth-child(3n) {
+    .battle-actions-row.attack-grid .fight-action-item:nth-child(3n) {
       margin-right: 0;
     }
 
-    .battle-actions-row.defense-grid .button,
-    .battle-actions-row.defense-grid .ghost,
-    .battle-actions-row.defense-grid .danger {
+    .battle-actions-row.defense-grid .fight-action-item {
       display: inline-block;
       width: 48.5%;
       margin-right: 3%;
-      vertical-align: top;
     }
 
-    .battle-actions-row.defense-grid .button:nth-child(2n),
-    .battle-actions-row.defense-grid .ghost:nth-child(2n),
-    .battle-actions-row.defense-grid .danger:nth-child(2n) {
+    .battle-actions-row.defense-grid .fight-action-item:nth-child(2n) {
       margin-right: 0;
     }
 
@@ -566,21 +538,22 @@
 
     .action-button-title {
       display: block;
-      font-size: 20px;
+      font-size: 24px;
       line-height: 1.2;
-      margin-bottom: 8px;
     }
 
     .action-button-meta {
       display: block;
-      font-size: 13px;
-      line-height: 1.35;
-      font-weight: 700;
+      font-size: 20px;
+      line-height: 1.45;
+      font-weight: 800;
+      text-align: center;
+      padding: 2px 4px 0 4px;
     }
 
     .action-button-meta span {
-      display: inline-block;
-      margin: 0 8px 4px 0;
+      display: block;
+      margin: 0 0 4px 0;
     }
 
     .action-blue {
@@ -1011,17 +984,6 @@
       applyBounds(fighter);
       pushLog(DATA.statLabels[statKey] + " выросла до " + fighter.stats[statKey] + ".", "good");
       render();
-    }
-
-    function renderStatLines(stats) {
-      var html = [];
-      var key;
-      for (key in DATA.statLabels) {
-        if (DATA.statLabels.hasOwnProperty(key)) {
-          html.push("<div class='stat-line'><span>" + DATA.statLabels[key] + "</span><strong>" + stats[key] + "</strong></div>");
-        }
-      }
-      return html.join("");
     }
 
     function openPanel(panel) {
@@ -2382,14 +2344,13 @@
     }
 
     function renderGame() {
-      var current = getCountryInfo(state.fighter.currentCountry);
       if (state.panel === "fightLive" || state.panel === "fightBreak" || state.panel === "fightResult") {
         return renderMainPanel();
       }
       return "" +
         "<div class='shell'>" +
           "<div class='topbar'>" +
-            "<div class='brand'><div class='eyebrow'>Street Boxer Simulator</div><div class='title'>" + state.fighter.name + "</div><div class='subtitle'>" + current.name + ", арена " + current.city + ".</div></div>" +
+            "<div class='brand'><div class='eyebrow'>Street Boxer Simulator</div><div class='title'>" + state.fighter.name + "</div></div>" +
             "<div class='week-chip'>Неделя " + state.fighter.week + "</div>" +
           "</div>" +
           renderNavigationTabs() +
@@ -2475,7 +2436,7 @@
     function renderFightActionButton(actionKey, className) {
       var fight = state.fight;
       var disabled = !fight || fight.result || fight.actionLock || !canUseFightAction(fight, "player", actionKey);
-      return "<button class='" + className + "' " + (disabled ? "disabled='disabled'" : "") + " onclick='fightAction(\"" + actionKey + "\")'><span class='action-button-title'>" + FIGHT_ACTIONS[actionKey].label + "</span>" + renderFightActionMeta(actionKey) + "</button>";
+      return "<div class='fight-action-item'><button class='" + className + "' " + (disabled ? "disabled='disabled'" : "") + " onclick='fightAction(\"" + actionKey + "\")'><span class='action-button-title'>" + FIGHT_ACTIONS[actionKey].label + "</span></button>" + renderFightActionMeta(actionKey) + "</div>";
     }
 
     function finishFightRound() {
