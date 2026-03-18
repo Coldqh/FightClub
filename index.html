@@ -923,7 +923,7 @@
       state.screen = "game";
       state.panel = "home";
       state.log.unshift({
-        text: state.fighter.name + " стартует в " + getCountryInfo(state.fighter.homeCountry).name + ". Боевая система собрана заново вокруг тактического ринга 5x5.",
+        text: state.fighter.name + " стартует в " + getCountryInfo(state.fighter.homeCountry).name + ".",
         tone: "good"
       });
       render();
@@ -1430,7 +1430,6 @@
     function renderHomeSummaryPanel() {
       var current = getCountryInfo(state.fighter.currentCountry);
       var home = getCountryInfo(state.fighter.homeCountry);
-      var bonus = currentTravelBonus(state.fighter);
       return "" +
         "<div class='panel fill-panel'>" +
           "<div class='eyebrow'>Основное</div>" +
@@ -1445,11 +1444,6 @@
           "</div>" +
           meter("Здоровье лагеря", state.fighter.health) +
           meter("Стресс", state.fighter.stress) +
-          "<div class='record-row'>" +
-            "<div class='chip'>Арена: " + current.city + "</div>" +
-            "<div class='chip gold'>Деньги x" + bonus.money.toFixed(2) + "</div>" +
-            "<div class='chip'>Известность x" + bonus.fame.toFixed(2) + "</div>" +
-          "</div>" +
           "<div class='footer-actions'>" +
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
             "<button class='button' onclick='openFightSelect()'>Найти соперника</button>" +
@@ -1463,6 +1457,21 @@
 
     function renderHomePanel() {
       return renderHomeSummaryPanel();
+    }
+
+    function renderStatUpgradeCards() {
+      var html = [];
+      var key;
+      var cost;
+      html.push("<div class='choice-grid'>");
+      for (key in DATA.statLabels) {
+        if (DATA.statLabels.hasOwnProperty(key)) {
+          cost = statPointCost(state.fighter.stats[key]);
+          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>Текущий уровень: " + state.fighter.stats[key] + ". Цена следующего: " + cost + ".</p><p>" + DATA.statDescriptions[key] + "</p><button class='button' " + (state.fighter.skillPoints < cost ? "disabled='disabled'" : "") + " onclick='buyStatPoint(\"" + key + "\")'>Улучшить</button></div>");
+        }
+      }
+      html.push("</div>");
+      return html.join("");
     }
 
     function renderCareerLogPage() {
@@ -1497,7 +1506,7 @@
       return "" +
         "<div class='panel'>" +
           "<h2 class='panel-title'>Тренировка</h2>" +
-          "<div class='muted'>Каждая тренировка тратит неделю и даёт очки навыков для вкладки прокачки.</div>" +
+          "<div class='muted'>Каждая тренировка тратит неделю и даёт очки навыков для вкладки персонажа.</div>" +
           "<div class='choice-grid'>" +
             "<div class='card'><h3>Лёгкая</h3><p>Очки +10, здоровье -6, стресс +6.</p><button class='button' onclick='actionTrain(\"light\")'>Провести</button></div>" +
             "<div class='card'><h3>Средняя</h3><p>Очки +20, здоровье -12, стресс +12.</p><button class='button' onclick='actionTrain(\"medium\")'>Провести</button></div>" +
@@ -1508,18 +1517,11 @@
     }
 
     function renderSkillPanel() {
-      var html = [];
-      var key;
-      var cost;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Навыки и прокачка</h2><div class='record-row'><div class='chip gold'>Свободно очков " + state.fighter.skillPoints + "</div></div><div class='muted'>Цена роста идёт ступенями: 0-9 стоит 1 очко, 10-19 стоит 2, 20-29 стоит 3 и дальше по той же схеме.</div><div class='choice-grid'>");
-      for (key in DATA.statLabels) {
-        if (DATA.statLabels.hasOwnProperty(key)) {
-          cost = statPointCost(state.fighter.stats[key]);
-          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>Текущий уровень: " + state.fighter.stats[key] + ". Цена следующего: " + cost + ".</p><p>" + DATA.statDescriptions[key] + "</p><button class='button' " + (state.fighter.skillPoints < cost ? "disabled='disabled'" : "") + " onclick='buyStatPoint(\"" + key + "\")'>Улучшить</button></div>");
-        }
-      }
-      html.push("</div></div>");
-      return html.join("");
+      return "" +
+        "<div class='panel fill-panel'>" +
+          "<h2 class='panel-title'>Навыки</h2>" +
+          "<div class='empty-state'>Здесь позже появятся способности, архетипы, пассивные ветки и особые боевые стили. Прокачка базовых характеристик перенесена во вкладку персонажа.</div>" +
+        "</div>";
     }
 
     function renderRecoverPanel() {
@@ -1586,7 +1588,6 @@
       }
       html.push("</div></div>");
       html.push("<div class='nameplate'><div><div class='fighter-class'>Имя на афише</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>Сменить имя</button></div>");
-      html.push("<div class='card'><div class='meta'>Старт</div><h3>Новая база</h3><p>Все пять характеристик начинаются с 1. Дальше ты качаешь их через очки навыков, а бой строится вокруг стамины, защиты, критов и ринговой дистанции.</p></div>");
       html.push("<div class='footer-actions'>");
       html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "Страна не выбрана") + "</div>");
       html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>Начать карьеру</button>");
@@ -1618,9 +1619,9 @@
       }
       html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
       html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
-      html.push("<div class='record-row'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div>");
       html.push("</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Статы</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Прокачка</h2><div class='record-row' style='margin-top:18px'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div><div class='muted'>Цена роста идёт ступенями: 0-9 стоит 1 очко, 10-19 стоит 2, 20-29 стоит 3 и дальше по той же схеме.</div>" + renderStatUpgradeCards() + "</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
       return html.join("");
     }
