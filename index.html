@@ -3,6 +3,9 @@
   <title>Fight Simulator</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=9" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
   <style>
 
     html, body {
@@ -35,6 +38,38 @@
       width: 100%;
       min-height: 100vh;
       padding: 12px;
+    }
+
+    .update-banner-wrap {
+      padding: 12px 12px 0 12px;
+    }
+
+    .update-banner {
+      padding: 16px 18px;
+      background: linear-gradient(135deg, rgba(217, 77, 103, 0.95), rgba(185, 45, 72, 0.95));
+      border-color: rgba(255, 255, 255, 0.14);
+      color: #fff4f6;
+    }
+
+    .update-banner strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .update-banner p {
+      margin: 0 0 12px 0;
+      font-size: 17px;
+      line-height: 1.45;
+      color: #fff4f6;
+    }
+
+    .update-banner .button {
+      min-height: 58px;
+      margin-bottom: 0;
+      background: #fff4f6;
+      color: #8e2039;
     }
 
     .topbar,
@@ -799,6 +834,7 @@
       }
     };
 
+    var APP_VERSION = "2026.03.18.2";
     var SAVE_KEY = "street_boxer_save_v1";
 
     var state = {
@@ -810,7 +846,9 @@
       fight: null,
       log: [],
       endingReason: "",
-      savedPreview: null
+      savedPreview: null,
+      updateAvailable: false,
+      remoteVersion: ""
     };
 
     function storageRef() {
@@ -824,6 +862,83 @@
 
     function buildSavePreview(sourceState) {
       return sourceState && sourceState.fighter ? true : null;
+    }
+
+    function supportsRemoteUpdateCheck() {
+      try {
+        return !!(window.location && /^https?:$/i.test(window.location.protocol) && typeof XMLHttpRequest !== "undefined");
+      } catch (error) {}
+      return false;
+    }
+
+    function buildUpdateUrl() {
+      var base;
+      if (!window.location) {
+        return "";
+      }
+      base = String(window.location.href || "").split("#")[0].split("?")[0];
+      return base + "?update=" + encodeURIComponent(state.remoteVersion || APP_VERSION) + "&t=" + new Date().getTime();
+    }
+
+    function applyAppUpdate() {
+      var targetUrl;
+      saveGameState();
+      targetUrl = buildUpdateUrl();
+      if (!targetUrl) {
+        return;
+      }
+      if (window.location.replace) {
+        window.location.replace(targetUrl);
+      } else {
+        window.location.href = targetUrl;
+      }
+    }
+
+    function renderUpdateBanner() {
+      if (!state.updateAvailable) {
+        return "";
+      }
+      return "" +
+        "<div class='update-banner-wrap'>" +
+          "<div class='panel update-banner'>" +
+            "<strong>Доступно обновление</strong>" +
+            "<p>На сайте уже лежит новая версия. Прогресс текущего бойца сохранится, если нажать кнопку ниже.</p>" +
+            "<button class='button' onclick='applyAppUpdate()'>Обновить приложение</button>" +
+          "</div>" +
+        "</div>";
+    }
+
+    function checkForAppUpdate() {
+      var xhr;
+      var url;
+      if (!supportsRemoteUpdateCheck()) {
+        return;
+      }
+      url = "version.json?t=" + new Date().getTime();
+      xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function () {
+        var payload;
+        if (xhr.readyState !== 4) {
+          return;
+        }
+        if (xhr.status !== 200 && xhr.status !== 0) {
+          return;
+        }
+        try {
+          payload = JSON.parse(xhr.responseText);
+        } catch (error) {
+          return;
+        }
+        if (!payload || !payload.version) {
+          return;
+        }
+        state.remoteVersion = payload.version;
+        state.updateAvailable = payload.version !== APP_VERSION;
+        render();
+      };
+      xhr.open("GET", url, true);
+      xhr.setRequestHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      xhr.send(null);
     }
 
     function sanitizeFightForSave(fight) {
@@ -2978,15 +3093,17 @@
 
     function render() {
       var app = document.getElementById("app");
+      var html = "";
       if (state.screen === "menu") {
-        app.innerHTML = renderMainMenu();
+        html = renderMainMenu();
       } else if (state.screen === "create") {
-        app.innerHTML = renderCreate();
+        html = renderCreate();
       } else if (state.screen === "end") {
-        app.innerHTML = renderEnding();
+        html = renderEnding();
       } else {
-        app.innerHTML = renderGame();
+        html = renderGame();
       }
+      app.innerHTML = renderUpdateBanner() + html;
       saveGameState();
     }
 
@@ -2994,10 +3111,15 @@
       refreshSavedPreview();
       state.screen = "menu";
       render();
+      checkForAppUpdate();
     };
 
     window.onresize = function () {
       render();
+    };
+
+    window.onfocus = function () {
+      checkForAppUpdate();
     };
 
     window.onbeforeunload = function () {
