@@ -496,14 +496,14 @@
     .battle-mode-row .button,
     .battle-mode-row .ghost {
       display: inline-block;
-      width: 48.5%;
-      margin-right: 3%;
+      width: 32%;
+      margin-right: 2%;
       min-width: 0;
       vertical-align: top;
     }
 
-    .battle-mode-row .button:last-child,
-    .battle-mode-row .ghost:last-child {
+    .battle-mode-row .button:nth-child(3n),
+    .battle-mode-row .ghost:nth-child(3n) {
       margin-right: 0;
     }
 
@@ -534,6 +534,21 @@
     .battle-actions-row.attack-grid .button:nth-child(3n),
     .battle-actions-row.attack-grid .ghost:nth-child(3n),
     .battle-actions-row.attack-grid .danger:nth-child(3n) {
+      margin-right: 0;
+    }
+
+    .battle-actions-row.defense-grid .button,
+    .battle-actions-row.defense-grid .ghost,
+    .battle-actions-row.defense-grid .danger {
+      display: inline-block;
+      width: 48.5%;
+      margin-right: 3%;
+      vertical-align: top;
+    }
+
+    .battle-actions-row.defense-grid .button:nth-child(2n),
+    .battle-actions-row.defense-grid .ghost:nth-child(2n),
+    .battle-actions-row.defense-grid .danger:nth-child(2n) {
       margin-right: 0;
     }
 
@@ -620,6 +635,7 @@
       font-weight: 700;
       box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
       position: relative;
+      transition: background 0.5s ease, box-shadow 0.5s ease, color 0.5s ease;
     }
 
     .token.player {
@@ -637,6 +653,11 @@
     .token.attack-up { animation: tokenAttackUp 0.32s ease-out; }
     .token.attack-down { animation: tokenAttackDown 0.32s ease-out; }
     .token.hit-react { animation: tokenHitReact 0.26s linear 1; }
+    .token.crit-flash {
+      background: linear-gradient(135deg, #ff6f61, #d12e2e) !important;
+      color: #fff4ef !important;
+      box-shadow: 0 0 0 4px rgba(255, 111, 97, 0.18), 0 12px 26px rgba(0, 0, 0, 0.28);
+    }
     .token.dodge-right { animation: tokenDodgeRight 0.32s ease-out; }
     .token.dodge-left { animation: tokenDodgeLeft 0.32s ease-out; }
     .token.dodge-up { animation: tokenDodgeUp 0.32s ease-out; }
@@ -703,12 +724,18 @@
   <script type="text/javascript">
     var DATA = {
       statLabels: {
-        power: "Сила удара",
-        speed: "Скорость",
-        endurance: "Выносливость",
-        technique: "Техника",
-        heart: "Характер",
-        charisma: "Харизма"
+        str: "Сила",
+        tec: "Техника",
+        spd: "Скорость",
+        end: "Выносливость",
+        vit: "Здоровье"
+      },
+      statDescriptions: {
+        str: "Увеличивает множитель урона.",
+        tec: "Поднимает точность и шанс крита.",
+        spd: "Даёт уклон и усиливает контратаку.",
+        end: "Повышает максимум стамины.",
+        vit: "Повышает максимум здоровья."
       }
     };
 
@@ -762,22 +789,21 @@
     }
 
     function baseStats() {
-      return { power: 5, speed: 5, endurance: 5, technique: 5, heart: 5, charisma: 4 };
+      return { str: 1, tec: 1, spd: 1, end: 1, vit: 1 };
     }
 
     function applyBounds(fighter) {
       var key;
       for (key in fighter.stats) {
         if (fighter.stats.hasOwnProperty(key)) {
-          fighter.stats[key] = clamp(fighter.stats[key], 1, 14);
+          fighter.stats[key] = clamp(fighter.stats[key], 1, 99);
         }
       }
       fighter.money = Math.max(0, fighter.money);
       fighter.health = clamp(fighter.health, 0, 100);
       fighter.stress = clamp(fighter.stress, 0, 100);
-      fighter.relationship = clamp(fighter.relationship, 0, 100);
-      fighter.morale = clamp(fighter.morale, 0, 100);
       fighter.fame = Math.max(0, fighter.fame);
+      fighter.skillPoints = Math.max(0, fighter.skillPoints || 0);
     }
 
     function recordText(fighter) {
@@ -786,8 +812,8 @@
 
     function combatRating(fighter) {
       var stats = fighter.stats;
-      var base = (stats.power + stats.speed + stats.endurance + stats.technique + stats.heart) / 5;
-      return base + fighter.wins * 0.25 + fighter.fame * 0.03;
+      var base = (stats.str + stats.tec + stats.spd + stats.end + stats.vit) / 5;
+      return base + fighter.wins * 0.35 + fighter.fame * 0.04;
     }
 
     var RING_SIZE = 5;
@@ -796,30 +822,49 @@
     var KO_TEXT_MS = 1000;
     var ACTION_ANIMATION_MS = 320;
     var COUNT_SHAKE_MS = 260;
+    var CRIT_FLASH_MS = 500;
     var FIGHT_ACTIONS = {
-      move_up: { type: "move", label: "Шаг вверх", dx: 0, dy: -1 },
-      move_left: { type: "move", label: "Шаг влево", dx: -1, dy: 0 },
-      move_right: { type: "move", label: "Шаг вправо", dx: 1, dy: 0 },
-      move_down: { type: "move", label: "Шаг вниз", dx: 0, dy: 1 },
-      jab: { type: "attack", label: "Джеб", reach: "line", range: 2, accuracy: 66, damage: 8, stamina: 5, body: false },
-      cross: { type: "attack", label: "Кросс", reach: "line", range: 2, accuracy: 61, damage: 11, stamina: 7, body: false },
-      hook: { type: "attack", label: "Хук", reach: "close", range: 1, accuracy: 58, damage: 12, stamina: 8, body: false },
-      uppercut: { type: "attack", label: "Апперкот", reach: "close", range: 1, accuracy: 54, damage: 14, stamina: 9, body: false },
-      body: { type: "attack", label: "Удар в корпус", reach: "line", range: 2, accuracy: 63, damage: 9, stamina: 6, body: true }
+      move_up: { type: "move", label: "Шаг вверх", dx: 0, dy: -1, stamina: 5 },
+      move_left: { type: "move", label: "Шаг влево", dx: -1, dy: 0, stamina: 5 },
+      move_right: { type: "move", label: "Шаг вправо", dx: 1, dy: 0, stamina: 5 },
+      move_down: { type: "move", label: "Шаг вниз", dx: 0, dy: 1, stamina: 5 },
+      jab: { type: "attack", label: "Джеб", reach: "line", hitBonus: 10, damage: 8, stamina: 7 },
+      cross: { type: "attack", label: "Кросс", reach: "line", hitBonus: 0, damage: 12, stamina: 11 },
+      body: { type: "attack", label: "Удар в корпус", reach: "line", hitBonus: 5, damage: 10, stamina: 10 },
+      hook: { type: "attack", label: "Хук", reach: "close", hitBonus: -6, damage: 16, stamina: 15 },
+      uppercut: { type: "attack", label: "Апперкот", reach: "close", hitBonus: -12, damage: 21, stamina: 18 },
+      block: { type: "defense", label: "Блок", staminaGain: 30 },
+      counter: { type: "defense", label: "Контратака", staminaGain: 15 }
+    };
+
+    var TRAINING_OPTIONS = {
+      light: { label: "Лёгкая", points: 10, health: -6, stress: 6 },
+      medium: { label: "Средняя", points: 20, health: -12, stress: 12 },
+      hard: { label: "Жёсткая", points: 30, health: -18, stress: 18 }
+    };
+
+    var RECOVERY_OPTIONS = {
+      home: { label: "Отлежаться дома", cost: 0, health: 18, stress: -10 },
+      doctor: { label: "Спортивный врач", cost: 60, health: 30, stress: -6 },
+      therapy: { label: "Терапия и массаж", cost: 35, health: 20, stress: -16 }
     };
 
     function buildFightState(stats, condition, position) {
-      var mult = 0.76 + condition / 330;
-      var maxHp = Math.floor((70 + stats.endurance * 6 + stats.heart * 5) * mult);
-      var stamina = clamp(Math.floor((52 + stats.endurance * 4 + stats.speed * 2) * mult), 35, 100);
+      var maxHp = 100 + stats.vit * 10;
+      var maxStamina = 100 + stats.end * 5;
+      var hp = Math.round(maxHp * clamp(condition, 0, 100) / 100);
       return {
-        hp: maxHp,
+        hp: clamp(hp, 1, maxHp),
         maxHp: maxHp,
-        stamina: stamina,
+        stamina: maxStamina,
+        maxStamina: maxStamina,
         knockdowns: 0,
         damageTaken: 0,
-        bodyDamage: 0,
-        position: { x: position.x, y: position.y }
+        position: { x: position.x, y: position.y },
+        defenseMode: null,
+        lastAttackKey: null,
+        attackChain: 0,
+        actedAttack: false
       };
     }
 
@@ -861,13 +906,11 @@
       state.fighter = {
         name: state.create.identity.fullName,
         stats: stats,
-        skills: [],
+        skillPoints: 0,
         money: 120,
-        morale: 58,
         week: 1,
         health: 100,
-        stress: 18,
-        relationship: 28,
+        stress: 12,
         fame: 0,
         wins: 0,
         losses: 0,
@@ -907,19 +950,33 @@
       }
     }
 
-    function meter(label, value) {
+    function meter(label, value, maxValue) {
+      var limit = typeof maxValue === "number" ? maxValue : 100;
+      var width = limit > 0 ? Math.round((value / limit) * 100) : 0;
       return "" +
         "<div class='meter-block'>" +
-          "<div class='meter-row'><span>" + label + "</span><strong>" + value + "/100</strong></div>" +
-          "<div class='meter'><span style='width:" + value + "%'></span></div>" +
+          "<div class='meter-row'><span>" + label + "</span><strong>" + value + "/" + limit + "</strong></div>" +
+          "<div class='meter'><span style='width:" + clamp(width, 0, 100) + "%'></span></div>" +
         "</div>";
     }
 
-    function renderSkillList(skills) {
-      if (!skills.length) {
-        return "<div class='empty-state'>Навыки и архетипы временно отключены. Сейчас карьера держится на статах, перемещении по рингу и выборе ударов по клеткам.</div>";
+    function statPointCost(value) {
+      return Math.floor(value / 10) + 1;
+    }
+
+    function buyStatPoint(statKey) {
+      var fighter = state.fighter;
+      var cost = statPointCost(fighter.stats[statKey]);
+      if (fighter.skillPoints < cost) {
+        pushLog("На улучшение '" + DATA.statLabels[statKey] + "' не хватает очков.", "bad");
+        render();
+        return;
       }
-      return "<div class='empty-state'>Текущая версия хранит слот навыков, но активная система сборки ещё не включена.</div>";
+      fighter.skillPoints -= cost;
+      fighter.stats[statKey] += 1;
+      applyBounds(fighter);
+      pushLog(DATA.statLabels[statKey] + " выросла до " + fighter.stats[statKey] + ".", "good");
+      render();
     }
 
     function renderStatLines(stats) {
@@ -956,65 +1013,33 @@
       if (fighter.stress > 70) {
         fighter.health -= 1;
       }
-      if (fighter.week % 4 === 0 && fighter.relationship > 0) {
-        fighter.relationship -= 1;
-      }
       applyBounds(fighter);
       weeklyEvent();
     }
 
     function weeklyEvent() {
       var fighter = state.fighter;
-      var pool;
-      var event;
-      if (!chance(48)) {
+      var roll;
+      if (!chance(35)) {
         return;
       }
-      pool = ["mentor", "rumor", "cash", "pressure"];
-      if (fighter.health < 40) {
-        pool.push("injury");
-      }
-      if (fighter.relationship > 60) {
-        pool.push("support");
-      }
-      if (fighter.stress > 70) {
-        pool.push("burnout");
-      }
-      if (fighter.fame > 45) {
-        pool.push("sponsor");
-      }
-      event = choice(pool);
-      if (event === "mentor") {
-        fighter.stats.speed += 1;
-        fighter.morale += 4;
-        pushLog("Старый тренер поправил работу ног. Скорость выросла на 1.", "good");
-      } else if (event === "rumor") {
-        fighter.fame += 5;
-        fighter.relationship -= 3;
-        pushLog("По району пошел новый слух о тебе. Слава вверх, дома чуть холоднее.", "warn");
-      } else if (event === "cash") {
+      roll = choice(["cash", "pressure", "injury", "fans", "coach"]);
+      if (roll === "cash") {
         fighter.money += rand(20, 45);
-        pushLog("Случайный калым помог закрыть неделю чуть спокойнее.", "good");
-      } else if (event === "pressure") {
+        pushLog("Случайный калым помог пережить неделю спокойнее.", "good");
+      } else if (roll === "pressure") {
         fighter.stress += 8;
-        fighter.morale -= 3;
-        pushLog("Напряжение вокруг боев растет. Голова гудит сильнее обычного.", "bad");
-      } else if (event === "injury") {
+        pushLog("Напряжение вокруг боев растет. Голова снова гудит.", "bad");
+      } else if (roll === "injury") {
         fighter.health -= 8;
-        fighter.stress += 6;
-        pushLog("Старая травма снова напоминает о себе. Тело сопротивляется графику.", "bad");
-      } else if (event === "support") {
-        fighter.relationship += 5;
-        fighter.stress -= 8;
-        pushLog("Кто-то близкий вытянул тебя из мрака обычным разговором.", "good");
-      } else if (event === "burnout") {
-        fighter.morale -= 8;
-        fighter.stress -= 3;
-        pushLog("Выгорание накрывает жестко. Даже победы больше не звучат так громко.", "warn");
+        fighter.stress += 5;
+        pushLog("Старая боль напоминает о себе и тормозит подготовку.", "bad");
+      } else if (roll === "fans") {
+        fighter.fame += 5;
+        pushLog("Район снова говорит о тебе. Известность подросла.", "good");
       } else {
-        fighter.money += 55;
-        fighter.fame += 4;
-        pushLog("Местный спонсор подкинул денег за имя на афише. +$55 и немного шума вокруг тебя.", "good");
+        fighter.skillPoints += 5;
+        pushLog("Тренер докрутил мелочи. +5 очков навыков.", "good");
       }
       applyBounds(fighter);
     }
@@ -1080,54 +1105,41 @@
       fighter.money -= cost;
       fighter.currentCountry = countryKey;
       fighter.stress += 4;
-      fighter.morale += 1;
       applyBounds(fighter);
       pushLog("Перелет в " + destination.name + " обошелся в $" + cost + ". Новая арена: " + destination.city + ".", "warn");
       spendWeek();
     }
 
-    function actionTrain(statKey) {
+    function actionTrain(kind) {
       var fighter = state.fighter;
-      var gain = fighter.stats[statKey] < 5 && chance(35) ? 2 : 1;
-      fighter.stats[statKey] += gain;
-      fighter.health -= rand(2, 5);
-      fighter.stress += rand(4, 7);
-      fighter.morale += 2;
+      var option = TRAINING_OPTIONS[kind];
+      if (!option) {
+        return;
+      }
+      fighter.skillPoints += option.points;
+      fighter.health += option.health;
+      fighter.stress += option.stress;
       applyBounds(fighter);
-      pushLog(fighter.name + " качает '" + DATA.statLabels[statKey] + "' на +" + gain + ".", "good");
+      pushLog(fighter.name + " проводит " + option.label.toLowerCase() + " тренировку и получает +" + option.points + " очков навыков.", "good");
       spendWeek();
     }
 
     function actionRecover(kind) {
       var fighter = state.fighter;
-      if (kind === "home") {
-        fighter.health += rand(12, 18);
-        fighter.stress -= 10;
-        fighter.morale += 4;
-        pushLog("Ты выдохнул дома и собрал себя обратно по кускам.", "good");
-      } else if (kind === "doctor") {
-        if (fighter.money < 60) {
-          pushLog("На спортивного врача пока не хватает денег.", "bad");
-          render();
-          return;
-        }
-        fighter.money -= 60;
-        fighter.health += rand(22, 28);
-        fighter.stress -= 6;
-        pushLog("Нормальное восстановление освежило тело перед следующей неделей.", "good");
-      } else {
-        if (fighter.money < 35) {
-          pushLog("На терапию и массаж сейчас не хватает денег.", "bad");
-          render();
-          return;
-        }
-        fighter.money -= 35;
-        fighter.health += rand(14, 18);
-        fighter.stress -= 12;
-        fighter.morale += 3;
-        pushLog("Мышцы отпустило, а в голове стало чуть тише.", "good");
+      var option = RECOVERY_OPTIONS[kind];
+      if (!option) {
+        return;
       }
+      if (fighter.money < option.cost) {
+        pushLog("На вариант восстановления '" + option.label + "' сейчас не хватает денег.", "bad");
+        render();
+        return;
+      }
+      fighter.money -= option.cost;
+      fighter.health += option.health;
+      fighter.stress += option.stress;
       applyBounds(fighter);
+      pushLog(option.label + " возвращает " + option.health + " здоровья и меняет стресс на " + option.stress + ".", "good");
       spendWeek();
     }
 
@@ -1142,56 +1154,13 @@
         fighter.money += rand(70, 95);
         fighter.stress += rand(7, 12);
         fighter.health -= rand(3, 9);
-        fighter.relationship -= rand(4, 7);
         fighter.fame += 4;
-        pushLog("Грязная работа закрыта. Денег больше, но совесть и близкие в минусе.", "bad");
+        pushLog("Грязная работа закрыта. Денег больше, но тело и нервы просели.", "bad");
       } else {
-        fighter.money += rand(20, 35) + Math.max(0, fighter.stats.charisma - 4) * 4;
+        fighter.money += rand(20, 35) + Math.max(0, fighter.stats.tec - 1) * 3;
         fighter.fame += 4;
         fighter.stress += 2;
         pushLog("Видео со спарринга залетело. Имя крутится по району все чаще.", "good");
-      }
-      applyBounds(fighter);
-      spendWeek();
-    }
-
-    function actionLife(kind) {
-      var fighter = state.fighter;
-      if (kind === "family") {
-        if (fighter.money < 10) {
-          pushLog("Даже на спокойный вечер сейчас не хватает.", "bad");
-          render();
-          return;
-        }
-        fighter.money -= 10;
-        fighter.relationship += 8;
-        fighter.stress -= 12;
-        fighter.morale += 6;
-        pushLog("Нормальный человеческий вечер напомнил, ради чего ты вообще лезешь в драки.", "good");
-      } else if (kind === "date") {
-        if (fighter.money < 25) {
-          pushLog("Свидание придется отложить до более денежной недели.", "bad");
-          render();
-          return;
-        }
-        fighter.money -= 25;
-        fighter.relationship += 12;
-        fighter.morale += 8;
-        fighter.stress -= 6;
-        pushLog("Ты вложился в отношения и почувствовал, что жизнь не сводится к рингу.", "good");
-      } else {
-        if (fighter.money < 20) {
-          pushLog("Отрыв придется отменить. Слишком пусто в кармане.", "bad");
-          render();
-          return;
-        }
-        fighter.money -= 20;
-        fighter.fame += 6;
-        fighter.morale += 10;
-        fighter.health -= rand(3, 8);
-        fighter.relationship -= rand(2, 6);
-        fighter.stress -= 3;
-        pushLog("Ночь была громкой. История красивая, последствия тоже настоящие.", "warn");
       }
       applyBounds(fighter);
       spendWeek();
@@ -1284,14 +1253,13 @@
       var identity = makeIdentity(fighter.currentCountry);
       var bonus = currentTravelBonus(fighter);
       var tierBonus = tier === "safe" ? -1 : (tier === "even" ? 1 : 3);
-      var base = clamp(Math.round(combatRating(fighter)) + tierBonus + rand(-1, 1), 4, 12);
+      var base = clamp(Math.round(combatRating(fighter)) + tierBonus + rand(-1, 1), 1, 40);
       var stats = {
-        power: clamp(base + rand(-1, 2), 3, 14),
-        speed: clamp(base + rand(-1, 2), 3, 14),
-        endurance: clamp(base + rand(-1, 2), 3, 14),
-        technique: clamp(base + rand(-1, 2), 3, 14),
-        heart: clamp(base + rand(-1, 2), 3, 14),
-        charisma: rand(3, 8)
+        str: clamp(base + rand(-1, 2), 1, 45),
+        tec: clamp(base + rand(-1, 2), 1, 45),
+        spd: clamp(base + rand(-1, 2), 1, 45),
+        end: clamp(base + rand(-1, 2), 1, 45),
+        vit: clamp(base + rand(-1, 2), 1, 45)
       };
       return {
         firstName: identity.firstName,
@@ -1299,7 +1267,7 @@
         nickname: identity.nickname,
         fullName: identity.fullName,
         countryKey: fighter.currentCountry,
-        profile: choice(["Давит по центру", "Любит обход по флангу", "Выжидает и ловит", "Лезет в корпус", "Охотится за ближней"]),
+        profile: choice(["Давит по центру", "Любит ловить на блоке", "Работает вторым номером", "Сушит темп и колет джебом", "Лезет в корпус"]),
         stats: stats,
         purse: Math.round(((tier === "safe" ? 65 : (tier === "even" ? 95 : 150)) + base * 8 + rand(0, 24)) * bonus.money),
         fameReward: Math.round(((tier === "safe" ? 6 : (tier === "even" ? 11 : 17)) + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
@@ -1352,10 +1320,14 @@
       var action = FIGHT_ACTIONS[actionKey];
       var fromX = actor.position.x + 1;
       var fromY = actor.position.y + 1;
+      actor.stamina = clamp(actor.stamina - action.stamina, 0, actor.maxStamina);
       actor.position = {
         x: actor.position.x + action.dx,
         y: actor.position.y + action.dy
       };
+      actor.actedAttack = false;
+      actor.defenseMode = null;
+      resetActionChain(actor);
       pushFightLine(fight, fightNameBySide(fight, side) + " смещается: " + fromX + ":" + fromY + " -> " + (actor.position.x + 1) + ":" + (actor.position.y + 1) + ".");
     }
 
@@ -1389,25 +1361,29 @@
 
     function renderFightControlsPanel(fight) {
       var html = [];
-      var showMoves = !fight.actionGroup || fight.actionGroup === "move";
+      var group = fight.actionGroup || "move";
       html.push("<div class='battle-panel'>");
       html.push("<strong>Управление</strong>");
       html.push("<div class='battle-mode-row'>");
-      html.push("<button class='" + (showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"move\")'>Движение</button>");
-      html.push("<button class='" + (!showMoves ? "button" : "ghost") + "' onclick='openFightActionGroup(\"attack\")'>Удары</button>");
+      html.push("<button class='" + (group === "move" ? "button" : "ghost") + "' onclick='openFightActionGroup(\"move\")'>Движение</button>");
+      html.push("<button class='" + (group === "attack" ? "button" : "ghost") + "' onclick='openFightActionGroup(\"attack\")'>Удары</button>");
+      html.push("<button class='" + (group === "defense" ? "button" : "ghost") + "' onclick='openFightActionGroup(\"defense\")'>Защита</button>");
       html.push("</div>");
-      html.push("<div class='battle-actions-row " + (showMoves ? "move-grid" : "attack-grid") + "'>");
-      if (showMoves) {
+      html.push("<div class='battle-actions-row " + (group === "move" ? "move-grid" : (group === "attack" ? "attack-grid" : "defense-grid")) + "'>");
+      if (group === "move") {
         html.push(renderFightActionButton("move_up", "ghost"));
         html.push(renderFightActionButton("move_left", "ghost"));
         html.push(renderFightActionButton("move_right", "ghost"));
         html.push(renderFightActionButton("move_down", "ghost"));
-      } else {
+      } else if (group === "attack") {
         html.push(renderFightActionButton("jab", "button"));
         html.push(renderFightActionButton("cross", "button"));
+        html.push(renderFightActionButton("body", "button"));
         html.push(renderFightActionButton("hook", "danger"));
         html.push(renderFightActionButton("uppercut", "danger"));
-        html.push(renderFightActionButton("body", "button"));
+      } else {
+        html.push(renderFightActionButton("block", "ghost"));
+        html.push(renderFightActionButton("counter", "button"));
       }
       html.push("</div></div>");
       return html.join("");
@@ -1463,9 +1439,12 @@
           "<div class='record-row' style='margin-top:14px'>" +
             "<div class='chip'>Слава " + state.fighter.fame + "</div>" +
             "<div class='chip'>Деньги $" + state.fighter.money + "</div>" +
+            "<div class='chip gold'>Очки " + state.fighter.skillPoints + "</div>" +
             "<div class='chip'>Дом " + home.name + "</div>" +
             "<div class='chip'>Сейчас " + current.name + "</div>" +
           "</div>" +
+          meter("Здоровье лагеря", state.fighter.health) +
+          meter("Стресс", state.fighter.stress) +
           "<div class='record-row'>" +
             "<div class='chip'>Арена: " + current.city + "</div>" +
             "<div class='chip gold'>Деньги x" + bonus.money.toFixed(2) + "</div>" +
@@ -1475,7 +1454,6 @@
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
             "<button class='button' onclick='openFightSelect()'>Найти соперника</button>" +
             "<button class='ghost' onclick='openPanel(\"work\")'>Заработать</button>" +
-            "<button class='ghost' onclick='openPanel(\"life\")'>Личная жизнь</button>" +
             "<button class='ghost' onclick='openPanel(\"recover\")'>Восстановиться</button>" +
             "<button class='ghost' onclick='openPanel(\"travel\")'>Путешествие</button>" +
             "<button class='danger' onclick='openPanel(\"retire\")'>Завершить карьеру</button>" +
@@ -1516,30 +1494,32 @@
     }
 
     function renderTrainPanel() {
-      var html = [];
-      var key;
-      html.push("<div class='panel'><h2 class='panel-title'>Тренировка</h2><div class='muted'>Тренировка тратит неделю: ты качаешь базовый стат, платишь здоровьем и стрессом, но усиливаешь бойца под новую систему клетки и ударов.</div><div class='choice-grid' style='margin-top:16px'>");
-      for (key in DATA.statLabels) {
-        if (DATA.statLabels.hasOwnProperty(key)) {
-          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>Текущий показатель: " + state.fighter.stats[key] + "</p><button class='button' onclick='actionTrain(\"" + key + "\")'>Качать</button></div>");
-        }
-      }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
-      return html.join("");
+      return "" +
+        "<div class='panel'>" +
+          "<h2 class='panel-title'>Тренировка</h2>" +
+          "<div class='muted'>Каждая тренировка тратит неделю и даёт очки навыков для вкладки прокачки.</div>" +
+          "<div class='choice-grid'>" +
+            "<div class='card'><h3>Лёгкая</h3><p>Очки +10, здоровье -6, стресс +6.</p><button class='button' onclick='actionTrain(\"light\")'>Провести</button></div>" +
+            "<div class='card'><h3>Средняя</h3><p>Очки +20, здоровье -12, стресс +12.</p><button class='button' onclick='actionTrain(\"medium\")'>Провести</button></div>" +
+            "<div class='card'><h3>Жёсткая</h3><p>Очки +30, здоровье -18, стресс +18.</p><button class='danger' onclick='actionTrain(\"hard\")'>Провести</button></div>" +
+          "</div>" +
+          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
+        "</div>";
     }
 
     function renderSkillPanel() {
-      return "" +
-        "<div class='panel fill-panel'>" +
-          "<h2 class='panel-title'>Навыки и архетипы</h2>" +
-          "<div class='empty-state'>Система навыков находится на полной переработке под мобильную версию. Здесь позже появятся архетип, ветки умений и пассивные бонусы.</div>" +
-          "<div class='skill-grid' style='margin-top:14px'>" +
-            "<div class='card'><h3>Архетип</h3><p>Слот пока пуст. Позже здесь будет выбран базовый стиль бойца.</p></div>" +
-            "<div class='card'><h3>Активные навыки</h3><p>Здесь появятся открытые приемы, бонусы к ударам и особые реакции.</p></div>" +
-            "<div class='card'><h3>Пассивные ветки</h3><p>Позже сюда переедут долгосрочные улучшения характера, выносливости и рингового IQ.</p></div>" +
-          "</div>" +
-          "<div class='panel inset-panel' style='margin-top:14px'><h2 class='panel-title'>Текущий статус</h2>" + renderSkillList(state.fighter.skills) + "</div>" +
-        "</div>";
+      var html = [];
+      var key;
+      var cost;
+      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Навыки и прокачка</h2><div class='record-row'><div class='chip gold'>Свободно очков " + state.fighter.skillPoints + "</div></div><div class='muted'>Цена роста идёт ступенями: 0-9 стоит 1 очко, 10-19 стоит 2, 20-29 стоит 3 и дальше по той же схеме.</div><div class='choice-grid'>");
+      for (key in DATA.statLabels) {
+        if (DATA.statLabels.hasOwnProperty(key)) {
+          cost = statPointCost(state.fighter.stats[key]);
+          html.push("<div class='card'><h3>" + DATA.statLabels[key] + "</h3><p>Текущий уровень: " + state.fighter.stats[key] + ". Цена следующего: " + cost + ".</p><p>" + DATA.statDescriptions[key] + "</p><button class='button' " + (state.fighter.skillPoints < cost ? "disabled='disabled'" : "") + " onclick='buyStatPoint(\"" + key + "\")'>Улучшить</button></div>");
+        }
+      }
+      html.push("</div></div>");
+      return html.join("");
     }
 
     function renderRecoverPanel() {
@@ -1547,9 +1527,9 @@
         "<div class='panel'>" +
           "<h2 class='panel-title'>Восстановление</h2>" +
           "<div class='choice-grid'>" +
-            "<div class='card'><h3>Отлежаться дома</h3><p>Бесплатно. Чинишь здоровье, сбиваешь стресс, возвращаешь мораль.</p><button class='button' onclick='actionRecover(\"home\")'>Выбрать</button></div>" +
-            "<div class='card'><h3>Спортивный врач</h3><p>$60. Самое сильное восстановление тела.</p><button class='button' onclick='actionRecover(\"doctor\")'>Выбрать</button></div>" +
-            "<div class='card'><h3>Терапия и массаж</h3><p>$35. Баланс между телом и головой.</p><button class='button' onclick='actionRecover(\"therapy\")'>Выбрать</button></div>" +
+            "<div class='card'><h3>Отлежаться дома</h3><p>$0. Здоровье +18, стресс -10.</p><button class='button' onclick='actionRecover(\"home\")'>Выбрать</button></div>" +
+            "<div class='card'><h3>Спортивный врач</h3><p>$60. Здоровье +30, стресс -6.</p><button class='button' onclick='actionRecover(\"doctor\")'>Выбрать</button></div>" +
+            "<div class='card'><h3>Терапия и массаж</h3><p>$35. Здоровье +20, стресс -16.</p><button class='button' onclick='actionRecover(\"therapy\")'>Выбрать</button></div>" +
           "</div>" +
           "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
         "</div>";
@@ -1568,19 +1548,6 @@
         "</div>";
     }
 
-    function renderLifePanel() {
-      return "" +
-        "<div class='panel'>" +
-          "<h2 class='panel-title'>Личная жизнь</h2>" +
-          "<div class='choice-grid'>" +
-            "<div class='card'><h3>Вечер с близкими</h3><p>$10. Снимает напряжение и укрепляет отношения.</p><button class='button' onclick='actionLife(\"family\")'>Провести вечер</button></div>" +
-            "<div class='card'><h3>Свидание</h3><p>$25. Сильнее качает отношения и мораль.</p><button class='button' onclick='actionLife(\"date\")'>Позвать на встречу</button></div>" +
-            "<div class='card'><h3>Ночной отрыв</h3><p>$20. Слава и мораль растут, но тело и отношения могут просесть.</p><button class='danger' onclick='actionLife(\"party\")'>Уйти в ночь</button></div>" +
-          "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
-        "</div>";
-    }
-
     function renderFightSelectPanel() {
       var html = [];
       var i;
@@ -1591,7 +1558,7 @@
         html.push("<div class='meta'>" + opponent.danger + "</div>");
         html.push("<h3>" + fullOpponentName(opponent) + "</h3>");
         html.push("<p>" + opponent.profile + ". " + getCountryInfo(opponent.countryKey).name + ", " + opponent.venue + ". Кошелек $" + opponent.purse + ", слава +" + opponent.fameReward + ", форма " + opponent.condition + "/100, раундов " + opponent.rounds + ".</p>");
-        html.push("<div class='split-row'><div class='chip'>Сила " + opponent.stats.power + "</div><div class='chip'>Скорость " + opponent.stats.speed + "</div><div class='chip'>Выносливость " + opponent.stats.endurance + "</div><div class='chip'>Техника " + opponent.stats.technique + "</div></div>");
+        html.push("<div class='split-row'><div class='chip'>Сила " + opponent.stats.str + "</div><div class='chip'>Техника " + opponent.stats.tec + "</div><div class='chip'>Скорость " + opponent.stats.spd + "</div><div class='chip'>Выносливость " + opponent.stats.end + "</div><div class='chip'>Здоровье " + opponent.stats.vit + "</div></div>");
         html.push("<button class='button' onclick='startFight(" + i + ")'>Принять бой</button>");
         html.push("</div>");
       }
@@ -1619,7 +1586,7 @@
       }
       html.push("</div></div>");
       html.push("<div class='nameplate'><div><div class='fighter-class'>Имя на афише</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>Сменить имя</button></div>");
-      html.push("<div class='card'><div class='meta'>Временная заглушка</div><h3>Архетипы и навыки</h3><p>Пока они отключены. На старте у всех одинаковая база, а бой решают статы, позиция на ринге 5x5 и выбор действий в ходе раунда.</p></div>");
+      html.push("<div class='card'><div class='meta'>Старт</div><h3>Новая база</h3><p>Все пять характеристик начинаются с 1. Дальше ты качаешь их через очки навыков, а бой строится вокруг стамины, защиты, критов и ринговой дистанции.</p></div>");
       html.push("<div class='footer-actions'>");
       html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "Страна не выбрана") + "</div>");
       html.push("<button class='button' " + ((!state.create.country || !state.create.identity) ? "disabled='disabled'" : "") + " onclick='startCareer()'>Начать карьеру</button>");
@@ -1651,8 +1618,7 @@
       }
       html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
       html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
-      html.push("<div>" + meter("Мораль", fighter.morale) + "</div>");
-      html.push("<div>" + meter("Личная жизнь", fighter.relationship) + "</div>");
+      html.push("<div class='record-row'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div>");
       html.push("</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Статы</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
       html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
@@ -1777,17 +1743,22 @@
       state.fight.animationTimeout = window.setTimeout("clearFightAnimation()", duration || ACTION_ANIMATION_MS);
     }
 
-    function setStrikeAnimation(attackerSide, mode) {
+    function setStrikeAnimation(attackerSide, mode, critical) {
       var fight = state.fight;
       var attacker = attackerSide === "player" ? fight.playerState : fight.opponentState;
       var defender = attackerSide === "player" ? fight.opponentState : fight.playerState;
       var direction = animationDirection(attacker.position, defender.position);
       var attackerClass = "attack-" + direction;
       var defenderClass = mode === "hit" ? "hit-react" : "dodge-" + direction;
+      var duration = ACTION_ANIMATION_MS;
+      if (critical) {
+        defenderClass += " crit-flash";
+        duration = CRIT_FLASH_MS;
+      }
       if (attackerSide === "player") {
-        setFightAnimationFrame(attackerClass, defenderClass, ACTION_ANIMATION_MS);
+        setFightAnimationFrame(attackerClass, defenderClass, duration);
       } else {
-        setFightAnimationFrame(defenderClass, attackerClass, ACTION_ANIMATION_MS);
+        setFightAnimationFrame(defenderClass, attackerClass, duration);
       }
     }
 
@@ -1816,36 +1787,91 @@
       return tokenClass;
     }
 
+    function actionReachAllowed(fight, side, actionKey) {
+      var actor = fightStateBySide(fight, side);
+      var target = fightStateBySide(fight, otherSide(side));
+      var action = FIGHT_ACTIONS[actionKey];
+      var zone;
+      if (!action) {
+        return false;
+      }
+      if (action.type !== "attack") {
+        return true;
+      }
+      zone = attackZone(actor.position, target.position);
+      if (action.reach === "close") {
+        return zone === "close";
+      }
+      return zone === "close" || zone === "line";
+    }
+
     function canUseFightAction(fight, side, actionKey) {
       var actor = fightStateBySide(fight, side);
       var target = fightStateBySide(fight, otherSide(side));
       var action = FIGHT_ACTIONS[actionKey];
       var nextX;
       var nextY;
-      var zone;
       if (!action) {
         return false;
       }
       if (action.type === "move") {
         nextX = actor.position.x + action.dx;
         nextY = actor.position.y + action.dy;
-        return insideRing(nextX, nextY) && !(target.position.x === nextX && target.position.y === nextY);
+        return actor.stamina >= action.stamina && insideRing(nextX, nextY) && !(target.position.x === nextX && target.position.y === nextY);
       }
-      zone = attackZone(actor.position, target.position);
-      if (action.reach === "close") {
-        return zone === "close";
+      if (action.type === "defense") {
+        return actionKey !== "counter" || actor.stamina >= 5;
       }
-      return zone === "line";
+      return actor.stamina >= action.stamina && actionReachAllowed(fight, side, actionKey);
+    }
+
+    function staminaIsLow(actor) {
+      return actor.stamina < actor.maxStamina * 0.2;
+    }
+
+    function resetActionChain(actor) {
+      actor.lastAttackKey = null;
+      actor.attackChain = 0;
+    }
+
+    function nextAttackChain(actor, actionKey) {
+      return actor.lastAttackKey === actionKey ? actor.attackChain + 1 : 1;
+    }
+
+    function applyAttackChain(actor, actionKey) {
+      actor.lastAttackKey = actionKey;
+      actor.attackChain = nextAttackChain(actor, actionKey);
+    }
+
+    function effectiveDodgeChance(defender, defenderStats) {
+      var dodge = 5 + defenderStats.spd * 0.5;
+      if (defender.stamina < 5) {
+        return 0;
+      }
+      if (defender.defenseMode === "block") {
+        dodge = dodge / 2;
+      } else if (defender.defenseMode === "counter") {
+        dodge = 20 + defenderStats.spd * 0.5;
+      }
+      return clamp(Math.round(dodge), 0, 90);
     }
 
     function knockdownRiseChance(fight, victimSide, count) {
       var victim = fightStateBySide(fight, victimSide);
       var victimStats = fightStatsBySide(fight, victimSide);
       var overkill = fight.knockdown ? fight.knockdown.overkill : 0;
-      var riseChance = 9 + count * 8 + victimStats.heart * 4 + victimStats.endurance * 3;
-      riseChance -= overkill * 9;
-      riseChance -= victim.knockdowns * 12;
-      return clamp(riseChance, 3, 88);
+      var riseChance = 12 + count * 7 + victimStats.vit * 0.8 + victimStats.end * 0.8;
+      riseChance -= overkill * 6;
+      riseChance -= victim.knockdowns * 10;
+      return clamp(Math.round(riseChance), 3, 88);
+    }
+
+    function restoreAfterKnockdown(stateBoxer) {
+      stateBoxer.hp = clamp(stateBoxer.hp + Math.round(stateBoxer.maxHp * 0.25), 0, stateBoxer.maxHp);
+      stateBoxer.stamina = clamp(stateBoxer.stamina + Math.round(stateBoxer.maxStamina * 0.25), 0, stateBoxer.maxStamina);
+      stateBoxer.defenseMode = null;
+      stateBoxer.actedAttack = false;
+      resetActionChain(stateBoxer);
     }
 
     function resolveKnockdown(fight, victimSide) {
@@ -1853,7 +1879,7 @@
       var attackerSide = otherSide(victimSide);
       var victimName = fightNameBySide(fight, victimSide);
       var overkill = Math.max(0, 0 - victim.hp);
-      awardFightPressure(fight, attackerSide, 12);
+      awardFightPressure(fight, attackerSide, 16);
       clearFightTimers();
       victim.hp = 0;
       fight.actionLock = true;
@@ -1864,7 +1890,7 @@
         count: 0,
         overkill: overkill
       };
-      pushFightLine(fight, victimName + " отправляется в нокдаун.");
+      pushFightLine(fight, victimName + " падает в нокдаун.");
       pulseKnockdownAnimation(victimSide);
       scheduleFightStep("advanceKnockdownSequence", COUNT_STEP_MS);
       return true;
@@ -1885,19 +1911,22 @@
       var fight = state.fight;
       var knockdown;
       var victim;
+      var attacker;
       consumeFightStepTimeout();
       if (!fight || !fight.knockdown) {
         return;
       }
       knockdown = fight.knockdown;
       victim = fightStateBySide(fight, knockdown.victimSide);
+      attacker = fightStateBySide(fight, otherSide(knockdown.victimSide));
       victim.knockdowns += 1;
-      victim.hp = clamp(Math.round(victim.maxHp * 0.25), 1, victim.maxHp);
-      victim.stamina = clamp(victim.stamina - 14, 0, 100);
+      restoreAfterKnockdown(victim);
+      restoreAfterKnockdown(attacker);
       resetRingPositions(fight);
       clearFightAnimationState();
-      pushFightLine(fight, knockdown.victimName + " поднимается на счет " + knockdown.count + " и бой продолжается.");
+      pushFightLine(fight, knockdown.victimName + " поднимается на счет " + knockdown.count + ". Оба бойца возвращают по 25% здоровья и стамины.");
       fight.knockdown = null;
+      fight.skipTurnRecovery = true;
       render();
       scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
     }
@@ -1948,11 +1977,52 @@
           return;
         }
         scheduleFightStep("advanceKnockdownSequence", COUNT_STEP_MS);
-        return;
       }
     }
 
-    function strikeActor(fight, side, actionKey) {
+    function applyDefenseAction(fight, side, actionKey) {
+      var actor = fightStateBySide(fight, side);
+      var action = FIGHT_ACTIONS[actionKey];
+      actor.stamina = clamp(actor.stamina + action.staminaGain, 0, actor.maxStamina);
+      actor.defenseMode = actionKey;
+      actor.actedAttack = false;
+      resetActionChain(actor);
+      pushFightLine(fight, fightNameBySide(fight, side) + " готовит " + action.label.toLowerCase() + ".");
+    }
+
+    function counterAttackChoices(fight, side) {
+      var keys = ["jab", "cross", "body"];
+      var list = [];
+      var i;
+      for (i = 0; i < keys.length; i += 1) {
+        if (actionReachAllowed(fight, side, keys[i])) {
+          list.push(keys[i]);
+        }
+      }
+      return list;
+    }
+
+    function attemptCounterAttack(fight, defenderSide) {
+      var defender = fightStateBySide(fight, defenderSide);
+      var defenderStats = fightStatsBySide(fight, defenderSide);
+      var choices = counterAttackChoices(fight, defenderSide);
+      var chanceToCounter;
+      var pickedAction;
+      if (!choices.length || defender.stamina < 5) {
+        return false;
+      }
+      chanceToCounter = clamp(Math.round(50 + defenderStats.tec * 0.5), 5, 95);
+      defender.defenseMode = null;
+      if (!chance(chanceToCounter)) {
+        pushFightLine(fight, fightNameBySide(fight, defenderSide) + " хотел ответить на контратаке, но окно закрылось.");
+        return false;
+      }
+      pickedAction = choice(choices);
+      pushFightLine(fight, fightNameBySide(fight, defenderSide) + " ловит момент и отвечает на контратаке.");
+      return strikeActor(fight, defenderSide, pickedAction, { free: true, counter: true });
+    }
+
+    function strikeActor(fight, side, actionKey, options) {
       var attacker = fightStateBySide(fight, side);
       var defender = fightStateBySide(fight, otherSide(side));
       var attackerStats = fightStatsBySide(fight, side);
@@ -1960,63 +2030,77 @@
       var attackerName = fightNameBySide(fight, side);
       var defenderName = fightNameBySide(fight, otherSide(side));
       var action = FIGHT_ACTIONS[actionKey];
-      var zone = attackZone(attacker.position, defender.position);
       var hitChance;
       var damage;
       var critical;
-      var bodyDrain;
-      attacker.stamina = clamp(attacker.stamina - (action.stamina + (zone === "line" ? 1 : 0)), 0, 100);
-      if (!canUseFightAction(fight, side, actionKey)) {
-        pushFightLine(fight, attackerName + " выбрасывает " + action.label.toLowerCase() + ", но дистанция не позволяет попасть.");
-        setStrikeAnimation(side, "miss");
+      var dodge;
+      var chainCount;
+      var accuracyPenalty = 0;
+      var damageMultiplier = 1;
+      var defenseMode = defender.defenseMode;
+      var allowCounter = !(options && options.counter);
+      options = options || {};
+      if (!action || !actionReachAllowed(fight, side, actionKey)) {
+        pushFightLine(fight, attackerName + " выбрасывает " + (action ? action.label.toLowerCase() : "удар") + ", но дистанция не позволяет попасть.");
+        setStrikeAnimation(side, "miss", false);
         return false;
       }
-      hitChance = action.accuracy + attackerStats.speed * 2 + attackerStats.technique * 2 + attackerStats.power * 0.4;
-      hitChance -= defenderStats.speed * 1.5 + defenderStats.technique * 1.2 + defenderStats.heart * 0.35;
-      hitChance -= Math.max(0, 40 - attacker.stamina) / 2;
-      if (zone === "line") {
-        hitChance -= 8;
+      if (!options.free && attacker.stamina < action.stamina) {
+        pushFightLine(fight, attackerName + " не хватает стамины на " + action.label.toLowerCase() + ".");
+        return false;
       }
-      hitChance = clamp(Math.round(hitChance), 24, 90);
+      if (!options.free) {
+        attacker.stamina = clamp(attacker.stamina - action.stamina, 0, attacker.maxStamina);
+      }
+      attacker.defenseMode = null;
+      attacker.actedAttack = true;
+      chainCount = nextAttackChain(attacker, actionKey);
+      if (chainCount === 2) {
+        accuracyPenalty -= 10;
+        damageMultiplier *= 0.95;
+      } else if (chainCount >= 3) {
+        accuracyPenalty -= 15;
+        damageMultiplier *= 0.9;
+      }
+      if (staminaIsLow(attacker)) {
+        accuracyPenalty -= 10;
+        damageMultiplier *= 0.9;
+      }
+      dodge = effectiveDodgeChance(defender, defenderStats);
+      hitChance = clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + accuracyPenalty - dodge), 25, 95);
       if (!chance(hitChance)) {
-        pushFightLine(fight, attackerName + " не доносит " + action.label.toLowerCase() + ", и " + defenderName + " уходит с линии атаки.");
-        setStrikeAnimation(side, "miss");
+        pushFightLine(fight, attackerName + " промахивается: " + action.label.toLowerCase() + " не доходит до цели.");
+        setStrikeAnimation(side, "miss", false);
+        if (allowCounter && defenseMode === "counter") {
+          return attemptCounterAttack(fight, otherSide(side));
+        }
+        defender.defenseMode = null;
+        applyAttackChain(attacker, actionKey);
         return false;
       }
-      damage = action.damage + attackerStats.power * 1.1 + attackerStats.technique * 0.5 + attackerStats.speed * 0.2;
-      damage -= defenderStats.endurance * 0.75 + defenderStats.heart * 0.25;
-      if (zone === "line") {
-        damage -= 2;
+      damage = action.damage * (1 + attackerStats.str * 0.05) * damageMultiplier;
+      if (defender.stamina < 5) {
+        damage *= 1.2;
       }
-      if (actionKey === "uppercut") {
-        damage += 2;
-      } else if (actionKey === "hook") {
-        damage += 1;
-      } else if (actionKey === "jab") {
-        damage -= 1;
+      if (defenseMode === "block") {
+        damage *= 0.5;
       }
-      damage = Math.max(4, Math.round(damage + rand(-2, 2)));
-      critical = chance(clamp(8 + attackerStats.technique * 2 + (actionKey === "uppercut" ? 8 : 0) + (actionKey === "cross" ? 4 : 0), 8, 38));
+      critical = chance(clamp(Math.round(5 + attackerStats.tec * 0.2), 5, 95));
       if (critical) {
-        damage += rand(3, 6);
+        damage *= 1.5;
       }
+      damage = Math.max(1, Math.round(damage));
       defender.hp -= damage;
       defender.damageTaken += damage;
-      awardFightPressure(fight, side, damage + (critical ? 4 : 2));
-      if (action.body) {
-        bodyDrain = rand(6, 10) + Math.max(0, attackerStats.power - 5);
-        defender.stamina = clamp(defender.stamina - bodyDrain, 0, 100);
-        defender.bodyDamage += damage;
-      }
+      defender.defenseMode = null;
+      awardFightPressure(fight, side, damage + (critical ? 6 : 2));
       if (critical) {
-        pushFightLine(fight, attackerName + " ловит момент и тяжело попадает: " + action.label + " проходит на " + damage + " урона.");
+        pushFightLine(fight, attackerName + " ловит критический удар '" + action.label + "' на " + damage + " урона.");
       } else {
         pushFightLine(fight, attackerName + " попадает ударом '" + action.label + "' и снимает " + damage + " прочности.");
       }
-      if (action.body) {
-        pushFightLine(fight, defenderName + " теряет темп после работы по корпусу.");
-      }
-      setStrikeAnimation(side, "hit");
+      setStrikeAnimation(side, "hit", critical);
+      applyAttackChain(attacker, actionKey);
       if (defender.hp <= 0) {
         return resolveKnockdown(fight, otherSide(side));
       }
@@ -2065,31 +2149,33 @@
     function pickAiAction(fight) {
       var ai = fight.opponentState;
       var player = fight.playerState;
-      var zone = attackZone(ai.position, player.position);
       var attacks = availableFightActions(fight, "opponent", "attack");
-      var retreat = ai.hp < ai.maxHp * 0.25 || ai.stamina < 16;
+      var retreat = ai.hp < ai.maxHp * 0.3 || ai.stamina < ai.maxStamina * 0.2;
+      if (ai.stamina < ai.maxStamina * 0.15 && canUseFightAction(fight, "opponent", "block") && chance(65)) {
+        return "block";
+      }
+      if (ai.hp < ai.maxHp * 0.45 && canUseFightAction(fight, "opponent", "counter") && chance(40)) {
+        return "counter";
+      }
       if (attacks.length) {
-        if (zone === "close") {
-          if (player.hp < player.maxHp * 0.32 && canUseFightAction(fight, "opponent", "uppercut")) {
-            return "uppercut";
-          }
-          if (canUseFightAction(fight, "opponent", "hook") && chance(60)) {
-            return "hook";
-          }
-          if (canUseFightAction(fight, "opponent", "body") && chance(35)) {
-            return "body";
-          }
-        } else if (zone === "line") {
-          if (canUseFightAction(fight, "opponent", "cross") && chance(55)) {
-            return "cross";
-          }
-          if (canUseFightAction(fight, "opponent", "jab") && chance(70)) {
-            return "jab";
-          }
+        if (player.hp < player.maxHp * 0.3 && canUseFightAction(fight, "opponent", "uppercut")) {
+          return "uppercut";
+        }
+        if (canUseFightAction(fight, "opponent", "cross") && chance(50)) {
+          return "cross";
+        }
+        if (canUseFightAction(fight, "opponent", "jab") && chance(65)) {
+          return "jab";
+        }
+        if (canUseFightAction(fight, "opponent", "body") && chance(45)) {
+          return "body";
+        }
+        if (canUseFightAction(fight, "opponent", "hook") && chance(35)) {
+          return "hook";
         }
         return choice(attacks);
       }
-      return pickAIMove(fight, retreat || zone === "close");
+      return pickAIMove(fight, retreat);
     }
 
     function renderFightResultPanel() {
@@ -2101,8 +2187,8 @@
       html.push("<div class='result-banner'><div class='eyebrow'>Итог боя</div><div class='title' style='font-size:24px'>" + resultLabel + " через " + fight.method + "</div>");
       html.push("<div class='subtitle'>Раундов прошло: " + fight.roundsCompleted + ".</div></div>");
       html.push("<div class='battle-bottom' style='margin-top:12px'>");
-      html.push("<div class='battle-column'><div class='battle-panel'><strong>Ты в бою</strong>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("Стамина", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div></div></div></div>");
-      html.push("<div class='battle-column right'><div class='battle-panel'><strong>Соперник</strong>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("Стамина", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div></div></div></div>");
+      html.push("<div class='battle-column'><div class='battle-panel'><strong>Ты в бою</strong>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div></div></div></div>");
+      html.push("<div class='battle-column right'><div class='battle-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div></div></div></div>");
       html.push("</div>");
       if (fight.roundCards.length) {
         html.push("<div class='battle-panel' style='margin-top:12px'><strong>Карточки судей</strong>");
@@ -2125,33 +2211,40 @@
       var fight = state.fight;
       var fighter = state.fighter;
       var opponent = fight.opponent;
-      var injury = Math.floor(fight.playerState.damageTaken * 0.22 + fight.playerState.knockdowns * 8 + fight.playerState.bodyDamage * 0.25);
+      var injury = Math.floor(fight.playerState.damageTaken * 0.1 + fight.playerState.knockdowns * 10);
       var fameGain;
+      var pointReward = 0;
       fighter.health -= injury;
-      fighter.stress += 6 + Math.floor(fight.playerState.bodyDamage / 6);
+      fighter.stress += 6 + fight.playerState.knockdowns * 3;
       if (fight.result === "win") {
         fighter.wins += 1;
         fighter.money += opponent.purse;
         fighter.fame += opponent.fameReward;
-        fighter.morale += 10;
+        pointReward = 40;
         if (fight.method.indexOf("KO") !== -1) {
           fighter.kos += 1;
+          pointReward = 60;
         }
-        pushLog("Победа. Ты забираешь $" + opponent.purse + " и +" + opponent.fameReward + " к известности.", "good");
+        if (fight.method.indexOf("Смерть") !== -1 || fight.method.indexOf("Убийство") !== -1) {
+          fighter.deathsCaused += 1;
+          pointReward = 80;
+        }
+        fighter.skillPoints += pointReward;
+        pushLog("Победа. Ты забираешь $" + opponent.purse + ", +" + opponent.fameReward + " к известности и +" + pointReward + " очков навыков.", "good");
       } else if (fight.result === "loss") {
         fameGain = Math.max(2, Math.floor(opponent.fameReward / 3));
         fighter.losses += 1;
         fighter.money += Math.floor(opponent.purse * 0.35);
         fighter.fame += fameGain;
-        fighter.morale -= 12;
         fighter.stress += 6;
-        pushLog("Поражение. Даже оно приносит часть денег и оставляет шум вокруг имени.", "bad");
+        fighter.skillPoints += 30;
+        pushLog("Поражение. Ты всё равно получаешь часть денег, немного известности и +30 очков навыков.", "bad");
       } else {
         fameGain = Math.max(4, Math.floor(opponent.fameReward / 2));
         fighter.money += Math.floor(opponent.purse * 0.55);
         fighter.fame += fameGain;
-        fighter.morale += 1;
-        pushLog("Ничья. Ты выжил в рубке и ушел с деньгами и известностью.", "warn");
+        fighter.skillPoints += 35;
+        pushLog("Ничья. Ты уходишь с деньгами, известностью и +35 очками навыков.", "warn");
       }
       applyBounds(fighter);
     }
@@ -2163,7 +2256,6 @@
       if (state.panel === "skills") { return wrapGamePanel("skills", renderSkillPanel()); }
       if (state.panel === "recover") { return wrapGamePanel("recover", renderRecoverPanel()); }
       if (state.panel === "work") { return wrapGamePanel("work", renderWorkPanel()); }
-      if (state.panel === "life") { return wrapGamePanel("life", renderLifePanel()); }
       if (state.panel === "travel") { return wrapGamePanel("travel", renderTravelPanel()); }
       if (state.panel === "fightSelect") { return wrapGamePanel("fightSelect", renderFightSelectPanel()); }
       if (state.panel === "fightLive") { return renderFightLivePanel(); }
@@ -2227,12 +2319,11 @@
                 "<strong>Финальное состояние</strong>" +
                 meter("Здоровье", fighter.health) +
                 meter("Стресс", fighter.stress) +
-                meter("Мораль", fighter.morale) +
-                meter("Личная жизнь", fighter.relationship) +
+                "<div class='record-row'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div>" +
               "</div>" +
               "<div class='summary-box'>" +
                 "<strong>Сборка</strong>" +
-                "<div class='empty-state'>Навыки и архетипы были отключены на время большой переделки боевки. Этот забег целиком держался на статах, маршрутах по странам и управлении бойцом на ринге 5x5.</div>" +
+                "<div class='empty-state'>Этот забег строился на пяти характеристиках, очках навыков, тренировках и новой боевой системе со стаминой, защитой и критами.</div>" +
               "</div>" +
             "</div>" +
             "<div class='footer-actions'>" +
@@ -2267,6 +2358,7 @@
         roundCards: [],
         breakSummary: null,
         knockdown: null,
+        skipTurnRecovery: false,
         pendingTimeout: null,
         animation: null,
         animationTimeout: null
@@ -2316,12 +2408,12 @@
       }
       playerHeal = Math.min(fight.playerState.maxHp - fight.playerState.hp, Math.round(fight.playerState.maxHp * 0.4));
       opponentHeal = Math.min(fight.opponentState.maxHp - fight.opponentState.hp, Math.round(fight.opponentState.maxHp * 0.4));
-      playerStaminaGain = 24 + Math.floor(state.fighter.stats.endurance / 2);
-      opponentStaminaGain = 24 + Math.floor(fight.opponent.stats.endurance / 2);
+      playerStaminaGain = Math.min(fight.playerState.maxStamina - fight.playerState.stamina, Math.round(fight.playerState.maxStamina * 0.4));
+      opponentStaminaGain = Math.min(fight.opponentState.maxStamina - fight.opponentState.stamina, Math.round(fight.opponentState.maxStamina * 0.4));
       fight.playerState.hp = clamp(fight.playerState.hp + playerHeal, 0, fight.playerState.maxHp);
       fight.opponentState.hp = clamp(fight.opponentState.hp + opponentHeal, 0, fight.opponentState.maxHp);
-      fight.playerState.stamina = clamp(fight.playerState.stamina + playerStaminaGain, 0, 100);
-      fight.opponentState.stamina = clamp(fight.opponentState.stamina + opponentStaminaGain, 0, 100);
+      fight.playerState.stamina = clamp(fight.playerState.stamina + playerStaminaGain, 0, fight.playerState.maxStamina);
+      fight.opponentState.stamina = clamp(fight.opponentState.stamina + opponentStaminaGain, 0, fight.opponentState.maxStamina);
       fight.breakSummary = {
         nextRound: fight.round + 1,
         playerHeal: playerHeal,
@@ -2341,14 +2433,21 @@
         return;
       }
       pushFightLine(fight, "Ход " + fight.turn + " завершен.");
+      if (!fight.skipTurnRecovery) {
+        fight.playerState.hp = clamp(fight.playerState.hp + (fight.playerState.actedAttack ? 2 : 4), 0, fight.playerState.maxHp);
+        fight.opponentState.hp = clamp(fight.opponentState.hp + (fight.opponentState.actedAttack ? 2 : 4), 0, fight.opponentState.maxHp);
+        fight.playerState.stamina = clamp(fight.playerState.stamina + (fight.playerState.actedAttack ? 2 : 4), 0, fight.playerState.maxStamina);
+        fight.opponentState.stamina = clamp(fight.opponentState.stamina + (fight.opponentState.actedAttack ? 2 : 4), 0, fight.opponentState.maxStamina);
+      }
+      fight.skipTurnRecovery = false;
+      fight.playerState.actedAttack = false;
+      fight.opponentState.actedAttack = false;
       if (fight.turn >= fight.turnsPerRound) {
         finishFightRound();
         return;
       }
       fight.turn += 1;
       fight.aiActionsLeft = 1;
-      fight.playerState.stamina = clamp(fight.playerState.stamina + 2, 0, 100);
-      fight.opponentState.stamina = clamp(fight.opponentState.stamina + 2, 0, 100);
       fight.actionLock = false;
       render();
     }
@@ -2365,8 +2464,15 @@
       fight.roundPoints = { player: 0, opponent: 0 };
       fight.breakSummary = null;
       fight.knockdown = null;
+      fight.skipTurnRecovery = false;
       fight.animation = null;
       fight.actionLock = false;
+      fight.playerState.actedAttack = false;
+      fight.opponentState.actedAttack = false;
+      fight.playerState.defenseMode = null;
+      fight.opponentState.defenseMode = null;
+      resetActionChain(fight.playerState);
+      resetActionChain(fight.opponentState);
       resetRingPositions(fight);
       pushFightLine(fight, "Начинается раунд " + fight.round + ". После перерыва бойцы снова сходятся в центре.");
       state.panel = "fightLive";
@@ -2383,13 +2489,13 @@
           "<div class='battle-bottom' style='margin-top:12px'>" +
             "<div class='battle-column'><div class='battle-panel'><strong>Твой угол</strong>" +
               "<div class='battle-chip-line'><div class='chip gold'>Здоровье +" + summary.playerHeal + "</div><div class='chip'>Стамина +" + summary.playerStamina + "</div></div>" +
-              meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) +
-              meter("Стамина", Math.round(fight.playerState.stamina)) +
+              meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) +
+              meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) +
             "</div></div>" +
             "<div class='battle-column right'><div class='battle-panel'><strong>Его угол</strong>" +
               "<div class='battle-chip-line'><div class='chip red'>Здоровье +" + summary.opponentHeal + "</div><div class='chip'>Стамина +" + summary.opponentStamina + "</div></div>" +
-              meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) +
-              meter("Стамина", Math.round(fight.opponentState.stamina)) +
+              meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) +
+              meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) +
             "</div></div>" +
           "</div>" +
           "<div class='footer-actions'><button class='button' onclick='startNextRound()'>Начать следующий раунд</button></div>" +
@@ -2444,6 +2550,13 @@
         scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
         return;
       }
+      if (FIGHT_ACTIONS[aiActionKey].type === "defense") {
+        applyDefenseAction(fight, "opponent", aiActionKey);
+        fight.aiActionsLeft = 0;
+        render();
+        scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
+        return;
+      }
       strikeOutcome = strikeActor(fight, "opponent", aiActionKey);
       fight.aiActionsLeft = 0;
       render();
@@ -2461,13 +2574,19 @@
         return;
       }
       if (!canUseFightAction(fight, "player", actionKey)) {
-        pushFightLine(fight, "Это действие сейчас недоступно по позиции на ринге.");
+        pushFightLine(fight, "Это действие сейчас недоступно из-за позиции на ринге или нехватки стамины.");
         render();
         return;
       }
       fight.actionLock = true;
       if (action.type === "move") {
         moveActor(fight, "player", actionKey);
+        render();
+        scheduleFightStep("runAiAfterPlayer", ACTION_DELAY_MS);
+        return;
+      }
+      if (action.type === "defense") {
+        applyDefenseAction(fight, "player", actionKey);
         render();
         scheduleFightStep("runAiAfterPlayer", ACTION_DELAY_MS);
         return;
@@ -2484,8 +2603,8 @@
       var html = [];
       html.push("<div class='battle-panel'><strong>Статистика</strong>");
       html.push("<div class='battle-chip-line'><div class='chip'>Раунд " + fight.round + " / " + fight.opponent.rounds + "</div><div class='chip'>Ход " + fight.turn + " / " + fight.turnsPerRound + "</div></div>");
-      html.push("<div class='battle-panel inset-panel'><strong>Ты</strong>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + meter("Стамина", Math.round(fight.playerState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div></div></div>");
-      html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + meter("Стамина", Math.round(fight.opponentState.stamina)) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div></div></div>");
+      html.push("<div class='battle-panel inset-panel'><strong>Ты</strong>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.playerState.defenseMode ? FIGHT_ACTIONS[fight.playerState.defenseMode].label : "Нет") + "</div></div></div>");
+      html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.opponentState.defenseMode ? FIGHT_ACTIONS[fight.opponentState.defenseMode].label : "Нет") + "</div></div></div>");
       if (fight.roundCards.length) {
         html.push("<div class='battle-panel inset-panel'><strong>Карточки</strong>");
         html.push("<div class='log-entry'>" + fight.roundCards[0] + "</div>");
@@ -2508,13 +2627,13 @@
       html.push("<div class='battle-topbar'>");
       html.push("<div class='battle-health-card'>");
       html.push("<div class='chip gold'>Ты</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.playerState.hp / fight.playerState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.playerState.stamina)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) + "</div>");
       html.push("</div>");
       html.push("<div class='battle-health-card right'>");
       html.push("<div class='chip red'>" + fullOpponentName(fight.opponent) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Прочность", Math.round(fight.opponentState.hp / fight.opponentState.maxHp * 100)) + "</div>");
-      html.push("<div class='battle-stats-line'>" + meter("Стамина", Math.round(fight.opponentState.stamina)) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + "</div>");
+      html.push("<div class='battle-stats-line'>" + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "</div>");
       html.push("</div>");
       html.push("</div>");
       html.push("<div class='battle-panel'><div class='battle-tabs'>");
