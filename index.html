@@ -374,12 +374,12 @@
     .nav-row .button,
     .nav-row .ghost {
       display: inline-block;
-      width: 24.25%;
+      width: 19.2%;
       margin-right: 1%;
       min-width: 0;
       min-height: 56px;
-      padding: 12px 6px;
-      font-size: 18px;
+      padding: 12px 4px;
+      font-size: 16px;
       vertical-align: top;
     }
 
@@ -409,6 +409,38 @@
     }
 
     .create-grid .create-card:nth-child(2n) {
+      margin-right: 0;
+    }
+
+    .npc-card {
+      margin-bottom: 12px;
+    }
+
+    .npc-meta-line {
+      margin: 8px 0 12px 0;
+    }
+
+    .npc-action-grid {
+      font-size: 0;
+      margin-top: 12px;
+    }
+
+    .npc-action-grid .button,
+    .npc-action-grid .ghost,
+    .npc-action-grid .danger {
+      display: inline-block;
+      width: 48.5%;
+      margin-right: 3%;
+      min-width: 0;
+      min-height: 58px;
+      padding: 12px 10px;
+      font-size: 18px;
+      vertical-align: top;
+    }
+
+    .npc-action-grid .button:nth-child(2n),
+    .npc-action-grid .ghost:nth-child(2n),
+    .npc-action-grid .danger:nth-child(2n) {
       margin-right: 0;
     }
 
@@ -876,7 +908,7 @@
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.18.7";
+    var APP_VERSION = "2026.03.18.8";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -1206,6 +1238,7 @@
         state.panel = "home";
       }
       ensureLifeState();
+      ensureNpcWorld();
       if (!state.world.offers.available.length) {
         refreshWorldState();
       }
@@ -1408,11 +1441,6 @@
       return TimeSystem.getAgeView(fighter.startingAge, fighter.calendar);
     }
 
-    function careerTimeLabel(fighter) {
-      var calendar = currentCalendarView(fighter);
-      return calendar.monthName + " " + calendar.year + " · " + calendar.weekOfMonth + "-я неделя месяца";
-    }
-
     function applyConditionDelta(fighter, delta) {
       var changes = delta || {};
       if (!fighter) {
@@ -1463,13 +1491,472 @@
       };
     }
 
+    function npcRoleInfo(roleId) {
+      var role = ContentLoader.getNpcRole ? ContentLoader.getNpcRole(roleId) : null;
+      var fallback = {
+        id: roleId,
+        label: "Контакт",
+        description: "Человек из твоего круга, который может стать важной частью карьеры.",
+        statusPool: ["держится рядом"],
+        traitsPool: ["наблюдательный"],
+        relationPreset: {
+          affinity: 35,
+          respect: 35,
+          trust: 30,
+          tension: 10,
+          relationTags: []
+        }
+      };
+      if (!role) {
+        return fallback;
+      }
+      return {
+        id: role.id || fallback.id,
+        label: role.label || fallback.label,
+        description: role.description || fallback.description,
+        statusPool: role.statusPool instanceof Array && role.statusPool.length ? role.statusPool : fallback.statusPool,
+        traitsPool: role.traitsPool instanceof Array && role.traitsPool.length ? role.traitsPool : fallback.traitsPool,
+        relationPreset: role.relationPreset ? clonePlainData(role.relationPreset) : clonePlainData(fallback.relationPreset)
+      };
+    }
+
+    function uniqueList(list) {
+      var out = [];
+      var i;
+      var j;
+      var exists;
+      if (!(list instanceof Array)) {
+        return out;
+      }
+      for (i = 0; i < list.length; i += 1) {
+        if (typeof list[i] !== "string" || !list[i]) {
+          continue;
+        }
+        exists = false;
+        for (j = 0; j < out.length; j += 1) {
+          if (out[j] === list[i]) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          out.push(list[i]);
+        }
+      }
+      return out;
+    }
+
+    function pickUniqueTraits(pool, count) {
+      var source = pool instanceof Array ? pool.slice(0) : [];
+      var picked = [];
+      var index;
+      while (source.length && picked.length < count) {
+        index = rand(0, source.length - 1);
+        picked.push(source.splice(index, 1)[0]);
+      }
+      return picked;
+    }
+
+    function npcAgeRange(roleId) {
+      if (roleId === "trainer" || roleId === "gym_owner" || roleId === "promoter" || roleId === "doctor") {
+        return { min: 31, max: 58 };
+      }
+      if (roleId === "journalist") {
+        return { min: 24, max: 45 };
+      }
+      return { min: 20, max: 34 };
+    }
+
+    function relationWeekStamp() {
+      return state.fighter ? state.fighter.week : 1;
+    }
+
+    function relationSummary(relation) {
+      if (!relation) {
+        return "незнакомец";
+      }
+      if (relation.tension >= 75 && relation.affinity <= 20) {
+        return "открытый конфликт";
+      }
+      if (relation.affinity >= 65 && relation.trust >= 60) {
+        return "близкий круг";
+      }
+      if (relation.respect >= 65) {
+        return "профессиональное уважение";
+      }
+      if (relation.affinity >= 50) {
+        return "тёплая связь";
+      }
+      if (relation.tension >= 50) {
+        return "напряжённые отношения";
+      }
+      return "рабочее знакомство";
+    }
+
+    function clampRelationValue(value) {
+      return clamp(Math.round(value), 0, 100);
+    }
+
+    function appendHistoryEntry(list, entry, limit) {
+      var target = list instanceof Array ? list : [];
+      target.unshift(entry);
+      if (target.length > limit) {
+        target = target.slice(0, limit);
+      }
+      return target;
+    }
+
+    function findNpcById(npcId) {
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        if (state.world.npcs[i].id === npcId) {
+          return state.world.npcs[i];
+        }
+      }
+      return null;
+    }
+
+    function findRelationship(npcId) {
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.relationships.length; i += 1) {
+        if (state.world.relationships[i].npcId === npcId) {
+          return state.world.relationships[i];
+        }
+      }
+      return null;
+    }
+
+    function syncNpcRelationSnapshot(npcId) {
+      var npc = findNpcById(npcId);
+      var relation = findRelationship(npcId);
+      var tags;
+      if (!npc || !relation) {
+        return;
+      }
+      tags = uniqueList((relation.relationTags || []).concat([npc.role]));
+      if (relation.affinity >= 70) { tags.push("close"); }
+      if (relation.respect >= 70) { tags.push("valued"); }
+      if (relation.tension >= 70) { tags.push("hostile"); }
+      if (relation.tension >= 45 && relation.respect >= 40) { tags.push("heated"); }
+      relation.relationTags = uniqueList(tags);
+      npc.relationToPlayer = {
+        affinity: clampRelationValue(relation.affinity),
+        respect: clampRelationValue(relation.respect),
+        trust: clampRelationValue(relation.trust),
+        tension: clampRelationValue(relation.tension),
+        summary: relationSummary(relation)
+      };
+      npc.flags = uniqueList((npc.flags || []).concat(relation.relationTags || []));
+    }
+
+    function syncAllNpcRelationSnapshots() {
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        syncNpcRelationSnapshot(state.world.npcs[i].id);
+      }
+    }
+
+    function createRelationshipForRole(npcId, roleId) {
+      var role = npcRoleInfo(roleId);
+      var preset = role.relationPreset || {};
+      return {
+        npcId: npcId,
+        affinity: typeof preset.affinity === "number" ? preset.affinity : 35,
+        respect: typeof preset.respect === "number" ? preset.respect : 35,
+        trust: typeof preset.trust === "number" ? preset.trust : 30,
+        tension: typeof preset.tension === "number" ? preset.tension : 10,
+        lastInteractionWeek: relationWeekStamp(),
+        historyEntries: [],
+        relationTags: uniqueList((preset.relationTags || []).concat([roleId]))
+      };
+    }
+
+    function ensureRelationshipForNpc(npc) {
+      var relation;
+      if (!npc) {
+        return null;
+      }
+      relation = findRelationship(npc.id);
+      if (relation) {
+        return relation;
+      }
+      relation = createRelationshipForRole(npc.id, npc.role);
+      state.world.relationships.push(relation);
+      return relation;
+    }
+
+    function buildNpcName(countryKey) {
+      var identity = makeIdentity(countryKey);
+      if (!identity) {
+        return "Новый контакт";
+      }
+      if (identity.firstName && identity.lastName) {
+        return identity.firstName + " " + identity.lastName;
+      }
+      return identity.fullName || "Новый контакт";
+    }
+
+    function makeNpc(countryKey, roleId, overrides) {
+      var role = npcRoleInfo(roleId);
+      var config = overrides || {};
+      var ageRange = npcAgeRange(roleId);
+      var npc = {
+        id: config.id || (roleId + "_" + relationWeekStamp() + "_" + rand(1000, 9999)),
+        name: config.name || buildNpcName(countryKey),
+        country: config.country || countryKey,
+        role: roleId,
+        age: typeof config.age === "number" ? config.age : rand(ageRange.min, ageRange.max),
+        traits: config.traits ? clonePlainData(config.traits) : pickUniqueTraits(role.traitsPool, 2),
+        status: config.status || choice(role.statusPool),
+        relationToPlayer: {
+          affinity: 0,
+          respect: 0,
+          trust: 0,
+          tension: 0,
+          summary: ""
+        },
+        history: [],
+        flags: uniqueList((config.flags || []).concat([roleId, countryKey]))
+      };
+      var relation = createRelationshipForRole(npc.id, roleId);
+      npc.history = appendHistoryEntry(npc.history, {
+        week: relationWeekStamp(),
+        type: "introduced",
+        text: role.label + " входит в твой круг."
+      }, 12);
+      relation.historyEntries = appendHistoryEntry(relation.historyEntries, {
+        week: relationWeekStamp(),
+        type: "introduced",
+        text: "Первое знакомство."
+      }, 16);
+      state.world.npcs.push(npc);
+      state.world.relationships.push(relation);
+      syncNpcRelationSnapshot(npc.id);
+      return npc;
+    }
+
+    function addMissingNpcRole(roleId, countryKey) {
+      var i;
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        if (state.world.npcs[i].role === roleId) {
+          return state.world.npcs[i];
+        }
+      }
+      return makeNpc(countryKey || state.fighter.homeCountry, roleId);
+    }
+
+    function generateCareerNpcWorld() {
+      var homeCountry;
+      var currentCountry;
+      ensureLifeState();
+      if (!state.fighter) {
+        return;
+      }
+      homeCountry = state.fighter.homeCountry;
+      currentCountry = state.fighter.currentCountry;
+      state.world.npcs = [];
+      state.world.relationships = [];
+      makeNpc(homeCountry, "trainer");
+      makeNpc(homeCountry, "friend");
+      makeNpc(homeCountry, "rival");
+      makeNpc(currentCountry, "promoter");
+      makeNpc(homeCountry, "sparring");
+      makeNpc(homeCountry, "doctor");
+      makeNpc(homeCountry, "gym_owner");
+      makeNpc(currentCountry, "journalist");
+      syncAllNpcRelationSnapshots();
+      pushLog("Вокруг тебя собирается круг людей: тренер, друг, соперник, промоутер и ещё несколько важных контактов.", "warn");
+    }
+
+    function ensureNpcWorld() {
+      var i;
+      var existing;
+      ensureLifeState();
+      if (!state.fighter) {
+        return;
+      }
+      if (!state.world.npcs.length) {
+        generateCareerNpcWorld();
+        return;
+      }
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        existing = state.world.npcs[i];
+        if (!(existing.history instanceof Array)) {
+          existing.history = [];
+        }
+        if (!(existing.flags instanceof Array)) {
+          existing.flags = [];
+        }
+        ensureRelationshipForNpc(existing);
+      }
+      addMissingNpcRole("trainer", state.fighter.homeCountry);
+      addMissingNpcRole("friend", state.fighter.homeCountry);
+      addMissingNpcRole("rival", state.fighter.homeCountry);
+      addMissingNpcRole("promoter", state.fighter.currentCountry);
+      syncAllNpcRelationSnapshots();
+    }
+
+    function updateNpcWorldForWeek(action) {
+      var fighter = state.fighter;
+      var currentWeek = relationWeekStamp();
+      var i;
+      var npc;
+      var relation;
+      var weeksSince;
+      ensureNpcWorld();
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        npc = state.world.npcs[i];
+        relation = ensureRelationshipForNpc(npc);
+        weeksSince = Math.max(0, currentWeek - (relation.lastInteractionWeek || currentWeek));
+        if (weeksSince >= 6) {
+          relation.affinity -= 1;
+          relation.trust -= 1;
+          if (npc.role !== "rival") {
+            relation.tension -= 1;
+          }
+        }
+        if (action.type === "train" && npc.role === "trainer") {
+          relation.respect += 2;
+          relation.trust += 1;
+        }
+        if (action.type === "recover" && (npc.role === "friend" || npc.role === "doctor")) {
+          relation.affinity += 1;
+          relation.trust += 1;
+        }
+        if (action.type === "fight" && npc.role === "promoter") {
+          relation.respect += action.meta && action.meta.result === "win" ? 3 : 1;
+        }
+        if (action.type === "fight" && npc.role === "rival" && action.meta && action.meta.result === "win") {
+          relation.respect += 1;
+          relation.tension += 3;
+        }
+        if (action.type === "work" && npc.role === "gym_owner") {
+          relation.respect += 1;
+        }
+        relation.affinity = clampRelationValue(relation.affinity);
+        relation.respect = clampRelationValue(relation.respect);
+        relation.trust = clampRelationValue(relation.trust);
+        relation.tension = clampRelationValue(relation.tension);
+        if (chance(35)) {
+          npc.status = choice(npcRoleInfo(npc.role).statusPool) || npc.status;
+        }
+        if (chance(20) && npc.role === "rival" && fighter.fame >= 10) {
+          relation.tension = clampRelationValue(relation.tension + 1);
+        }
+        syncNpcRelationSnapshot(npc.id);
+      }
+    }
+
+    function roleHelpEffect(npc) {
+      var fighter = state.fighter;
+      var role = npc ? npc.role : "";
+      if (role === "trainer") {
+        fighter.skillPoints += 4;
+        return "Тренер разложил лагерь по полочкам. +4 очка навыков.";
+      }
+      if (role === "friend") {
+        fighter.stress -= 5;
+        fighter.morale += 4;
+        return "Друг вытянул тебя из тяжёлой головы. Стресс падает.";
+      }
+      if (role === "rival") {
+        fighter.skillPoints += 2;
+        fighter.stress += 2;
+        return "Соперник дал жёсткий ориентир через спарринг. +2 очка навыков, но нервы на пределе.";
+      }
+      if (role === "promoter") {
+        fighter.fame += 3;
+        return "Промоутер бросил пару слов куда надо. +3 известности.";
+      }
+      if (role === "journalist") {
+        fighter.fame += 4;
+        fighter.stress += 2;
+        return "Журналист подогрел интерес к твоему имени. +4 известности.";
+      }
+      if (role === "doctor") {
+        fighter.health += 8;
+        fighter.stress -= 2;
+        return "Врач быстро собрал тебя обратно. +8 здоровья.";
+      }
+      if (role === "gym_owner") {
+        fighter.money += 20;
+        return "Владелец зала подкинул смену и крышу. +$20.";
+      }
+      fighter.skillPoints += 3;
+      fighter.health -= 2;
+      return "Контакт помог через спарринг и советы. +3 очка навыков.";
+    }
+
+    function interactWithNpc(npcId, interactionKey) {
+      var npc = findNpcById(npcId);
+      var relation = findRelationship(npcId);
+      var label;
+      var delta;
+      var relationDelta;
+      var roleInfo;
+      var helpText = "";
+      if (!npc || !relation || !state.fighter) {
+        return;
+      }
+      roleInfo = npcRoleInfo(npc.role);
+      label = "Встреча";
+      delta = { fatigue: 2, wear: 0, morale: 1 };
+      relationDelta = { affinity: 4, respect: 1, trust: 2, tension: -2 };
+      if (interactionKey === "talk") {
+        label = "Разговор";
+        delta = { fatigue: 1, wear: 0, morale: 2 };
+        relationDelta = { affinity: 3, respect: 2, trust: 3, tension: -1 };
+      } else if (interactionKey === "help") {
+        label = "Просьба о помощи";
+        delta = { fatigue: 2, wear: 0, morale: 2 };
+        relationDelta = { affinity: 1, respect: 3, trust: 5, tension: 0 };
+        helpText = roleHelpEffect(npc);
+      } else if (interactionKey === "conflict") {
+        label = "Обострение";
+        delta = { fatigue: 3, wear: 0, morale: -3 };
+        relationDelta = { affinity: -8, respect: -2, trust: -7, tension: 12 };
+      }
+      relation.affinity = clampRelationValue(relation.affinity + relationDelta.affinity);
+      relation.respect = clampRelationValue(relation.respect + relationDelta.respect);
+      relation.trust = clampRelationValue(relation.trust + relationDelta.trust);
+      relation.tension = clampRelationValue(relation.tension + relationDelta.tension);
+      relation.lastInteractionWeek = relationWeekStamp();
+      relation.historyEntries = appendHistoryEntry(relation.historyEntries, {
+        week: relationWeekStamp(),
+        type: interactionKey,
+        text: label + " с " + npc.name + "."
+      }, 16);
+      npc.history = appendHistoryEntry(npc.history, {
+        week: relationWeekStamp(),
+        type: interactionKey,
+        text: label + " с игроком."
+      }, 12);
+      registerWeeklyAction("npc", label + ": " + roleInfo.label, delta, {
+        npcId: npc.id,
+        role: npc.role,
+        interaction: interactionKey
+      });
+      syncNpcRelationSnapshot(npc.id);
+      applyBounds(state.fighter);
+      pushLog(label + ": " + npc.name + " (" + roleInfo.label + "). Связь теперь: " + relationSummary(relation) + ".", interactionKey === "conflict" ? "bad" : "good");
+      if (helpText) {
+        pushLog(helpText, "good");
+      }
+      spendWeek();
+    }
+
     function refreshWorldState() {
       var fighter = state.fighter;
       ensureLifeState();
+      ensureNpcWorld();
       state.world.offers = buildWeeklyOffers();
       state.world.scene.updatedWeek = fighter.week;
       state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
       state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
+      syncAllNpcRelationSnapshots();
     }
 
     function runWorldTick() {
@@ -1521,6 +2008,7 @@
         fighter.stress += 1;
       }
       applyBounds(fighter);
+      updateNpcWorldForWeek(action);
       refreshWorldState();
       state.world.lastWeekAction = {
         type: "idle",
@@ -1646,6 +2134,7 @@
       };
       state.world = defaultWorldState();
       applyBounds(state.fighter);
+      generateCareerNpcWorld();
       refreshWorldState();
       state.screen = "game";
       state.panel = "home";
@@ -2238,6 +2727,7 @@
             "<div class='chip'>Слава " + state.fighter.fame + "</div>" +
             "<div class='chip'>Деньги $" + state.fighter.money + "</div>" +
             "<div class='chip gold'>Очки " + state.fighter.skillPoints + "</div>" +
+            "<div class='chip'>Люди " + (state.world && state.world.npcs ? state.world.npcs.length : 0) + "</div>" +
             "<div class='chip'>Дом " + home.name + "</div>" +
             "<div class='chip'>Сейчас " + current.name + "</div>" +
           "</div>" +
@@ -2278,6 +2768,55 @@
 
     function renderCareerLogPage() {
       return "<div class='panel fill-panel'>" + renderLogPanelInner() + "</div>";
+    }
+
+    function renderPeoplePanel() {
+      var html = [];
+      var i;
+      var npc;
+      var relation;
+      var role;
+      var country;
+      var lastEntry;
+      ensureNpcWorld();
+      html.push("<div class='panel fill-panel'>");
+      html.push("<h2 class='panel-title'>Люди</h2>");
+      html.push("<div class='muted'>Это твой круг карьеры. Любое взаимодействие занимает неделю, запоминается в отношениях и влияет на будущую атмосферу вокруг бойца.</div>");
+      if (!state.world.npcs.length) {
+        html.push("<div class='empty-state' style='margin-top:14px'>Пока вокруг тебя ещё никого нет.</div></div>");
+        return html.join("");
+      }
+      html.push("<div class='card-grid'>");
+      for (i = 0; i < state.world.npcs.length; i += 1) {
+        npc = state.world.npcs[i];
+        relation = findRelationship(npc.id);
+        role = npcRoleInfo(npc.role);
+        country = getCountryInfo(npc.country);
+        lastEntry = relation && relation.historyEntries && relation.historyEntries.length ? relation.historyEntries[0] : null;
+        html.push("<div class='card npc-card'>");
+        html.push("<div class='meta'>" + role.label + " · " + (country ? country.name : npc.country) + " · " + npc.age + " лет</div>");
+        html.push("<h3>" + npc.name + "</h3>");
+        html.push("<p>" + role.description + "</p>");
+        html.push("<div class='npc-meta-line'>");
+        html.push("<div class='chip gold'>" + npc.relationToPlayer.summary + "</div>");
+        html.push("<div class='chip'>Симпатия " + npc.relationToPlayer.affinity + "</div>");
+        html.push("<div class='chip'>Уважение " + npc.relationToPlayer.respect + "</div>");
+        html.push("<div class='chip'>Доверие " + npc.relationToPlayer.trust + "</div>");
+        html.push("<div class='chip red'>Напряжение " + npc.relationToPlayer.tension + "</div>");
+        html.push("</div>");
+        html.push("<div class='muted'>Сейчас: " + npc.status + ".</div>");
+        html.push("<div class='muted'>Черты: " + (npc.traits && npc.traits.length ? npc.traits.join(", ") : "без ярких черт") + ".</div>");
+        html.push("<div class='muted'>Связь: " + (lastEntry ? lastEntry.text : "история только начинается") + "</div>");
+        html.push("<div class='npc-action-grid'>");
+        html.push("<button class='button' onclick='interactWithNpc(\"" + npc.id + "\", \"meet\")'>Встретиться</button>");
+        html.push("<button class='ghost' onclick='interactWithNpc(\"" + npc.id + "\", \"talk\")'>Поговорить</button>");
+        html.push("<button class='button' onclick='interactWithNpc(\"" + npc.id + "\", \"help\")'>Попросить помощь</button>");
+        html.push("<button class='danger' onclick='interactWithNpc(\"" + npc.id + "\", \"conflict\")'>Обострить</button>");
+        html.push("</div>");
+        html.push("</div>");
+      }
+      html.push("</div></div>");
+      return html.join("");
     }
 
     function wrapGamePanel(panelKey, html) {
@@ -2426,6 +2965,7 @@
       html.push("<div class='chip'>Сейчас " + (current ? current.name : "-") + "</div>");
       html.push("</div>");
       html.push("<div class='record-row'><div class='chip'>Время " + calendar.monthName + " " + calendar.year + "</div><div class='chip'>Неделя " + fighter.week + "</div><div class='chip'>Возраст " + age.label + "</div></div>");
+      html.push("<div class='record-row'><div class='chip'>Контактов " + (state.world && state.world.npcs ? state.world.npcs.length : 0) + "</div></div>");
       if (current) {
         html.push("<div class='muted'>Школа: " + current.schoolStyle + " Жизнь в городе: ~$" + current.baseLivingCost + "/нед. Арена: " + current.city + ".</div>");
       }
@@ -3082,6 +3622,7 @@
 
     function renderMainPanel() {
       if (state.panel === "character") { return wrapGamePanel("character", renderCharacterPanel()); }
+      if (state.panel === "people") { return wrapGamePanel("people", renderPeoplePanel()); }
       if (state.panel === "careerLog") { return wrapGamePanel("careerLog", renderCareerLogPage()); }
       if (state.panel === "train") { return wrapGamePanel("train", renderTrainPanel()); }
       if (state.panel === "skills") { return wrapGamePanel("skills", renderSkillPanel()); }
@@ -3568,10 +4109,5 @@
   <div id="app"></div>
 </body>
 </html>
-
-
-
-
-
 
 

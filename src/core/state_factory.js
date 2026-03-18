@@ -1,4 +1,4 @@
-var SAVE_VERSION = 4;
+var SAVE_VERSION = 5;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -45,6 +45,80 @@ function baseWorldSchema() {
       temperature: 50
     }
   };
+}
+
+function baseNpcSchema() {
+  return {
+    id: "",
+    name: "",
+    country: "",
+    role: "",
+    age: 24,
+    traits: [],
+    status: "",
+    relationToPlayer: {
+      affinity: 0,
+      respect: 0,
+      trust: 0,
+      tension: 0,
+      summary: ""
+    },
+    history: [],
+    flags: []
+  };
+}
+
+function baseRelationshipSchema() {
+  return {
+    npcId: "",
+    affinity: 0,
+    respect: 0,
+    trust: 0,
+    tension: 0,
+    lastInteractionWeek: 0,
+    historyEntries: [],
+    relationTags: []
+  };
+}
+
+function normalizeNpcEntry(sourceNpc) {
+  var normalized = baseNpcSchema();
+  if (!sourceNpc || typeof sourceNpc !== "object") {
+    return normalized;
+  }
+  normalized.id = sourceNpc.id || "";
+  normalized.name = sourceNpc.name || "";
+  normalized.country = sourceNpc.country || "";
+  normalized.role = sourceNpc.role || "";
+  normalized.age = typeof sourceNpc.age === "number" ? sourceNpc.age : normalized.age;
+  normalized.traits = sourceNpc.traits instanceof Array ? clonePlainData(sourceNpc.traits) : [];
+  normalized.status = sourceNpc.status || "";
+  if (sourceNpc.relationToPlayer && typeof sourceNpc.relationToPlayer === "object") {
+    if (typeof sourceNpc.relationToPlayer.affinity === "number") { normalized.relationToPlayer.affinity = sourceNpc.relationToPlayer.affinity; }
+    if (typeof sourceNpc.relationToPlayer.respect === "number") { normalized.relationToPlayer.respect = sourceNpc.relationToPlayer.respect; }
+    if (typeof sourceNpc.relationToPlayer.trust === "number") { normalized.relationToPlayer.trust = sourceNpc.relationToPlayer.trust; }
+    if (typeof sourceNpc.relationToPlayer.tension === "number") { normalized.relationToPlayer.tension = sourceNpc.relationToPlayer.tension; }
+    normalized.relationToPlayer.summary = sourceNpc.relationToPlayer.summary || "";
+  }
+  normalized.history = sourceNpc.history instanceof Array ? clonePlainData(sourceNpc.history) : [];
+  normalized.flags = sourceNpc.flags instanceof Array ? clonePlainData(sourceNpc.flags) : [];
+  return normalized;
+}
+
+function normalizeRelationshipEntry(sourceRelationship) {
+  var normalized = baseRelationshipSchema();
+  if (!sourceRelationship || typeof sourceRelationship !== "object") {
+    return normalized;
+  }
+  normalized.npcId = sourceRelationship.npcId || "";
+  if (typeof sourceRelationship.affinity === "number") { normalized.affinity = sourceRelationship.affinity; }
+  if (typeof sourceRelationship.respect === "number") { normalized.respect = sourceRelationship.respect; }
+  if (typeof sourceRelationship.trust === "number") { normalized.trust = sourceRelationship.trust; }
+  if (typeof sourceRelationship.tension === "number") { normalized.tension = sourceRelationship.tension; }
+  if (typeof sourceRelationship.lastInteractionWeek === "number") { normalized.lastInteractionWeek = sourceRelationship.lastInteractionWeek; }
+  normalized.historyEntries = sourceRelationship.historyEntries instanceof Array ? clonePlainData(sourceRelationship.historyEntries) : [];
+  normalized.relationTags = sourceRelationship.relationTags instanceof Array ? clonePlainData(sourceRelationship.relationTags) : [];
+  return normalized;
 }
 
 function createGameState(options) {
@@ -108,6 +182,7 @@ function createGameState(options) {
 
 function normalizeWorldState(sourceWorld) {
   var normalized = baseWorldSchema();
+  var i;
   if (!sourceWorld || typeof sourceWorld !== "object") {
     return normalized;
   }
@@ -117,8 +192,18 @@ function normalizeWorldState(sourceWorld) {
     normalized.offers.available = sourceWorld.offers.available instanceof Array ? clonePlainData(sourceWorld.offers.available) : [];
     normalized.offers.headline = sourceWorld.offers.headline || "";
   }
-  normalized.npcs = sourceWorld.npcs instanceof Array ? clonePlainData(sourceWorld.npcs) : [];
-  normalized.relationships = sourceWorld.relationships instanceof Array ? clonePlainData(sourceWorld.relationships) : [];
+  if (sourceWorld.npcs instanceof Array) {
+    normalized.npcs = [];
+    for (i = 0; i < sourceWorld.npcs.length; i += 1) {
+      normalized.npcs.push(normalizeNpcEntry(sourceWorld.npcs[i]));
+    }
+  }
+  if (sourceWorld.relationships instanceof Array) {
+    normalized.relationships = [];
+    for (i = 0; i < sourceWorld.relationships.length; i += 1) {
+      normalized.relationships.push(normalizeRelationshipEntry(sourceWorld.relationships[i]));
+    }
+  }
   normalized.contracts = sourceWorld.contracts instanceof Array ? clonePlainData(sourceWorld.contracts) : [];
   if (sourceWorld.lastWeekAction && typeof sourceWorld.lastWeekAction === "object") {
     normalized.lastWeekAction.type = sourceWorld.lastWeekAction.type || "idle";
