@@ -1885,16 +1885,14 @@
       var fight = state.fight;
       var knockdown;
       var victim;
-      var victimStats;
       consumeFightStepTimeout();
       if (!fight || !fight.knockdown) {
         return;
       }
       knockdown = fight.knockdown;
       victim = fightStateBySide(fight, knockdown.victimSide);
-      victimStats = fightStatsBySide(fight, knockdown.victimSide);
       victim.knockdowns += 1;
-      victim.hp = clamp(8 + victimStats.heart * 2 + victimStats.endurance - knockdown.count - knockdown.overkill * 2, 4, victim.maxHp);
+      victim.hp = clamp(Math.round(victim.maxHp * 0.25), 1, victim.maxHp);
       victim.stamina = clamp(victim.stamina - 14, 0, 100);
       resetRingPositions(fight);
       clearFightAnimationState();
@@ -2316,8 +2314,8 @@
         );
         return;
       }
-      playerHeal = Math.min(fight.playerState.maxHp - fight.playerState.hp, 10 + Math.floor(state.fighter.stats.endurance / 2));
-      opponentHeal = Math.min(fight.opponentState.maxHp - fight.opponentState.hp, 10 + Math.floor(fight.opponent.stats.endurance / 2));
+      playerHeal = Math.min(fight.playerState.maxHp - fight.playerState.hp, Math.round(fight.playerState.maxHp * 0.4));
+      opponentHeal = Math.min(fight.opponentState.maxHp - fight.opponentState.hp, Math.round(fight.opponentState.maxHp * 0.4));
       playerStaminaGain = 24 + Math.floor(state.fighter.stats.endurance / 2);
       opponentStaminaGain = 24 + Math.floor(fight.opponent.stats.endurance / 2);
       fight.playerState.hp = clamp(fight.playerState.hp + playerHeal, 0, fight.playerState.maxHp);
