@@ -1,4 +1,4 @@
-var SAVE_VERSION = 9;
+var SAVE_VERSION = 10;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -27,6 +27,29 @@ function basePlayerLifeSchema() {
   return {
     housingId: "normal",
     support: 50
+  };
+}
+
+function basePlayerDevelopmentSchema() {
+  return {
+    focusId: "technique",
+    totalXp: 0,
+    perkPoints: 0,
+    focusProgress: {
+      endurance: 0,
+      technique: 0,
+      power: 0,
+      defense: 0,
+      sparring: 0,
+      recovery: 0
+    },
+    styleProgress: {
+      outboxer: 0,
+      puncher: 0,
+      counterpuncher: 0,
+      tempo: 0
+    },
+    activePerks: []
   };
 }
 
@@ -218,6 +241,7 @@ function createGameState(options) {
       },
       conditions: basePlayerConditionsSchema(),
       life: basePlayerLifeSchema(),
+      development: basePlayerDevelopmentSchema(),
       biography: basePlayerBiographySchema(),
       record: {
         wins: 0,
@@ -380,6 +404,22 @@ function normalizeGameState(gameState, options) {
       normalized.player.life.housingId = source.player.life.housingId || normalized.player.life.housingId;
       if (typeof source.player.life.support === "number") { normalized.player.life.support = source.player.life.support; }
     }
+    if (source.player.development) {
+      normalized.player.development.focusId = source.player.development.focusId || normalized.player.development.focusId;
+      if (typeof source.player.development.totalXp === "number") { normalized.player.development.totalXp = source.player.development.totalXp; }
+      if (typeof source.player.development.perkPoints === "number") { normalized.player.development.perkPoints = source.player.development.perkPoints; }
+      for (key in normalized.player.development.focusProgress) {
+        if (normalized.player.development.focusProgress.hasOwnProperty(key) && source.player.development.focusProgress && typeof source.player.development.focusProgress[key] === "number") {
+          normalized.player.development.focusProgress[key] = source.player.development.focusProgress[key];
+        }
+      }
+      for (key in normalized.player.development.styleProgress) {
+        if (normalized.player.development.styleProgress.hasOwnProperty(key) && source.player.development.styleProgress && typeof source.player.development.styleProgress[key] === "number") {
+          normalized.player.development.styleProgress[key] = source.player.development.styleProgress[key];
+        }
+      }
+      normalized.player.development.activePerks = source.player.development.activePerks instanceof Array ? clonePlainData(source.player.development.activePerks) : [];
+    }
     if (source.player.biography) {
       normalized.player.biography.flags = source.player.biography.flags instanceof Array ? clonePlainData(source.player.biography.flags) : [];
       normalized.player.biography.history = source.player.biography.history instanceof Array ? clonePlainData(source.player.biography.history) : [];
@@ -472,6 +512,13 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.player.conditions.startingAge = typeof fighter.startingAge === "number" ? fighter.startingAge : gameState.player.conditions.startingAge;
     gameState.player.life.housingId = fighter.housingId || gameState.player.life.housingId;
     gameState.player.life.support = typeof fighter.support === "number" ? fighter.support : gameState.player.life.support;
+    if (fighter.development && typeof fighter.development === "object") {
+      gameState.player.development = normalizeGameState({
+        player: {
+          development: fighter.development
+        }
+      }, options).player.development;
+    }
     gameState.player.biography.flags = fighter.bioFlags instanceof Array ? clonePlainData(fighter.bioFlags) : [];
     gameState.player.biography.history = fighter.bioHistory instanceof Array ? clonePlainData(fighter.bioHistory) : [];
     gameState.player.record.wins = fighter.wins || 0;
@@ -549,6 +596,7 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     morale: normalized.player.conditions.morale,
     housingId: normalized.player.life.housingId,
     support: normalized.player.life.support,
+    development: clonePlainData(normalized.player.development),
     startingAge: normalized.player.conditions.startingAge,
     bioFlags: clonePlainData(normalized.player.biography.flags),
     bioHistory: clonePlainData(normalized.player.biography.history),

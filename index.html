@@ -1,4 +1,4 @@
-﻿<html>
+<html>
 <head>
   <title>Fight Simulator</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -739,6 +739,70 @@
       color: #ffe189;
     }
 
+    .dev-header {
+      margin-bottom: 14px;
+    }
+
+    .dev-highlight {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.05);
+      margin-bottom: 12px;
+    }
+
+    .dev-progress {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .dev-progress span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #f4c56b, #dba647);
+    }
+
+    .dev-meta {
+      color: #ced8e4;
+      font-size: 18px;
+      line-height: 1.45;
+      margin-top: 8px;
+    }
+
+    .dev-mini {
+      color: #ced8e4;
+      font-size: 17px;
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+
+    .perk-card.active {
+      border-color: rgba(244, 197, 107, 0.68);
+      box-shadow: 0 0 0 1px rgba(244, 197, 107, 0.22), 0 18px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    .perk-state {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .perk-state.ready {
+      color: #ffe189;
+    }
+
+    .perk-state.locked {
+      color: #ced8e4;
+    }
+
+    .perk-state.active {
+      color: #61d59a;
+    }
+
     .knockdown-banner {
       margin-bottom: 12px;
       padding: 14px 16px;
@@ -901,6 +965,7 @@
   <script type="text/javascript" src="country_data.js"></script>
   <script type="text/javascript" src="src/content/content_data.js"></script>
   <script type="text/javascript" src="src/content/career_ecosystem_data.js"></script>
+  <script type="text/javascript" src="src/content/development_data.js"></script>
   <script type="text/javascript" src="src/content/event_data.js"></script>
   <script type="text/javascript" src="src/content/life_data.js"></script>
   <script type="text/javascript" src="src/content/life_event_data.js"></script>
@@ -913,7 +978,7 @@
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.18.12";
+    var APP_VERSION = "2026.03.19.3";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -1296,11 +1361,12 @@
       var from = getCountryInfo(fromKey);
       var to = getCountryInfo(toKey);
       var distance;
+      var discount = state.fighter ? developmentScalarBonus(state.fighter, "travelDiscountPercent") : 0;
       if (!from || !to || fromKey === toKey) {
         return 0;
       }
       distance = Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
-      return Math.round((60 + distance * 22) / 5) * 5;
+      return Math.max(5, Math.round(((60 + distance * 22) * (1 - discount / 100)) / 5) * 5);
     }
 
     function currentTravelBonus(fighter) {
@@ -1326,6 +1392,10 @@
 
     function listCountries() {
       return ContentLoader.listCountries();
+    }
+
+    function listOpponentTypes() {
+      return ContentLoader.listOpponentTypes ? ContentLoader.listOpponentTypes() : [];
     }
 
     function listCountryGyms(countryKey) {
@@ -1459,6 +1529,7 @@
       if (typeof state.world.scene.temperature !== "number") {
         state.world.scene.temperature = 50;
       }
+      normalizeWorldOffers();
       if (!fighter) {
         return;
       }
@@ -1493,6 +1564,7 @@
       if (!(fighter.bioHistory instanceof Array)) {
         fighter.bioHistory = [];
       }
+      ensureDevelopmentState(fighter);
       fighter.week = TimeSystem.getCalendarView(fighter.calendar).weekNumber;
       state.world.opponents = state.opponents || state.world.opponents;
       if (state.activeEvent != null && typeof state.activeEvent !== "object") {
@@ -1546,6 +1618,620 @@
       return ContentLoader.getSocialAction ? ContentLoader.getSocialAction(actionId) : null;
     }
 
+    function listDevelopmentStyles() {
+      return ContentLoader.listDevelopmentStyles ? ContentLoader.listDevelopmentStyles() : [];
+    }
+
+    function getDevelopmentStyle(styleId) {
+      return ContentLoader.getDevelopmentStyle ? ContentLoader.getDevelopmentStyle(styleId) : null;
+    }
+
+    function listTrainingFocuses() {
+      return ContentLoader.listTrainingFocuses ? ContentLoader.listTrainingFocuses() : [];
+    }
+
+    function getTrainingFocus(focusId) {
+      return ContentLoader.getTrainingFocus ? ContentLoader.getTrainingFocus(focusId) : null;
+    }
+
+    function listDevelopmentPerks() {
+      return ContentLoader.listDevelopmentPerks ? ContentLoader.listDevelopmentPerks() : [];
+    }
+
+    function getDevelopmentPerk(perkId) {
+      return ContentLoader.getDevelopmentPerk ? ContentLoader.getDevelopmentPerk(perkId) : null;
+    }
+
+    function trainerDevelopmentProfile(trainerTypeId) {
+      return ContentLoader.getTrainerDevelopmentProfile ? ContentLoader.getTrainerDevelopmentProfile(trainerTypeId) : null;
+    }
+
+    function gymDevelopmentProfile(gymId) {
+      return ContentLoader.getGymDevelopmentProfile ? ContentLoader.getGymDevelopmentProfile(gymId) : null;
+    }
+
+    function buildProgressMap(entries) {
+      var map = {};
+      var i;
+      if (!(entries instanceof Array)) {
+        return map;
+      }
+      for (i = 0; i < entries.length; i += 1) {
+        if (entries[i] && entries[i].id) {
+          map[entries[i].id] = 0;
+        }
+      }
+      return map;
+    }
+
+    function createDevelopmentState() {
+      return {
+        focusId: "technique",
+        totalXp: 0,
+        perkPoints: 0,
+        focusProgress: buildProgressMap(listTrainingFocuses()),
+        styleProgress: buildProgressMap(listDevelopmentStyles()),
+        activePerks: []
+      };
+    }
+
+    function ensureDevelopmentState(fighter) {
+      var development;
+      var styles;
+      var focuses;
+      var i;
+      if (!fighter) {
+        return null;
+      }
+      if (!fighter.development || typeof fighter.development !== "object") {
+        fighter.development = createDevelopmentState();
+      }
+      development = fighter.development;
+      if (typeof development.focusId !== "string" || !getTrainingFocus(development.focusId)) {
+        development.focusId = "technique";
+      }
+      if (typeof development.totalXp !== "number") {
+        development.totalXp = 0;
+      }
+      if (typeof development.perkPoints !== "number") {
+        development.perkPoints = 0;
+      }
+      if (!(development.activePerks instanceof Array)) {
+        development.activePerks = [];
+      }
+      if (!development.focusProgress || typeof development.focusProgress !== "object") {
+        development.focusProgress = {};
+      }
+      if (!development.styleProgress || typeof development.styleProgress !== "object") {
+        development.styleProgress = {};
+      }
+      focuses = listTrainingFocuses();
+      for (i = 0; i < focuses.length; i += 1) {
+        if (typeof development.focusProgress[focuses[i].id] !== "number") {
+          development.focusProgress[focuses[i].id] = 0;
+        }
+      }
+      styles = listDevelopmentStyles();
+      for (i = 0; i < styles.length; i += 1) {
+        if (typeof development.styleProgress[styles[i].id] !== "number") {
+          development.styleProgress[styles[i].id] = 0;
+        }
+      }
+      development.totalXp = Math.max(0, Math.round(development.totalXp));
+      development.perkPoints = Math.max(0, Math.round(development.perkPoints));
+      development.activePerks = uniqueList(development.activePerks);
+      return development;
+    }
+
+    function currentDevelopment(fighter) {
+      return ensureDevelopmentState(fighter || state.fighter);
+    }
+
+    function currentFocus(fighter) {
+      var development = currentDevelopment(fighter);
+      return development ? getTrainingFocus(development.focusId) : null;
+    }
+
+    function developmentFocusValue(fighter, focusId) {
+      var development = currentDevelopment(fighter);
+      return development && typeof development.focusProgress[focusId] === "number" ? development.focusProgress[focusId] : 0;
+    }
+
+    function developmentStyleValue(fighter, styleId) {
+      var development = currentDevelopment(fighter);
+      return development && typeof development.styleProgress[styleId] === "number" ? development.styleProgress[styleId] : 0;
+    }
+
+    function styleTierAtProgress(styleDef, progress) {
+      var i;
+      var currentTier = null;
+      if (!styleDef || !(styleDef.tiers instanceof Array)) {
+        return null;
+      }
+      for (i = 0; i < styleDef.tiers.length; i += 1) {
+        if (progress >= styleDef.tiers[i].threshold) {
+          currentTier = styleDef.tiers[i];
+        }
+      }
+      return currentTier;
+    }
+
+    function currentStyleSnapshot(fighter) {
+      var styles = listDevelopmentStyles();
+      var development = currentDevelopment(fighter);
+      var focus = currentFocus(fighter);
+      var bestStyle = null;
+      var bestValue = -1;
+      var i;
+      var score;
+      if (!development || !styles.length) {
+        return null;
+      }
+      for (i = 0; i < styles.length; i += 1) {
+        score = developmentStyleValue(fighter, styles[i].id);
+        if (score === 0 && focus && focus.styleWeights && typeof focus.styleWeights[styles[i].id] === "number") {
+          score = focus.styleWeights[styles[i].id] * 0.25;
+        }
+        if (score > bestValue) {
+          bestValue = score;
+          bestStyle = styles[i];
+        }
+      }
+      return bestStyle ? {
+        style: bestStyle,
+        progress: developmentStyleValue(fighter, bestStyle.id),
+        tier: styleTierAtProgress(bestStyle, developmentStyleValue(fighter, bestStyle.id))
+      } : null;
+    }
+
+    function perkCategoryLabel(category) {
+      return DATA.perkCategoryLabels && DATA.perkCategoryLabels[category] ? DATA.perkCategoryLabels[category] : "Перк";
+    }
+
+    function activeStyleBonuses(fighter) {
+      var snapshot = currentStyleSnapshot(fighter);
+      var bonuses = [];
+      var i;
+      if (!snapshot || !snapshot.style || !(snapshot.style.tiers instanceof Array)) {
+        return bonuses;
+      }
+      for (i = 0; i < snapshot.style.tiers.length; i += 1) {
+        if (snapshot.progress >= snapshot.style.tiers[i].threshold && snapshot.style.tiers[i].bonuses) {
+          bonuses.push(snapshot.style.tiers[i].bonuses);
+        }
+      }
+      return bonuses;
+    }
+
+    function activePerkDefinitions(fighter) {
+      var development = currentDevelopment(fighter);
+      var list = [];
+      var i;
+      var perk;
+      if (!development) {
+        return list;
+      }
+      for (i = 0; i < development.activePerks.length; i += 1) {
+        perk = getDevelopmentPerk(development.activePerks[i]);
+        if (perk) {
+          list.push(perk);
+        }
+      }
+      return list;
+    }
+
+    function allDevelopmentBonusSources(fighter) {
+      var sources = activeStyleBonuses(fighter);
+      var perks = activePerkDefinitions(fighter);
+      var i;
+      for (i = 0; i < perks.length; i += 1) {
+        if (perks[i].bonuses) {
+          sources.push(perks[i].bonuses);
+        }
+      }
+      return sources;
+    }
+
+    function developmentScalarBonus(fighter, key) {
+      var sources = allDevelopmentBonusSources(fighter);
+      var total = 0;
+      var i;
+      for (i = 0; i < sources.length; i += 1) {
+        if (sources[i] && typeof sources[i][key] === "number") {
+          total += sources[i][key];
+        }
+      }
+      return total;
+    }
+
+    function developmentActionBonus(fighter, key, actionKey) {
+      var sources = allDevelopmentBonusSources(fighter);
+      var total = 0;
+      var i;
+      var bucket;
+      for (i = 0; i < sources.length; i += 1) {
+        bucket = sources[i] ? sources[i][key] : null;
+        if (bucket && typeof bucket[actionKey] === "number") {
+          total += bucket[actionKey];
+        }
+      }
+      return total;
+    }
+
+    function developmentTrainingBoostForFocus(focusId) {
+      var gym = currentGym();
+      var trainerType = currentTrainerType();
+      var total = 0;
+      var gymProfile = gym ? gymDevelopmentProfile(gym.id) : null;
+      var trainerProfile = trainerType ? trainerDevelopmentProfile(trainerType.id) : null;
+      if (gymProfile && gymProfile.focusBoosts && typeof gymProfile.focusBoosts[focusId] === "number") {
+        total += gymProfile.focusBoosts[focusId];
+      }
+      if (trainerProfile && trainerProfile.focusBoosts && typeof trainerProfile.focusBoosts[focusId] === "number") {
+        total += trainerProfile.focusBoosts[focusId];
+      }
+      return total;
+    }
+
+    function developmentStyleBoost(styleId) {
+      var gym = currentGym();
+      var trainerType = currentTrainerType();
+      var total = 0;
+      var gymProfile = gym ? gymDevelopmentProfile(gym.id) : null;
+      var trainerProfile = trainerType ? trainerDevelopmentProfile(trainerType.id) : null;
+      if (gymProfile && gymProfile.styleWeights && typeof gymProfile.styleWeights[styleId] === "number") {
+        total += gymProfile.styleWeights[styleId];
+      }
+      if (trainerProfile && trainerProfile.styleWeights && typeof trainerProfile.styleWeights[styleId] === "number") {
+        total += trainerProfile.styleWeights[styleId];
+      }
+      return total;
+    }
+
+    function trainingIntensityFactor(kind) {
+      if (kind === "hard") {
+        return 3;
+      }
+      if (kind === "medium") {
+        return 2;
+      }
+      return 1;
+    }
+
+    function addDevelopmentXp(fighter, focusId, amount) {
+      var development = currentDevelopment(fighter);
+      var oldLevel;
+      var newLevel;
+      if (!development || !focusId || !amount) {
+        return 0;
+      }
+      oldLevel = Math.floor(development.totalXp / 20);
+      development.focusProgress[focusId] = Math.max(0, development.focusProgress[focusId] + amount);
+      development.totalXp = Math.max(0, development.totalXp + amount);
+      newLevel = Math.floor(development.totalXp / 20);
+      if (newLevel > oldLevel) {
+        development.perkPoints += newLevel - oldLevel;
+      }
+      return newLevel - oldLevel;
+    }
+
+    function addStyleProgress(fighter, styleId, amount) {
+      var development = currentDevelopment(fighter);
+      if (!development || !styleId || !amount) {
+        return;
+      }
+      development.styleProgress[styleId] = Math.max(0, development.styleProgress[styleId] + amount);
+    }
+
+    function applyTrainingDevelopment(fighter, kind) {
+      var focus = currentFocus(fighter);
+      var perkPointGain;
+      var focusXp;
+      var focusLabel = focus ? focus.label : "Техника";
+      var styleGains = [];
+      var styleId;
+      var amount;
+      var perkXpBonus = developmentScalarBonus(fighter, "trainingXp");
+      var i;
+      if (!focus) {
+        return null;
+      }
+      focusXp = (focus.xpByTraining && typeof focus.xpByTraining[kind] === "number" ? focus.xpByTraining[kind] : 0) + developmentTrainingBoostForFocus(focus.id) + perkXpBonus;
+      perkPointGain = addDevelopmentXp(fighter, focus.id, focusXp);
+      for (styleId in focus.styleWeights) {
+        if (focus.styleWeights.hasOwnProperty(styleId)) {
+          amount = focus.styleWeights[styleId] * trainingIntensityFactor(kind) + developmentStyleBoost(styleId);
+          addStyleProgress(fighter, styleId, amount);
+          styleGains.push({ styleId: styleId, amount: amount });
+        }
+      }
+      for (i = 0; i < styleGains.length; i += 1) {
+        styleGains[i].style = getDevelopmentStyle(styleGains[i].styleId);
+      }
+      return {
+        focus: focusLabel,
+        focusXp: focusXp,
+        perkPointGain: perkPointGain,
+        styleGains: styleGains
+      };
+    }
+
+    function perkRequirementMet(perk, fighter) {
+      var req = perk ? perk.requirements || {} : {};
+      var key;
+      if (!perk || !fighter) {
+        return false;
+      }
+      if (req.styleAtLeast) {
+        for (key in req.styleAtLeast) {
+          if (req.styleAtLeast.hasOwnProperty(key) && developmentStyleValue(fighter, key) < req.styleAtLeast[key]) {
+            return false;
+          }
+        }
+      }
+      if (req.focusAtLeast) {
+        for (key in req.focusAtLeast) {
+          if (req.focusAtLeast.hasOwnProperty(key) && developmentFocusValue(fighter, key) < req.focusAtLeast[key]) {
+            return false;
+          }
+        }
+      }
+      if (req.statAtLeast) {
+        for (key in req.statAtLeast) {
+          if (req.statAtLeast.hasOwnProperty(key) && (!fighter.stats || fighter.stats[key] < req.statAtLeast[key])) {
+            return false;
+          }
+        }
+      }
+      if (typeof req.weekAtLeast === "number" && fighter.week < req.weekAtLeast) {
+        return false;
+      }
+      if (typeof req.fameAtLeast === "number" && fighter.fame < req.fameAtLeast) {
+        return false;
+      }
+      if (typeof req.moraleAtLeast === "number" && fighter.morale < req.moraleAtLeast) {
+        return false;
+      }
+      if (typeof req.supportAtLeast === "number" && fighter.support < req.supportAtLeast) {
+        return false;
+      }
+      return true;
+    }
+
+    function perkRequirementText(perk) {
+      var req = perk ? perk.requirements || {} : {};
+      var parts = [];
+      var key;
+      if (req.styleAtLeast) {
+        for (key in req.styleAtLeast) {
+          if (req.styleAtLeast.hasOwnProperty(key)) {
+            parts.push((getDevelopmentStyle(key) ? getDevelopmentStyle(key).label : key) + " " + req.styleAtLeast[key]);
+          }
+        }
+      }
+      if (req.focusAtLeast) {
+        for (key in req.focusAtLeast) {
+          if (req.focusAtLeast.hasOwnProperty(key)) {
+            parts.push((getTrainingFocus(key) ? getTrainingFocus(key).label : key) + " " + req.focusAtLeast[key]);
+          }
+        }
+      }
+      if (req.statAtLeast) {
+        for (key in req.statAtLeast) {
+          if (req.statAtLeast.hasOwnProperty(key)) {
+            parts.push(DATA.statLabels[key] + " " + req.statAtLeast[key]);
+          }
+        }
+      }
+      if (typeof req.weekAtLeast === "number") {
+        parts.push("неделя " + req.weekAtLeast + "+");
+      }
+      if (typeof req.fameAtLeast === "number") {
+        parts.push("слава " + req.fameAtLeast + "+");
+      }
+      if (typeof req.moraleAtLeast === "number") {
+        parts.push("мораль " + req.moraleAtLeast + "+");
+      }
+      if (typeof req.supportAtLeast === "number") {
+        parts.push("опора " + req.supportAtLeast + "+");
+      }
+      return parts.join(", ");
+    }
+
+    function unlockPerk(perkId) {
+      var fighter = state.fighter;
+      var development = currentDevelopment(fighter);
+      var perk = getDevelopmentPerk(perkId);
+      if (!fighter || !development || !perk) {
+        return;
+      }
+      if (containsTag(development.activePerks, perkId)) {
+        pushLog("Этот перк уже активен.", "warn");
+        render();
+        return;
+      }
+      if (!perkRequirementMet(perk, fighter)) {
+        pushLog("Для перка '" + perk.label + "' пока не выполнены требования.", "bad");
+        render();
+        return;
+      }
+      if (development.perkPoints < 1) {
+        pushLog("Пока нет очков перков.", "bad");
+        render();
+        return;
+      }
+      development.perkPoints -= 1;
+      development.activePerks.push(perkId);
+      development.activePerks = uniqueList(development.activePerks);
+      pushLog("Открыт перк '" + perk.label + "'.", "good");
+      render();
+    }
+
+    function setTrainingFocus(focusId) {
+      var development = currentDevelopment(state.fighter);
+      var focus = getTrainingFocus(focusId);
+      if (!development || !focus || development.focusId === focusId) {
+        return;
+      }
+      development.focusId = focusId;
+      pushLog("Лагерь смещает акцент на направление '" + focus.label + "'.", "warn");
+      render();
+    }
+
+    function developmentProgressPercent(currentValue, threshold) {
+      if (threshold <= 0) {
+        return 100;
+      }
+      return clamp(Math.round((currentValue / threshold) * 100), 0, 100);
+    }
+
+    function nextStyleThreshold(styleDef, progress) {
+      var i;
+      if (!styleDef || !(styleDef.tiers instanceof Array)) {
+        return null;
+      }
+      for (i = 0; i < styleDef.tiers.length; i += 1) {
+        if (progress < styleDef.tiers[i].threshold) {
+          return styleDef.tiers[i];
+        }
+      }
+      return null;
+    }
+
+    function summarizeDevelopmentBonuses(bonuses) {
+      var parts = [];
+      var key;
+      var action;
+      if (!bonuses) {
+        return "Без заметного эффекта.";
+      }
+      if (bonuses.dodge) {
+        parts.push("уклон +" + bonuses.dodge + "%");
+      }
+      if (bonuses.critChance) {
+        parts.push("крит +" + bonuses.critChance + "%");
+      }
+      if (bonuses.counterChance) {
+        parts.push("контратака +" + bonuses.counterChance + "%");
+      }
+      if (bonuses.blockReduction) {
+        parts.push("блок сильнее на " + Math.round(bonuses.blockReduction * 100) + "%");
+      }
+      if (bonuses.turnRecoveryStamina) {
+        parts.push("стамина/ход +" + bonuses.turnRecoveryStamina);
+      }
+      if (bonuses.trainingPointsFlat) {
+        parts.push("очки тренировки +" + bonuses.trainingPointsFlat);
+      }
+      if (bonuses.trainingXp) {
+        parts.push("XP лагеря +" + bonuses.trainingXp);
+      }
+      if (bonuses.travelDiscountPercent) {
+        parts.push("перелёты -" + bonuses.travelDiscountPercent + "%");
+      }
+      if (bonuses.workMoney) {
+        parts.push("работа +$" + bonuses.workMoney);
+      }
+      if (bonuses.offerPurse) {
+        parts.push("офферы +$" + bonuses.offerPurse);
+      }
+      if (bonuses.offerFame) {
+        parts.push("известность офферов +" + bonuses.offerFame);
+      }
+      if (bonuses.toxicRiskGuard) {
+        parts.push("токсичность -" + bonuses.toxicRiskGuard + "%");
+      }
+      if (bonuses.supportGain) {
+        parts.push("опора +" + bonuses.supportGain);
+      }
+      if (bonuses.recoverStressRelief) {
+        parts.push("стресс восстановления " + (bonuses.recoverStressRelief > 0 ? "-" : "+") + Math.abs(bonuses.recoverStressRelief));
+      }
+      if (bonuses.moraleShield) {
+        parts.push("защита морали +" + bonuses.moraleShield);
+      }
+      if (bonuses.accuracyByAction) {
+        for (action in bonuses.accuracyByAction) {
+          if (bonuses.accuracyByAction.hasOwnProperty(action) && FIGHT_ACTIONS[action]) {
+            parts.push(FIGHT_ACTIONS[action].label + " точность +" + bonuses.accuracyByAction[action] + "%");
+          }
+        }
+      }
+      if (bonuses.damageByAction) {
+        for (action in bonuses.damageByAction) {
+          if (bonuses.damageByAction.hasOwnProperty(action) && FIGHT_ACTIONS[action]) {
+            parts.push(FIGHT_ACTIONS[action].label + " урон +" + bonuses.damageByAction[action]);
+          }
+        }
+      }
+      if (bonuses.staminaCostByAction) {
+        for (action in bonuses.staminaCostByAction) {
+          if (bonuses.staminaCostByAction.hasOwnProperty(action) && FIGHT_ACTIONS[action]) {
+            parts.push(FIGHT_ACTIONS[action].label + " стамина " + bonuses.staminaCostByAction[action]);
+          }
+        }
+      }
+      if (!parts.length) {
+        return "Без заметного эффекта.";
+      }
+      return parts.join(", ");
+    }
+
+    function summarizeDevelopmentProfile(profile) {
+      var parts = [];
+      var key;
+      if (!profile) {
+        return "Без смещения развития.";
+      }
+      if (profile.focusBoosts) {
+        for (key in profile.focusBoosts) {
+          if (profile.focusBoosts.hasOwnProperty(key) && getTrainingFocus(key)) {
+            parts.push(getTrainingFocus(key).label + " +" + profile.focusBoosts[key] + " XP");
+          }
+        }
+      }
+      if (profile.styleWeights) {
+        for (key in profile.styleWeights) {
+          if (profile.styleWeights.hasOwnProperty(key) && getDevelopmentStyle(key)) {
+            parts.push(getDevelopmentStyle(key).label + " +" + profile.styleWeights[key] + " к школе");
+          }
+        }
+      }
+      if (!parts.length) {
+        return "Без смещения развития.";
+      }
+      return parts.join(", ");
+    }
+
+    function currentFightSideFighter(fight, side) {
+      if (side === "player") {
+        return state.fighter;
+      }
+      return fight && fight.opponent && fight.opponent.development ? fight.opponent : null;
+    }
+
+    function fightActionStaminaCost(fight, side, actionKey) {
+      var action = FIGHT_ACTIONS[actionKey];
+      var fighter = currentFightSideFighter(fight, side);
+      if (!action) {
+        return 0;
+      }
+      if (action.type === "defense") {
+        return 0;
+      }
+      return Math.max(0, action.stamina + developmentActionBonus(fighter, "staminaCostByAction", actionKey));
+    }
+
+    function markFightStyle(fight, styleId, amount) {
+      if (!fight || !fight.styleMarks || !styleId || !amount) {
+        return;
+      }
+      if (typeof fight.styleMarks[styleId] !== "number") {
+        fight.styleMarks[styleId] = 0;
+      }
+      fight.styleMarks[styleId] += amount;
+    }
+
     function supportLabel(value) {
       if (value >= 75) {
         return "сильная опора";
@@ -1594,6 +2280,17 @@
 
     function signedMoney(value) {
       return value >= 0 ? ("+$" + value) : ("-$" + Math.abs(value));
+    }
+
+    function hasBrokenText(value) {
+      return typeof value === "string" && value.indexOf("\uFFFD") !== -1;
+    }
+
+    function safeUiText(value, fallback) {
+      if (hasBrokenText(value)) {
+        return fallback || "";
+      }
+      return value || fallback || "";
     }
 
     function moraleRecoveryModifier(fighter) {
@@ -1718,6 +2415,7 @@
     function actionSocial(actionId) {
       var fighter = state.fighter;
       var option = getSocialAction(actionId);
+      var supportDelta;
       var i;
       var logText;
       if (!fighter || !option) {
@@ -1731,7 +2429,11 @@
       fighter.money += option.money || 0;
       fighter.health += option.health || 0;
       fighter.stress += option.stress || 0;
-      fighter.support += option.support || 0;
+      supportDelta = option.support || 0;
+      if (supportDelta > 0) {
+        supportDelta += developmentScalarBonus(fighter, "supportGain");
+      }
+      fighter.support += supportDelta;
       registerWeeklyAction("social_" + option.id, option.label, option.delta || null, {
         socialAction: option.id
       });
@@ -1745,20 +2447,25 @@
       if (option.money) {
         logText += "деньги " + signedMoney(option.money) + ", ";
       }
-      logText += "стресс " + signedNumber(option.stress) + ", опора " + signedNumber(option.support) + ".";
-      pushLog(logText, option.support >= 0 ? "good" : "warn");
+      logText += "стресс " + signedNumber(option.stress) + ", опора " + signedNumber(supportDelta) + ".";
+      pushLog(logText, supportDelta >= 0 ? "good" : "warn");
       spendWeek();
     }
 
     function applyConditionDelta(fighter, delta) {
       var changes = delta || {};
+      var moraleShift;
       if (!fighter) {
         return;
       }
       ensureLifeState();
+      moraleShift = changes.morale || 0;
+      if (moraleShift < 0) {
+        moraleShift += developmentScalarBonus(fighter, "moraleShield");
+      }
       fighter.fatigue += changes.fatigue || 0;
       fighter.wear += changes.wear || 0;
-      fighter.morale += changes.morale || 0;
+      fighter.morale += moraleShift;
       applyBounds(fighter);
     }
 
@@ -2414,12 +3121,12 @@
         promoterId: promoter.id,
         label: template.label,
         durationWeeks: template.durationWeeks,
-        guaranteedPurse: Math.max(50, template.guaranteedPurse + promoterInfo.purseBonus),
+        guaranteedPurse: Math.max(50, template.guaranteedPurse + promoterInfo.purseBonus + developmentScalarBonus(state.fighter, "offerPurse")),
         winBonus: Math.max(10, template.winBonus + Math.round(promoterInfo.purseBonus * 0.5)),
         koBonus: Math.max(10, template.koBonus + trainerBonusValue("koBonus")),
-        fameMultiplier: Math.max(0.85, template.fameMultiplier + (promoterInfo.repGuard * 0.01)),
+        fameMultiplier: Math.max(0.85, template.fameMultiplier + (promoterInfo.repGuard * 0.01) + developmentScalarBonus(state.fighter, "offerFame") * 0.01),
         fightFrequency: Math.max(1, template.fightFrequency + promoterInfo.offerBonus),
-        toxicRisk: clamp(template.toxicRisk + promoterInfo.toxicShift - gymBonusValue("toxicGuard") - trainerBonusValue("toxicGuard"), 0, 90),
+        toxicRisk: clamp(template.toxicRisk + promoterInfo.toxicShift - gymBonusValue("toxicGuard") - trainerBonusValue("toxicGuard") - developmentScalarBonus(state.fighter, "toxicRiskGuard"), 0, 90),
         reputationDelta: template.reputationDelta + Math.max(0, promoterInfo.repGuard),
         conditionsText: template.conditionsText,
         description: template.description,
@@ -2564,6 +3271,93 @@
       return { money: 1.0, fame: effects.abroadFameMultiplier };
     }
 
+    function opponentTierDevelopmentBase(tier) {
+      if (tier === "danger") {
+        return 68;
+      }
+      if (tier === "even") {
+        return 44;
+      }
+      return 24;
+    }
+
+    function randomStyleByWeights(weights) {
+      var styles = listDevelopmentStyles();
+      var total = 0;
+      var i;
+      var roll;
+      var weight;
+      if (!(styles instanceof Array) || !styles.length) {
+        return null;
+      }
+      for (i = 0; i < styles.length; i += 1) {
+        weight = weights && typeof weights[styles[i].id] === "number" ? weights[styles[i].id] : 0;
+        total += Math.max(0, weight);
+      }
+      if (total <= 0) {
+        return choice(styles).id;
+      }
+      roll = rand(1, total);
+      total = 0;
+      for (i = 0; i < styles.length; i += 1) {
+        weight = weights && typeof weights[styles[i].id] === "number" ? weights[styles[i].id] : 0;
+        total += Math.max(0, weight);
+        if (roll <= total) {
+          return styles[i].id;
+        }
+      }
+      return styles[0].id;
+    }
+
+    function buildOpponentDevelopment(profileDef, tier, gym, trainerType, stats) {
+      var development = createDevelopmentState();
+      var gymProfile = gym ? gymDevelopmentProfile(gym.id) : null;
+      var trainerProfile = trainerType ? trainerDevelopmentProfile(trainerType.id) : null;
+      var baseXp = opponentTierDevelopmentBase(tier) + rand(-4, 6);
+      var focusId = profileDef && profileDef.focusId ? profileDef.focusId : "technique";
+      var targetStyleId = randomStyleByWeights(profileDef ? profileDef.styleWeights : null) || "outboxer";
+      var styleId;
+      var styleAmount;
+      var perkPool;
+      var perkLimit;
+      var i;
+      var perk;
+      development.focusId = focusId;
+      development.totalXp = Math.max(0, baseXp);
+      development.focusProgress[focusId] = Math.max(0, baseXp + (gymProfile && gymProfile.focusBoosts && gymProfile.focusBoosts[focusId] ? gymProfile.focusBoosts[focusId] * 4 : 0) + (trainerProfile && trainerProfile.focusBoosts && trainerProfile.focusBoosts[focusId] ? trainerProfile.focusBoosts[focusId] * 5 : 0));
+      for (styleId in development.styleProgress) {
+        if (development.styleProgress.hasOwnProperty(styleId)) {
+          styleAmount = 4 + rand(0, 6);
+          if (profileDef && profileDef.styleWeights && typeof profileDef.styleWeights[styleId] === "number") {
+            styleAmount += profileDef.styleWeights[styleId] * 8;
+          }
+          if (gymProfile && gymProfile.styleWeights && typeof gymProfile.styleWeights[styleId] === "number") {
+            styleAmount += gymProfile.styleWeights[styleId] * 4;
+          }
+          if (trainerProfile && trainerProfile.styleWeights && typeof trainerProfile.styleWeights[styleId] === "number") {
+            styleAmount += trainerProfile.styleWeights[styleId] * 5;
+          }
+          if (styleId === targetStyleId) {
+            styleAmount += baseXp;
+          } else {
+            styleAmount += Math.round(baseXp * 0.2);
+          }
+          development.styleProgress[styleId] = Math.max(0, styleAmount);
+        }
+      }
+      perkPool = profileDef && profileDef.perkPool ? profileDef.perkPool.slice(0) : [];
+      perkLimit = tier === "danger" ? 3 : (tier === "even" ? 2 : 1);
+      for (i = 0; i < perkPool.length && development.activePerks.length < perkLimit; i += 1) {
+        perk = getDevelopmentPerk(perkPool[i]);
+        if (perk && perkRequirementMet(perk, { stats: stats, development: development, week: 12, fame: tier === "danger" ? 24 : (tier === "even" ? 14 : 6), morale: 55, support: 40 })) {
+          development.activePerks.push(perk.id);
+        }
+      }
+      development.activePerks = uniqueList(development.activePerks);
+      development.perkPoints = 0;
+      return development;
+    }
+
     function buildOpponentSnapshot(opponent) {
       return opponent ? clonePlainData(opponent) : null;
     }
@@ -2579,8 +3373,55 @@
       var tierBonus;
       var base;
       var stats;
+      var opponentType;
+      var countryGyms;
+      var gym;
+      var trainerType;
+      var development;
+      var styleSnapshot;
+      var opponentClone;
+      var types;
+      var i;
       if (snapshotOverride) {
-        return clonePlainData(snapshotOverride);
+        opponentClone = clonePlainData(snapshotOverride);
+        if (opponentClone && !opponentClone.development) {
+          opponentCountryKey = opponentClone.countryKey || countryKeyOverride || fighter.currentCountry;
+          types = listOpponentTypes();
+          opponentType = null;
+          for (i = 0; i < types.length; i += 1) {
+            if (types[i].id === opponentClone.profileId || types[i].label === opponentClone.profile) {
+              opponentType = types[i];
+              break;
+            }
+          }
+          opponentType = opponentType || (types.length ? choice(types) : { id: "pressure", label: "Прессингует и душит темпом" });
+          countryGyms = listCountryGyms(opponentCountryKey);
+          gym = opponentClone.gymId ? getGym(opponentClone.gymId) : null;
+          if (!gym) {
+            gym = countryGyms.length ? choice(countryGyms) : null;
+          }
+          trainerType = opponentClone.trainerTypeId ? getTrainerType(opponentClone.trainerTypeId) : null;
+          if (!trainerType && gym && gym.trainerTypeIds && gym.trainerTypeIds.length) {
+            trainerType = getTrainerType(choice(gym.trainerTypeIds));
+          }
+          development = buildOpponentDevelopment(opponentType, tier, gym, trainerType, opponentClone.stats || baseStats());
+          styleSnapshot = currentStyleSnapshot({
+            stats: opponentClone.stats || baseStats(),
+            development: development
+          });
+          opponentClone.profileId = opponentType.id;
+          opponentClone.profile = opponentClone.profile || opponentType.label;
+          opponentClone.gymId = gym ? gym.id : "";
+          opponentClone.gymName = gym ? gym.name : "";
+          opponentClone.trainerTypeId = trainerType ? trainerType.id : "";
+          opponentClone.trainerLabel = trainerType ? trainerType.label : "";
+          opponentClone.development = development;
+          opponentClone.styleLabel = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "";
+        } else if (opponentClone && opponentClone.development && !opponentClone.styleLabel) {
+          styleSnapshot = currentStyleSnapshot(opponentClone);
+          opponentClone.styleLabel = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "";
+        }
+        return opponentClone;
       }
       opponentCountryKey = countryKeyOverride || fighter.currentCountry;
       country = getCountryInfo(opponentCountryKey);
@@ -2590,6 +3431,7 @@
       tierData = ContentLoader.getOpponentTier(tier);
       tierBonus = tierData.tierBonus;
       base = clamp(Math.round(combatRating(fighter)) + tierBonus + rand(-1, 1), 1, 40);
+      opponentType = choice(listOpponentTypes()) || { id: "pressure", label: "Прессингует и душит темпом" };
       stats = {
         str: clamp(base + rand(-1, 2), 1, 45),
         tec: clamp(base + rand(-1, 2), 1, 45),
@@ -2597,14 +3439,29 @@
         end: clamp(base + rand(-1, 2), 1, 45),
         vit: clamp(base + rand(-1, 2), 1, 45)
       };
+      countryGyms = listCountryGyms(opponentCountryKey);
+      gym = countryGyms.length ? choice(countryGyms) : null;
+      trainerType = gym && gym.trainerTypeIds && gym.trainerTypeIds.length ? getTrainerType(choice(gym.trainerTypeIds)) : null;
+      development = buildOpponentDevelopment(opponentType, tier, gym, trainerType, stats);
+      styleSnapshot = currentStyleSnapshot({
+        stats: stats,
+        development: development
+      });
       return {
         firstName: identity.firstName,
         lastName: identity.lastName,
         nickname: identity.nickname,
         fullName: identity.fullName,
         countryKey: opponentCountryKey,
-        profile: choice(ContentLoader.getOpponentTypeLabels()),
+        profileId: opponentType.id,
+        profile: opponentType.label,
         stats: stats,
+        gymId: gym ? gym.id : "",
+        gymName: gym ? gym.name : "",
+        trainerTypeId: trainerType ? trainerType.id : "",
+        trainerLabel: trainerType ? trainerType.label : "",
+        development: development,
+        styleLabel: styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "",
         purse: Math.round((tierData.purseBase + base * 8 + rand(0, 24)) * bonus.money),
         fameReward: Math.round((tierData.fameBase + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
         condition: rand(72, 100),
@@ -2658,11 +3515,11 @@
         countryName: country ? country.name : countryKey,
         city: arena ? arena.city : (country ? country.city : ""),
         venue: arena ? arena.name : (country ? country.venueName : ""),
-        guaranteedPurse: Math.max(40, template.purseBase + contractPurse + promoter.purseBonus + gymBonusValue("purseBonus") + trainerBonusValue("purseBonus")),
+        guaranteedPurse: Math.max(40, template.purseBase + contractPurse + promoter.purseBonus + gymBonusValue("purseBonus") + trainerBonusValue("purseBonus") + developmentScalarBonus(state.fighter, "offerPurse")),
         winBonus: Math.max(10, template.winBonus + contractWin + Math.round(promoter.purseBonus * 0.5)),
         koBonus: Math.max(10, template.koBonus + contractKo + trainerBonusValue("koBonus")),
-        fameReward: Math.max(2, Math.round((template.fameBase + gymBonusValue("fameBonus") + trainerBonusValue("fameBonus")) * contractFame)),
-        toxicRisk: clamp(template.toxicBase + (contract ? contract.toxicRisk : 0) + promoter.toxicShift - gymBonusValue("toxicGuard") - trainerBonusValue("toxicGuard"), 0, 95),
+        fameReward: Math.max(2, Math.round((template.fameBase + gymBonusValue("fameBonus") + trainerBonusValue("fameBonus") + developmentScalarBonus(state.fighter, "offerFame")) * contractFame)),
+        toxicRisk: clamp(template.toxicBase + (contract ? contract.toxicRisk : 0) + promoter.toxicShift - gymBonusValue("toxicGuard") - trainerBonusValue("toxicGuard") - developmentScalarBonus(state.fighter, "toxicRiskGuard"), 0, 95),
         reputationOnAccept: reputationSwing,
         reputationOnDecline: template.declineRep,
         contractLabel: contract ? contract.label : "Без контракта",
@@ -2748,6 +3605,25 @@
         fightOffers: fightOffers,
         contractOffers: contractOffers
       };
+    }
+
+    function normalizeFightOffer(offer) {
+      if (!offer || !offer.opponent) {
+        return offer;
+      }
+      offer.opponent = generateOpponent(offer.tier || "even", offer.countryKey || state.fighter.currentCountry, offer.opponent);
+      if (!offer.venue && offer.opponent.venue) {
+        offer.venue = offer.opponent.venue;
+      }
+      return offer;
+    }
+
+    function normalizeWorldOffers() {
+      var offers = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers : [];
+      var i;
+      for (i = 0; i < offers.length; i += 1) {
+        normalizeFightOffer(offers[i]);
+      }
     }
 
     function payGymAndTrainerUpkeep() {
@@ -3031,16 +3907,20 @@
     function recordResolvedEvent(activeEvent, choice) {
       var eventState = state.world.eventState;
       var eventEntry;
+      var safeTitle;
+      var safeChoice;
       if (!activeEvent || !choice) {
         return;
       }
+      safeTitle = safeUiText(activeEvent.title, "Событие недели");
+      safeChoice = safeUiText(choice.label, "Выбор");
       eventState.cooldowns[activeEvent.id] = state.fighter.week;
       if (activeEvent.once || activeEvent.repeatable === false) {
         eventState.onceResolved = uniqueList(eventState.onceResolved.concat([activeEvent.id]));
       }
       eventEntry = {
         id: activeEvent.id,
-        title: activeEvent.title,
+        title: safeTitle,
         choiceId: choice.id,
         week: state.fighter.week
       };
@@ -3048,16 +3928,20 @@
       if (eventState.recentEvents.length > 20) {
         eventState.recentEvents = eventState.recentEvents.slice(0, 20);
       }
-      addBiographyHistory(activeEvent.title + ": " + choice.label + ".", "event");
+      addBiographyHistory(safeTitle + ": " + safeChoice + ".", "event");
     }
 
     function resolveActiveEventChoice(choiceId) {
       var activeEvent = state.activeEvent;
       var choice = findChoiceInActiveEvent(choiceId);
       var i;
+      var safeTitle;
+      var safeResult;
       if (!activeEvent || !choice) {
         return;
       }
+      safeTitle = safeUiText(activeEvent.title, "Событие недели");
+      safeResult = safeUiText(choice.resultText, "Ты принимаешь решение и двигаешься дальше.");
       for (i = 0; i < choice.effects.length; i += 1) {
         applyEventEffect(choice.effects[i]);
       }
@@ -3067,7 +3951,7 @@
       recordResolvedEvent(activeEvent, choice);
       applyBounds(state.fighter);
       refreshWorldState();
-      pushLog(activeEvent.title + ": " + choice.resultText, "warn");
+      pushLog(safeTitle + ": " + safeResult, "warn");
       state.activeEvent = null;
       if (state.screen === "game") {
         state.panel = "home";
@@ -3197,6 +4081,24 @@
       fighter.support = clamp(typeof fighter.support === "number" ? fighter.support : 50, 0, 100);
       fighter.housingId = typeof fighter.housingId === "string" && getHousingOption(fighter.housingId) ? fighter.housingId : "normal";
       fighter.startingAge = Math.max(16, Math.min(40, typeof fighter.startingAge === "number" ? fighter.startingAge : 22));
+      ensureDevelopmentState(fighter);
+      if (fighter.development) {
+        var focusKey;
+        var styleKey;
+        fighter.development.totalXp = Math.max(0, Math.round(fighter.development.totalXp || 0));
+        fighter.development.perkPoints = Math.max(0, Math.round(fighter.development.perkPoints || 0));
+        fighter.development.activePerks = uniqueList(fighter.development.activePerks || []);
+        for (focusKey in fighter.development.focusProgress) {
+          if (fighter.development.focusProgress.hasOwnProperty(focusKey)) {
+            fighter.development.focusProgress[focusKey] = Math.max(0, Math.round(fighter.development.focusProgress[focusKey] || 0));
+          }
+        }
+        for (styleKey in fighter.development.styleProgress) {
+          if (fighter.development.styleProgress.hasOwnProperty(styleKey)) {
+            fighter.development.styleProgress[styleKey] = Math.max(0, Math.round(fighter.development.styleProgress[styleKey] || 0));
+          }
+        }
+      }
     }
 
     function recordText(fighter) {
@@ -3299,6 +4201,7 @@
         morale: 56,
         housingId: "normal",
         support: 52,
+        development: createDevelopmentState(),
         fame: 0,
         wins: 0,
         losses: 0,
@@ -3474,6 +4377,9 @@
       var option = TRAINING_OPTIONS[kind];
       var trainDelta;
       var bonusPoints;
+      var developmentSummary;
+      var styleParts = [];
+      var i;
       if (!option) {
         return;
       }
@@ -3482,13 +4388,22 @@
         medium: { fatigue: 14, wear: 2, morale: 1 },
         hard: { fatigue: 20, wear: 3, morale: -2 }
       }[kind] || { fatigue: 10, wear: 1, morale: 0 };
-      bonusPoints = gymBonusValue("trainingPoints") + trainerBonusValue("trainingPoints");
+      bonusPoints = gymBonusValue("trainingPoints") + trainerBonusValue("trainingPoints") + developmentScalarBonus(fighter, "trainingPointsFlat");
       fighter.skillPoints += option.points + bonusPoints;
       fighter.health += option.health;
       fighter.stress += option.stress;
+      developmentSummary = applyTrainingDevelopment(fighter, kind);
       registerWeeklyAction("train", option.label, trainDelta, { kind: kind });
       applyBounds(fighter);
       pushLog(fighter.name + " проводит " + option.label.toLowerCase() + " тренировку и получает +" + (option.points + bonusPoints) + " очков навыков.", "good");
+      if (developmentSummary) {
+        for (i = 0; i < developmentSummary.styleGains.length; i += 1) {
+          if (developmentSummary.styleGains[i].style) {
+            styleParts.push(developmentSummary.styleGains[i].style.label + " +" + developmentSummary.styleGains[i].amount);
+          }
+        }
+        pushLog("Фокус '" + developmentSummary.focus + "' даёт +" + developmentSummary.focusXp + " XP развития" + (developmentSummary.perkPointGain > 0 ? (" и +" + developmentSummary.perkPointGain + " очко перка") : "") + (styleParts.length ? (". Стили: " + styleParts.join(", ") + ".") : "."), "warn");
+      }
       spendWeek();
     }
 
@@ -3514,7 +4429,7 @@
       }
       moraleBonus = moraleRecoveryModifier(fighter);
       bonusHealth = gymBonusValue("recoveryHealth") + trainerBonusValue("recoveryHealth") + housingRecoveryHealthBonus(fighter) + moraleBonus;
-      stressShift = option.stress - trainerBonusValue("stressRelief") - housingRecoveryStressRelief(fighter) - Math.max(0, socialSupportBuffer(fighter));
+      stressShift = option.stress - trainerBonusValue("stressRelief") - housingRecoveryStressRelief(fighter) - Math.max(0, socialSupportBuffer(fighter)) - developmentScalarBonus(fighter, "recoverStressRelief");
       fighter.money -= option.cost;
       fighter.health += option.health + bonusHealth;
       fighter.stress += stressShift;
@@ -3526,7 +4441,8 @@
 
     function actionWork() {
       var fighter = state.fighter;
-      fighter.money += LEGAL_JOB.money;
+      var moneyGain = LEGAL_JOB.money + developmentScalarBonus(fighter, "workMoney");
+      fighter.money += moneyGain;
       fighter.health += LEGAL_JOB.health;
       fighter.stress += LEGAL_JOB.stress;
       registerWeeklyAction("work", LEGAL_JOB.label, {
@@ -3534,7 +4450,7 @@
         wear: 1,
         morale: -4
       }, null);
-      pushLog(LEGAL_JOB.label + " приносит $" + LEGAL_JOB.money + ", здоровье " + LEGAL_JOB.health + " и стресс +" + LEGAL_JOB.stress + ".", "warn");
+      pushLog(LEGAL_JOB.label + " приносит $" + moneyGain + ", здоровье " + LEGAL_JOB.health + " и стресс +" + LEGAL_JOB.stress + ".", "warn");
       applyBounds(fighter);
       spendWeek();
     }
@@ -3647,17 +4563,21 @@
 
     function moveActor(fight, side, actionKey) {
       var actor = fightStateBySide(fight, side);
-      var action = FIGHT_ACTIONS[actionKey];
+      var staminaCost = fightActionStaminaCost(fight, side, actionKey);
       var fromX = actor.position.x + 1;
       var fromY = actor.position.y + 1;
-      actor.stamina = clamp(actor.stamina - action.stamina, 0, actor.maxStamina);
+      actor.stamina = clamp(actor.stamina - staminaCost, 0, actor.maxStamina);
       actor.position = {
-        x: actor.position.x + action.dx,
-        y: actor.position.y + action.dy
+        x: actor.position.x + FIGHT_ACTIONS[actionKey].dx,
+        y: actor.position.y + FIGHT_ACTIONS[actionKey].dy
       };
       actor.actedAttack = false;
       actor.defenseMode = null;
       resetActionChain(actor);
+      if (side === "player") {
+        markFightStyle(fight, "outboxer", 1);
+        markFightStyle(fight, "tempo", 1);
+      }
       pushFightLine(fight, fightNameBySide(fight, side) + " смещается: " + fromX + ":" + fromY + " -> " + (actor.position.x + 1) + ":" + (actor.position.y + 1) + ".");
     }
 
@@ -3693,29 +4613,38 @@
       return actor.lastAttackKey === actionKey ? actor.attackChain + 1 : 1;
     }
 
-    function previewAttackModifiers(attacker, actionKey) {
+    function previewAttackModifiers(fight, side, actionKey) {
+      var attacker = fightStateBySide(fight, side);
+      var fighter = currentFightSideFighter(fight, side);
       var chainCount = previewAttackChain(attacker, actionKey);
-      var accuracyPenalty = 0;
+      var accuracyShift = 0;
       var damageMultiplier = 1;
+      var flatDamage = developmentActionBonus(fighter, "damageByAction", actionKey);
       if (chainCount === 2) {
-        accuracyPenalty -= 10;
+        accuracyShift -= 10;
         damageMultiplier *= 0.95;
       } else if (chainCount >= 3) {
-        accuracyPenalty -= 15;
+        accuracyShift -= 15;
         damageMultiplier *= 0.9;
       }
       if (staminaIsLow(attacker)) {
-        accuracyPenalty -= 10;
+        accuracyShift -= 10;
         damageMultiplier *= 0.9;
       }
       return {
-        accuracyPenalty: accuracyPenalty,
-        damageMultiplier: damageMultiplier
+        accuracyShift: accuracyShift + developmentActionBonus(fighter, "accuracyByAction", actionKey),
+        damageMultiplier: damageMultiplier,
+        flatDamage: flatDamage
       };
     }
 
+    function blockDamageMultiplier(fight, side) {
+      var defenderFighter = currentFightSideFighter(fight, side);
+      var reduction = 0.5 + developmentScalarBonus(defenderFighter, "blockReduction");
+      return clamp(1 - reduction, 0.15, 0.95);
+    }
+
     function previewHitChance(fight, side, actionKey) {
-      var attacker = fightStateBySide(fight, side);
       var defender = fightStateBySide(fight, otherSide(side));
       var attackerStats = fightStatsBySide(fight, side);
       var defenderStats = fightStatsBySide(fight, otherSide(side));
@@ -3728,13 +4657,12 @@
       if (!actionReachAllowed(fight, side, actionKey)) {
         return 0;
       }
-      modifiers = previewAttackModifiers(attacker, actionKey);
-      dodge = effectiveDodgeChance(defender, defenderStats);
-      return clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + modifiers.accuracyPenalty - dodge), 25, 95);
+      modifiers = previewAttackModifiers(fight, side, actionKey);
+      dodge = effectiveDodgeChance(fight, otherSide(side), defender, defenderStats);
+      return clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + modifiers.accuracyShift - dodge), 25, 95);
     }
 
     function previewDamage(fight, side, actionKey) {
-      var attacker = fightStateBySide(fight, side);
       var defender = fightStateBySide(fight, otherSide(side));
       var attackerStats = fightStatsBySide(fight, side);
       var action = FIGHT_ACTIONS[actionKey];
@@ -3743,13 +4671,13 @@
       if (!action || action.type !== "attack") {
         return 0;
       }
-      modifiers = previewAttackModifiers(attacker, actionKey);
-      damage = action.damage * (1 + attackerStats.str * 0.05) * modifiers.damageMultiplier;
+      modifiers = previewAttackModifiers(fight, side, actionKey);
+      damage = action.damage * (1 + attackerStats.str * 0.05) * modifiers.damageMultiplier + modifiers.flatDamage;
       if (defender.stamina < 5) {
         damage *= 1.2;
       }
       if (defender.defenseMode === "block") {
-        damage *= 0.5;
+        damage *= blockDamageMultiplier(fight, otherSide(side));
       }
       return Math.max(1, Math.round(damage));
     }
@@ -3762,11 +4690,11 @@
         return "";
       }
       if (action.type === "move") {
-        parts.push("<span class='action-blue'>Стамина -" + action.stamina + "</span>");
+        parts.push("<span class='action-blue'>Стамина -" + fightActionStaminaCost(fight, "player", actionKey) + "</span>");
       } else if (action.type === "defense") {
         parts.push("<span class='action-blue'>Стамина +" + action.staminaGain + "</span>");
       } else if (action.type === "attack") {
-        parts.push("<span class='action-blue'>Стамина -" + action.stamina + "</span>");
+        parts.push("<span class='action-blue'>Стамина -" + fightActionStaminaCost(fight, "player", actionKey) + "</span>");
         parts.push("<span class='action-red'>Урон " + previewDamage(fight, "player", actionKey) + "</span>");
         parts.push("<span class='action-yellow'>Точность " + previewHitChance(fight, "player", actionKey) + "%</span>");
       }
@@ -3874,6 +4802,8 @@
       var fightOfferCount = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers.length : 0;
       var housing = currentHousing();
       var discipline = disciplineScore(state.fighter);
+      var styleSnapshot = currentStyleSnapshot(state.fighter);
+      var focus = currentFocus(state.fighter);
       return "" +
         "<div class='panel fill-panel'>" +
           "<div class='eyebrow'>Основное</div>" +
@@ -3903,6 +4833,7 @@
             "<div class='card'><h3>Активный контракт</h3><p>" + (contract ? (contract.label + ". До недели " + contract.endsWeek + ".") : "Пока без контракта.") + "</p><div class='muted'>" + (contract ? ("Гарантия $" + contract.guaranteedPurse + ", победа $" + contract.winBonus + ", KO $" + contract.koBonus + ".") : "Новые условия ищи во вкладке персонажа.") + "</div></div>" +
             "<div class='card'><h3>Предложения боёв</h3><p>На этой неделе доступно " + fightOfferCount + " оффер(ов).</p><div class='muted'>" + offerHeadline + "</div></div>" +
             "<div class='card'><h3>Быт</h3><p>" + (housing ? housing.label : "Нормальные условия") + ".</p><div class='muted'>" + housingEffectSummary(housing) + "</div><div class='muted'>Опора: " + supportLabel(currentSupportScore()) + ".</div></div>" +
+            "<div class='card'><h3>Школа бойца</h3><p>" + (styleSnapshot ? (styleSnapshot.style.label + (styleSnapshot.tier ? (" · " + styleSnapshot.tier.label) : "")) : "Стиль только формируется") + ".</p><div class='muted'>Фокус лагеря: " + (focus ? focus.label : "Техника") + ".</div><div class='muted'>Перки: " + currentDevelopment(state.fighter).activePerks.length + " · очки перков " + currentDevelopment(state.fighter).perkPoints + ".</div></div>" +
           "</div>" +
           "<div class='footer-actions' style='margin-top:18px'>" +
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
@@ -3924,13 +4855,19 @@
       var activeEvent = state.activeEvent;
       var html = [];
       var i;
+      var eventTitle;
+      var eventText;
+      var choiceLabel;
+      var choiceText;
       if (!activeEvent) {
         return renderHomePanel();
       }
+      eventTitle = safeUiText(activeEvent.title, "Событие недели");
+      eventText = safeUiText(activeEvent.text, "На этой неделе что-то меняется вокруг тебя. Выбери, как ответить.");
       html.push("<div class='panel fill-panel'>");
       html.push("<div class='eyebrow'>Событие недели</div>");
-      html.push("<h2 class='panel-title'>" + activeEvent.title + "</h2>");
-      html.push("<div class='subtitle'>" + activeEvent.text + "</div>");
+      html.push("<h2 class='panel-title'>" + eventTitle + "</h2>");
+      html.push("<div class='subtitle'>" + eventText + "</div>");
       if (activeEvent.actors) {
         html.push("<div class='record-row' style='margin-top:14px'>");
         for (i in activeEvent.actors) {
@@ -3942,7 +4879,9 @@
       }
       html.push("<div class='choice-grid' style='margin-top:18px'>");
       for (i = 0; i < activeEvent.choices.length; i += 1) {
-        html.push("<div class='card'><h3>" + activeEvent.choices[i].label + "</h3><p>" + activeEvent.choices[i].resultText + "</p><button class='button' onclick='resolveActiveEventChoice(\"" + activeEvent.choices[i].id + "\")'>Выбрать</button></div>");
+        choiceLabel = safeUiText(activeEvent.choices[i].label, "Вариант " + (i + 1));
+        choiceText = safeUiText(activeEvent.choices[i].resultText, "Этот выбор изменит неделю и отношения вокруг тебя.");
+        html.push("<div class='card'><h3>" + choiceLabel + "</h3><p>" + choiceText + "</p><button class='button' onclick='resolveActiveEventChoice(\"" + activeEvent.choices[i].id + "\")'>Выбрать</button></div>");
       }
       html.push("</div>");
       html.push("</div>");
@@ -4036,25 +4975,131 @@
     }
 
     function renderTrainPanel() {
-      return "" +
-        "<div class='panel'>" +
-          "<h2 class='panel-title'>Тренировка</h2>" +
-          "<div class='muted'>Каждая тренировка тратит неделю и даёт очки навыков для вкладки персонажа.</div>" +
-          "<div class='choice-grid'>" +
-            "<div class='card'><h3>Лёгкая</h3><p>Очки +10, здоровье -6, стресс +6.</p><button class='button' onclick='actionTrain(\"light\")'>Провести</button></div>" +
-            "<div class='card'><h3>Средняя</h3><p>Очки +20, здоровье -12, стресс +12.</p><button class='button' onclick='actionTrain(\"medium\")'>Провести</button></div>" +
-            "<div class='card'><h3>Жёсткая</h3><p>Очки +30, здоровье -18, стресс +18.</p><button class='danger' onclick='actionTrain(\"hard\")'>Провести</button></div>" +
-          "</div>" +
-          "<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div>" +
-        "</div>";
+      var focus = currentFocus(state.fighter);
+      var focuses = listTrainingFocuses();
+      var gym = currentGym();
+      var trainerType = currentTrainerType();
+      var html = [];
+      var i;
+      var focusOption;
+      html.push("<div class='panel'>");
+      html.push("<h2 class='panel-title'>Тренировка</h2>");
+      html.push("<div class='muted'>Каждая тренировка тратит неделю, даёт очки навыков для вкладки персонажа и качает выбранное направление школы.</div>");
+      html.push("<div class='dev-highlight'>");
+      html.push("<div class='fighter-class'>Фокус подготовки</div>");
+      html.push("<div class='fighter-name' style='font-size:28px'>" + (focus ? focus.label : "Техника") + "</div>");
+      html.push("<div class='dev-meta'>" + (focus ? focus.description : "Базовый фокус лагеря.") + "</div>");
+      html.push("<div class='dev-mini'>Зал: " + (gym ? gym.name : "без зала") + " · Тренер: " + (trainerType ? trainerType.label : "без тренера") + ".</div>");
+      html.push("</div>");
+      html.push("<div class='choice-grid'>");
+      html.push("<div class='card'><h3>Лёгкая</h3><p>Очки +10, здоровье -6, стресс +6.</p><div class='muted'>XP фокуса зависит от выбранного направления, зала, тренера и активных перков.</div><button class='button' onclick='actionTrain(\"light\")'>Провести</button></div>");
+      html.push("<div class='card'><h3>Средняя</h3><p>Очки +20, здоровье -12, стресс +12.</p><div class='muted'>Более плотный лагерь: сильнее растит стиль и быстрее ведёт к новым перкам.</div><button class='button' onclick='actionTrain(\"medium\")'>Провести</button></div>");
+      html.push("<div class='card'><h3>Жёсткая</h3><p>Очки +30, здоровье -18, стресс +18.</p><div class='muted'>Максимальное давление на лагерь. Даёт самый резкий прогресс направлений.</div><button class='danger' onclick='actionTrain(\"hard\")'>Провести</button></div>");
+      html.push("</div>");
+      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Сменить фокус</h3><div class='choice-grid'>");
+      for (i = 0; i < focuses.length; i += 1) {
+        focusOption = focuses[i];
+        html.push("<div class='card'><h3>" + focusOption.label + "</h3><p>" + focusOption.description + "</p><div class='muted'>Текущий прогресс: " + developmentFocusValue(state.fighter, focusOption.id) + " XP.</div><button class='" + (focus && focus.id === focusOption.id ? "ghost" : "button") + "' onclick='setTrainingFocus(\"" + focusOption.id + "\")'>" + (focus && focus.id === focusOption.id ? "Текущий фокус" : "Сделать основным") + "</button></div>");
+      }
+      html.push("</div></div>");
+      html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button><button class='button' onclick='openPanel(\"skills\")'>Стили и перки</button></div>");
+      html.push("</div>");
+      return html.join("");
     }
 
     function renderSkillPanel() {
-      return "" +
-        "<div class='panel fill-panel'>" +
-          "<h2 class='panel-title'>Навыки</h2>" +
-          "<div class='empty-state'>Здесь позже появятся способности, архетипы, пассивные ветки и особые боевые стили. Прокачка базовых характеристик перенесена во вкладку персонажа.</div>" +
-        "</div>";
+      var fighter = state.fighter;
+      var development = currentDevelopment(fighter);
+      var focus = currentFocus(fighter);
+      var styleSnapshot = currentStyleSnapshot(fighter);
+      var styles = listDevelopmentStyles();
+      var focuses = listTrainingFocuses();
+      var perks = listDevelopmentPerks();
+      var activePerks = activePerkDefinitions(fighter);
+      var gym = currentGym();
+      var trainerType = currentTrainerType();
+      var gymProfile = gym ? gymDevelopmentProfile(gym.id) : null;
+      var trainerProfile = trainerType ? trainerDevelopmentProfile(trainerType.id) : null;
+      var html = [];
+      var i;
+      var styleDef;
+      var progress;
+      var tier;
+      var nextTier;
+      var perk;
+      var isActive;
+      var ready;
+      html.push("<div class='panel fill-panel'>");
+      html.push("<div class='dev-header'><h2 class='panel-title'>Стили и перки</h2><div class='muted'>Базовые статы по-прежнему качаются во вкладке персонажа. Здесь собирается школа боя: стиль, фокус лагеря и активные пассивки.</div></div>");
+      html.push("<div class='dev-highlight'>");
+      html.push("<div class='fighter-class'>Текущий стиль</div>");
+      html.push("<div class='fighter-name' style='font-size:30px'>" + (styleSnapshot ? styleSnapshot.style.label : "Стиль формируется") + "</div>");
+      html.push("<div class='dev-meta'>" + (styleSnapshot ? styleSnapshot.style.description : "Выраженный стиль пока не проявился.") + "</div>");
+      html.push("<div class='record-row' style='margin-top:10px'><div class='chip gold'>Фокус: " + (focus ? focus.label : "Техника") + "</div><div class='chip'>XP лагеря " + development.totalXp + "</div><div class='chip'>Очки перков " + development.perkPoints + "</div><div class='chip'>Активных перков " + development.activePerks.length + "</div></div>");
+      if (styleSnapshot && styleSnapshot.tier) {
+        html.push("<div class='dev-mini'>Текущий tier: " + styleSnapshot.tier.label + ". " + summarizeDevelopmentBonuses(styleSnapshot.tier.bonuses) + "</div>");
+      }
+      html.push("</div>");
+      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Влияние лагеря</h3>");
+      html.push("<div class='dev-mini'>Зал: " + (gym ? gym.name : "без зала") + ". " + summarizeDevelopmentProfile(gymProfile) + "</div>");
+      html.push("<div class='dev-mini'>Тренер: " + (trainerType ? trainerType.label : "без тренера") + ". " + summarizeDevelopmentProfile(trainerProfile) + "</div>");
+      html.push("</div>");
+      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Фокусы подготовки</h3><div class='choice-grid'>");
+      for (i = 0; i < focuses.length; i += 1) {
+        styleDef = focuses[i];
+        html.push("<div class='card'><h3>" + styleDef.label + "</h3><p>" + styleDef.description + "</p><div class='dev-mini'>Прогресс: " + developmentFocusValue(fighter, styleDef.id) + " XP.</div><button class='" + (focus && focus.id === styleDef.id ? "ghost" : "button") + "' onclick='setTrainingFocus(\"" + styleDef.id + "\")'>" + (focus && focus.id === styleDef.id ? "Текущий фокус" : "Сместить лагерь") + "</button></div>");
+      }
+      html.push("</div></div>");
+      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Прогресс стилей</h3><div class='choice-grid'>");
+      for (i = 0; i < styles.length; i += 1) {
+        styleDef = styles[i];
+        progress = developmentStyleValue(fighter, styleDef.id);
+        tier = styleTierAtProgress(styleDef, progress);
+        nextTier = nextStyleThreshold(styleDef, progress);
+        html.push("<div class='card'><h3>" + styleDef.label + "</h3><p>" + styleDef.description + "</p><div class='record-row'><div class='chip gold'>Прогресс " + progress + "</div><div class='chip'>" + (tier ? tier.label : "Без tier") + "</div></div>");
+        if (nextTier) {
+          html.push("<div class='dev-mini'>До следующего этапа '" + nextTier.label + "' нужно " + Math.max(0, nextTier.threshold - progress) + " ед.</div>");
+          html.push("<div class='dev-progress'><span style='width:" + developmentProgressPercent(progress, nextTier.threshold) + "%'></span></div>");
+        } else {
+          html.push("<div class='dev-mini'>Стиль раскрыт на максимум.</div>");
+          html.push("<div class='dev-progress'><span style='width:100%'></span></div>");
+        }
+        if (tier && tier.bonuses) {
+          html.push("<div class='dev-mini'>" + summarizeDevelopmentBonuses(tier.bonuses) + "</div>");
+        }
+        html.push("</div>");
+      }
+      html.push("</div></div>");
+      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Активные перки</h3>");
+      if (!activePerks.length) {
+        html.push("<div class='empty-state'>Пока активных перков нет. Набирай XP через тренировки и стиль через решения в бою.</div>");
+      } else {
+        html.push("<div class='choice-grid'>");
+        for (i = 0; i < activePerks.length; i += 1) {
+          perk = activePerks[i];
+          html.push("<div class='card perk-card active'><div class='meta'>" + perkCategoryLabel(perk.category) + "</div><h3>" + perk.label + "</h3><p>" + perk.description + "</p><div class='dev-mini'>" + summarizeDevelopmentBonuses(perk.bonuses) + "</div><div class='perk-state active'>Активен</div></div>");
+        }
+        html.push("</div>");
+      }
+      html.push("</div>");
+      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Доступные перки</h3><div class='choice-grid'>");
+      for (i = 0; i < perks.length; i += 1) {
+        perk = perks[i];
+        isActive = containsTag(development.activePerks, perk.id);
+        ready = perkRequirementMet(perk, fighter);
+        html.push("<div class='card perk-card" + (isActive ? " active" : "") + "'><div class='meta'>" + perkCategoryLabel(perk.category) + "</div><h3>" + perk.label + "</h3><p>" + perk.description + "</p><div class='dev-mini'>Требования: " + perkRequirementText(perk) + ".</div><div class='dev-mini'>" + summarizeDevelopmentBonuses(perk.bonuses) + "</div>");
+        if (isActive) {
+          html.push("<div class='perk-state active'>Уже активен</div>");
+        } else if (ready) {
+          html.push("<div class='perk-state ready'>Готов к открытию</div><button class='button' " + (development.perkPoints < 1 ? "disabled='disabled'" : "") + " onclick='unlockPerk(\"" + perk.id + "\")'>Открыть за 1 очко</button>");
+        } else {
+          html.push("<div class='perk-state locked'>Условия пока не выполнены</div>");
+        }
+        html.push("</div>");
+      }
+      html.push("</div></div>");
+      html.push("</div>");
+      return html.join("");
     }
 
     function renderLifePanel() {
@@ -4129,6 +5174,7 @@
         html.push("<div class='meta'>" + offer.label + "</div>");
         html.push("<h3>" + fullOpponentName(opponent) + "</h3>");
         html.push("<p>" + offer.description + " " + opponent.profile + ". " + offer.countryName + ", " + offer.venue + ".</p>");
+        html.push("<div class='record-row'><div class='chip'>Стиль: " + (opponent.styleLabel || "Базовый") + "</div><div class='chip'>Зал: " + (opponent.gymName || "Уличная база") + "</div><div class='chip'>Тренер: " + (opponent.trainerLabel || "Сам себе угол") + "</div></div>");
         html.push("<div class='record-row'><div class='chip gold'>Гарантия $" + offer.guaranteedPurse + "</div><div class='chip'>Победа $" + offer.winBonus + "</div><div class='chip'>KO $" + offer.koBonus + "</div></div>");
         html.push("<div class='record-row'><div class='chip'>Известность +" + offer.fameReward + "</div><div class='chip'>Токсичность " + offer.toxicRisk + "%</div><div class='chip'>Контракт: " + offer.contractLabel + "</div></div>");
         html.push("<div class='record-row'><div class='chip'>Форма " + opponent.condition + "/100</div><div class='chip'>Раундов " + opponent.rounds + "</div><div class='chip'>" + opponent.danger + "</div></div>");
@@ -4197,6 +5243,9 @@
       var trainerNpc = currentTrainerNpc();
       var trainerType = currentTrainerType();
       var contract = currentContract();
+      var styleSnapshot = currentStyleSnapshot(fighter);
+      var focus = currentFocus(fighter);
+      var development = currentDevelopment(fighter);
       var contractOffers = state.world && state.world.offers && state.world.offers.contractOffers ? state.world.offers.contractOffers : [];
       var i;
       var gymOption;
@@ -4231,6 +5280,7 @@
       html.push("<div>" + meter("Настроение", fighter.morale) + "</div>");
       html.push("<div>" + meter("Социальная опора", fighter.support) + "</div>");
       html.push("</div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Школа бойца</h2><div class='record-row'><div class='chip gold'>" + (styleSnapshot ? styleSnapshot.style.label : "Стиль формируется") + "</div><div class='chip'>Фокус " + (focus ? focus.label : "Техника") + "</div><div class='chip'>XP " + development.totalXp + "</div><div class='chip'>Очки перков " + development.perkPoints + "</div></div><div class='muted'>" + (styleSnapshot && styleSnapshot.tier ? ("Текущий tier: " + styleSnapshot.tier.label + ". " + summarizeDevelopmentBonuses(styleSnapshot.tier.bonuses)) : "Стиль пока набирает очертания. Подробности и перки находятся во вкладке навыки.") + "</div></div>");
       html.push("<div class='panel'><h2 class='panel-title'>Прокачка</h2><div class='record-row' style='margin-top:18px'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div><div class='muted'>Цена роста идёт ступенями: 0-9 стоит 1 очко, 10-19 стоит 2, 20-29 стоит 3 и дальше по той же схеме.</div>" + renderStatUpgradeCards() + "</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Зал</h2>");
       html.push("<div class='muted'>" + (gym ? (gym.name + " · " + gym.city + " · $" + gym.cost + "/нед. " + gym.specialization + ".") : "Ты пока не закрепился ни в одном зале. Членство списывается автоматически каждую неделю.") + "</div>");
@@ -4462,6 +5512,7 @@
       var actor = fightStateBySide(fight, side);
       var target = fightStateBySide(fight, otherSide(side));
       var action = FIGHT_ACTIONS[actionKey];
+      var staminaCost;
       var nextX;
       var nextY;
       if (!action) {
@@ -4470,12 +5521,14 @@
       if (action.type === "move") {
         nextX = actor.position.x + action.dx;
         nextY = actor.position.y + action.dy;
-        return actor.stamina >= action.stamina && insideRing(nextX, nextY) && !(target.position.x === nextX && target.position.y === nextY);
+        staminaCost = fightActionStaminaCost(fight, side, actionKey);
+        return actor.stamina >= staminaCost && insideRing(nextX, nextY) && !(target.position.x === nextX && target.position.y === nextY);
       }
       if (action.type === "defense") {
         return actionKey !== "counter" || actor.stamina >= 5;
       }
-      return actor.stamina >= action.stamina && actionReachAllowed(fight, side, actionKey);
+      staminaCost = fightActionStaminaCost(fight, side, actionKey);
+      return actor.stamina >= staminaCost && actionReachAllowed(fight, side, actionKey);
     }
 
     function staminaIsLow(actor) {
@@ -4496,7 +5549,8 @@
       actor.attackChain = nextAttackChain(actor, actionKey);
     }
 
-    function effectiveDodgeChance(defender, defenderStats) {
+    function effectiveDodgeChance(fight, side, defender, defenderStats) {
+      var fighter = currentFightSideFighter(fight, side);
       var dodge = 5 + defenderStats.spd * 0.5;
       if (defender.stamina < 5) {
         return 0;
@@ -4506,6 +5560,7 @@
       } else if (defender.defenseMode === "counter") {
         dodge = 20 + defenderStats.spd * 0.5;
       }
+      dodge += developmentScalarBonus(fighter, "dodge");
       return clamp(Math.round(dodge), 0, 90);
     }
 
@@ -4648,6 +5703,12 @@
       actor.defenseMode = actionKey;
       actor.actedAttack = false;
       resetActionChain(actor);
+      if (side === "player") {
+        markFightStyle(fight, "counterpuncher", actionKey === "counter" ? 3 : 2);
+        if (actionKey === "block") {
+          markFightStyle(fight, "outboxer", 1);
+        }
+      }
       pushFightLine(fight, fightNameBySide(fight, side) + " готовит " + action.label.toLowerCase() + ".");
     }
 
@@ -4666,13 +5727,14 @@
     function attemptCounterAttack(fight, defenderSide) {
       var defender = fightStateBySide(fight, defenderSide);
       var defenderStats = fightStatsBySide(fight, defenderSide);
+      var defenderFighter = currentFightSideFighter(fight, defenderSide);
       var choices = counterAttackChoices(fight, defenderSide);
       var chanceToCounter;
       var pickedAction;
       if (!choices.length || defender.stamina < 5) {
         return false;
       }
-      chanceToCounter = clamp(Math.round(50 + defenderStats.tec * 0.5), 5, 95);
+      chanceToCounter = clamp(Math.round(50 + defenderStats.tec * 0.5 + developmentScalarBonus(defenderFighter, "counterChance")), 5, 95);
       defender.defenseMode = null;
       if (!chance(chanceToCounter)) {
         pushFightLine(fight, fightNameBySide(fight, defenderSide) + " хотел ответить на контратаке, но окно закрылось.");
@@ -4688,8 +5750,8 @@
       var defender = fightStateBySide(fight, otherSide(side));
       var attackerStats = fightStatsBySide(fight, side);
       var defenderStats = fightStatsBySide(fight, otherSide(side));
+      var attackerFighter = currentFightSideFighter(fight, side);
       var attackerName = fightNameBySide(fight, side);
-      var defenderName = fightNameBySide(fight, otherSide(side));
       var action = FIGHT_ACTIONS[actionKey];
       var hitChance;
       var damage;
@@ -4698,24 +5760,25 @@
       var modifiers;
       var defenseMode = defender.defenseMode;
       var allowCounter = !(options && options.counter);
+      var staminaCost = fightActionStaminaCost(fight, side, actionKey);
       options = options || {};
       if (!action || !actionReachAllowed(fight, side, actionKey)) {
         pushFightLine(fight, attackerName + " выбрасывает " + (action ? action.label.toLowerCase() : "удар") + ", но дистанция не позволяет попасть.");
         setStrikeAnimation(side, "miss", false);
         return false;
       }
-      if (!options.free && attacker.stamina < action.stamina) {
+      if (!options.free && attacker.stamina < staminaCost) {
         pushFightLine(fight, attackerName + " не хватает стамины на " + action.label.toLowerCase() + ".");
         return false;
       }
       if (!options.free) {
-        attacker.stamina = clamp(attacker.stamina - action.stamina, 0, attacker.maxStamina);
+        attacker.stamina = clamp(attacker.stamina - staminaCost, 0, attacker.maxStamina);
       }
       attacker.defenseMode = null;
       attacker.actedAttack = true;
-      modifiers = previewAttackModifiers(attacker, actionKey);
-      dodge = effectiveDodgeChance(defender, defenderStats);
-      hitChance = clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + modifiers.accuracyPenalty - dodge), 25, 95);
+      modifiers = previewAttackModifiers(fight, side, actionKey);
+      dodge = effectiveDodgeChance(fight, otherSide(side), defender, defenderStats);
+      hitChance = clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + modifiers.accuracyShift - dodge), 25, 95);
       if (!chance(hitChance)) {
         pushFightLine(fight, attackerName + " промахивается: " + action.label.toLowerCase() + " не доходит до цели.");
         setStrikeAnimation(side, "miss", false);
@@ -4726,14 +5789,14 @@
         applyAttackChain(attacker, actionKey);
         return false;
       }
-      damage = action.damage * (1 + attackerStats.str * 0.05) * modifiers.damageMultiplier;
+      damage = action.damage * (1 + attackerStats.str * 0.05) * modifiers.damageMultiplier + modifiers.flatDamage;
       if (defender.stamina < 5) {
         damage *= 1.2;
       }
       if (defenseMode === "block") {
-        damage *= 0.5;
+        damage *= blockDamageMultiplier(fight, otherSide(side));
       }
-      critical = chance(clamp(Math.round(5 + attackerStats.tec * 0.2), 5, 95));
+      critical = chance(clamp(Math.round(5 + attackerStats.tec * 0.2 + developmentScalarBonus(attackerFighter, "critChance")), 5, 95));
       if (critical) {
         damage *= 1.5;
       }
@@ -4749,6 +5812,21 @@
       }
       setStrikeAnimation(side, "hit", critical);
       applyAttackChain(attacker, actionKey);
+      if (side === "player") {
+        if (actionKey === "jab") {
+          markFightStyle(fight, "outboxer", 2);
+        } else if (actionKey === "cross") {
+          markFightStyle(fight, "outboxer", 1);
+          markFightStyle(fight, "puncher", 1);
+        } else if (actionKey === "body") {
+          markFightStyle(fight, "tempo", 2);
+        } else if (actionKey === "hook" || actionKey === "uppercut") {
+          markFightStyle(fight, "puncher", 2);
+        }
+        if (options.counter) {
+          markFightStyle(fight, "counterpuncher", 3);
+        }
+      }
       if (defender.hp <= 0) {
         return resolveKnockdown(fight, otherSide(side));
       }
@@ -4797,10 +5875,60 @@
     function pickAiAction(fight) {
       var ai = fight.opponentState;
       var player = fight.playerState;
+      var opponentFighter = currentFightSideFighter(fight, "opponent");
+      var styleSnapshot = currentStyleSnapshot(opponentFighter);
+      var styleId = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.id : "";
       var attacks = availableFightActions(fight, "opponent", "attack");
       var retreat = ai.hp < ai.maxHp * 0.3 || ai.stamina < ai.maxStamina * 0.2;
       if (ai.stamina < ai.maxStamina * 0.15 && canUseFightAction(fight, "opponent", "block") && chance(65)) {
         return "block";
+      }
+      if (styleId === "counterpuncher") {
+        if (canUseFightAction(fight, "opponent", "counter") && chance(52)) {
+          return "counter";
+        }
+        if (canUseFightAction(fight, "opponent", "block") && chance(40)) {
+          return "block";
+        }
+        if (canUseFightAction(fight, "opponent", "jab") && chance(55)) {
+          return "jab";
+        }
+        if (canUseFightAction(fight, "opponent", "cross") && chance(45)) {
+          return "cross";
+        }
+      }
+      if (styleId === "outboxer") {
+        if (canUseFightAction(fight, "opponent", "jab") && chance(72)) {
+          return "jab";
+        }
+        if (canUseFightAction(fight, "opponent", "cross") && chance(48)) {
+          return "cross";
+        }
+        if (chance(40)) {
+          return pickAIMove(fight, false) || "jab";
+        }
+      }
+      if (styleId === "puncher") {
+        if (player.hp < player.maxHp * 0.45 && canUseFightAction(fight, "opponent", "uppercut") && chance(45)) {
+          return "uppercut";
+        }
+        if (canUseFightAction(fight, "opponent", "hook") && chance(55)) {
+          return "hook";
+        }
+        if (canUseFightAction(fight, "opponent", "cross") && chance(65)) {
+          return "cross";
+        }
+      }
+      if (styleId === "tempo") {
+        if (canUseFightAction(fight, "opponent", "body") && chance(62)) {
+          return "body";
+        }
+        if (canUseFightAction(fight, "opponent", "jab") && chance(52)) {
+          return "jab";
+        }
+        if (chance(35)) {
+          return pickAIMove(fight, false) || "jab";
+        }
       }
       if (ai.hp < ai.maxHp * 0.45 && canUseFightAction(fight, "opponent", "counter") && chance(40)) {
         return "counter";
@@ -4830,7 +5958,6 @@
       var fight = state.fight;
       var resultLabel = fight.result === "win" ? "Победа" : (fight.result === "loss" ? "Поражение" : "Ничья");
       var html = [];
-      var i;
       html.push("<div class='battle-shell'><div class='battle-result'>");
       html.push("<div class='result-banner'><div class='eyebrow'>Итог боя</div><div class='title' style='font-size:24px'>" + resultLabel + " через " + fight.method + "</div>");
       html.push("<div class='subtitle'>Раундов прошло: " + fight.roundsCompleted + ".</div></div>");
@@ -4874,6 +6001,10 @@
       var toxicPenalty = offer ? Math.round(guarantee * (offer.toxicRisk || 0) / 220) : 0;
       var repGain = offer ? offer.reputationOnAccept : 0;
       var supportBuffer = socialSupportBuffer(fighter);
+      var styleSummary = [];
+      var styleId;
+      var styleGain;
+      var styleDef;
       var fightDelta = {
         fatigue: 12 + fight.roundsCompleted * 2 + fight.playerState.knockdowns * 4,
         wear: 2 + fight.playerState.knockdowns + Math.floor(fight.playerState.damageTaken / 40),
@@ -4946,6 +6077,25 @@
         fighter.stress += Math.abs(supportBuffer) + 1;
         fightDelta.morale -= Math.abs(supportBuffer) + 1;
         pushLog("Одиночество делает послебоевую неделю тяжелее.", "bad");
+      }
+      if (fight.styleMarks) {
+        for (styleId in fight.styleMarks) {
+          if (fight.styleMarks.hasOwnProperty(styleId) && fight.styleMarks[styleId] > 0) {
+            styleGain = Math.max(1, Math.round(fight.styleMarks[styleId] * 0.6));
+            if (fight.result === "win") {
+              styleGain += 1;
+            }
+            if (fight.method && fight.method.indexOf("KO") !== -1 && styleId === "puncher") {
+              styleGain += 1;
+            }
+            addStyleProgress(fighter, styleId, styleGain);
+            styleDef = getDevelopmentStyle(styleId);
+            styleSummary.push((styleDef ? styleDef.label : styleId) + " +" + styleGain);
+          }
+        }
+      }
+      if (styleSummary.length) {
+        pushLog("Бой закрепляет школу: " + styleSummary.join(", ") + ".", "warn");
       }
       registerWeeklyAction("fight", fight.method || "Бой", fightDelta, {
         result: fight.result,
@@ -5072,6 +6222,12 @@
         roundsCompleted: 0,
         judges: { player: 0, opponent: 0 },
         roundPoints: { player: 0, opponent: 0 },
+        styleMarks: {
+          outboxer: 0,
+          puncher: 0,
+          counterpuncher: 0,
+          tempo: 0
+        },
         roundCards: [],
         breakSummary: null,
         knockdown: null,
@@ -5151,6 +6307,8 @@
 
     function completeFightTurn() {
       var fight = state.fight;
+      var playerStaminaRecovery;
+      var opponentStaminaRecovery;
       consumeFightStepTimeout();
       if (!fight || fight.result || fight.knockdown) {
         return;
@@ -5159,8 +6317,10 @@
       if (!fight.skipTurnRecovery) {
         fight.playerState.hp = clamp(fight.playerState.hp + turnHealthRecovery(fight.playerState), 0, fight.playerState.maxHp);
         fight.opponentState.hp = clamp(fight.opponentState.hp + turnHealthRecovery(fight.opponentState), 0, fight.opponentState.maxHp);
-        fight.playerState.stamina = clamp(fight.playerState.stamina + (fight.playerState.actedAttack ? 2 : 4), 0, fight.playerState.maxStamina);
-        fight.opponentState.stamina = clamp(fight.opponentState.stamina + (fight.opponentState.actedAttack ? 2 : 4), 0, fight.opponentState.maxStamina);
+        playerStaminaRecovery = (fight.playerState.actedAttack ? 2 : 4) + developmentScalarBonus(state.fighter, "turnRecoveryStamina");
+        opponentStaminaRecovery = (fight.opponentState.actedAttack ? 2 : 4) + developmentScalarBonus(currentFightSideFighter(fight, "opponent"), "turnRecoveryStamina");
+        fight.playerState.stamina = clamp(fight.playerState.stamina + playerStaminaRecovery, 0, fight.playerState.maxStamina);
+        fight.opponentState.stamina = clamp(fight.opponentState.stamina + opponentStaminaRecovery, 0, fight.opponentState.maxStamina);
       }
       fight.skipTurnRecovery = false;
       fight.playerState.actedAttack = false;
@@ -5327,7 +6487,7 @@
       html.push("<div class='battle-panel'><strong>Статистика</strong>");
       html.push("<div class='battle-chip-line'><div class='chip'>Раунд " + fight.round + " / " + fight.opponent.rounds + "</div><div class='chip'>Ход " + fight.turn + " / " + fight.turnsPerRound + "</div></div>");
       html.push("<div class='battle-panel inset-panel'><strong>Ты</strong>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.playerState.defenseMode ? FIGHT_ACTIONS[fight.playerState.defenseMode].label : "Нет") + "</div></div></div>");
-      html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.opponentState.defenseMode ? FIGHT_ACTIONS[fight.opponentState.defenseMode].label : "Нет") + "</div></div></div>");
+      html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.opponentState.defenseMode ? FIGHT_ACTIONS[fight.opponentState.defenseMode].label : "Нет") + "</div></div><div class='battle-chip-line'><div class='chip'>Стиль " + (fight.opponent.styleLabel || "Базовый") + "</div><div class='chip'>Зал " + (fight.opponent.gymName || "Уличная база") + "</div><div class='chip'>Тренер " + (fight.opponent.trainerLabel || "Сам себе угол") + "</div></div></div>");
       if (fight.roundCards.length) {
         html.push("<div class='battle-panel inset-panel'><strong>Карточки</strong>");
         html.push("<div class='log-entry'>" + fight.roundCards[0] + "</div>");
@@ -5342,7 +6502,6 @@
       var html = [];
       var x;
       var y;
-      var i;
       var playerCell;
       var opponentCell;
       var activeTab = fight.uiTab || "controls";
@@ -5464,5 +6623,4 @@
   <div id="app"></div>
 </body>
 </html>
-
 

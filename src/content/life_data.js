@@ -10,7 +10,7 @@ var LIFE_DATA = {
       recoveryHealthBonus: -4,
       recoveryStressRelief: -1,
       disciplineBonus: -6,
-      description: "Сырой угол, шумные соседи и сон урывками."
+      description: "Съёмная комната, шум, теснота и постоянное ощущение, что ты живёшь на краю."
     },
     {
       id: "normal",
@@ -22,7 +22,7 @@ var LIFE_DATA = {
       recoveryHealthBonus: 0,
       recoveryStressRelief: 0,
       disciplineBonus: 0,
-      description: "Спокойная комната и достаточно порядка, чтобы держаться в режиме."
+      description: "Стабильный быт без роскоши: можно жить, держать режим и не разваливаться."
     },
     {
       id: "comfortable",
@@ -34,9 +34,10 @@ var LIFE_DATA = {
       recoveryHealthBonus: 4,
       recoveryStressRelief: 3,
       disciplineBonus: 6,
-      description: "Тихо, чисто и проще восстанавливаться после тяжёлых недель."
+      description: "Нормальный сон, тишина и порядок. Лагерь дышит свободнее, но платить приходится больше."
     }
   ],
+
   socialActions: [
     {
       id: "friend",
@@ -46,9 +47,9 @@ var LIFE_DATA = {
       stress: -8,
       support: 8,
       delta: { fatigue: -2, wear: 0, morale: 5 },
-      description: "Живой разговор снимает часть напряжения и возвращает опору.",
+      description: "Немного выйти из бойцовского круга и вспомнить, что жизнь шире следующего раунда.",
       relationEffects: [
-        { role: "friend", affinity: 6, respect: 1, trust: 4, tension: -3 }
+        { role: "friend", affinity: 6, respect: 1, trust: 4, tension: -3, note: "время с другом" }
       ]
     },
     {
@@ -59,10 +60,10 @@ var LIFE_DATA = {
       stress: -5,
       support: 6,
       delta: { fatigue: -1, wear: -1, morale: 4 },
-      description: "Неформальное время с командой собирает лагерь и держит тебя в круге.",
+      description: "Побыть среди своих: поговорить, посмеяться, обсудить бой и лагерь без официоза.",
       relationEffects: [
-        { role: "trainer", affinity: 2, respect: 3, trust: 2, tension: -1 },
-        { role: "sparring", affinity: 3, respect: 2, trust: 1, tension: -1 }
+        { role: "trainer", affinity: 2, respect: 3, trust: 2, tension: -1, note: "время с командой" },
+        { role: "sparring", affinity: 3, respect: 2, trust: 1, tension: -1, note: "время с командой" }
       ]
     },
     {
@@ -73,7 +74,7 @@ var LIFE_DATA = {
       stress: -7,
       support: 10,
       delta: { fatigue: -3, wear: -1, morale: 7 },
-      description: "Связь с близкими помогает держать голову на месте и не растворяться в рутине.",
+      description: "Вернуться к людям, которые помнят тебя не только по боям и слухам.",
       relationEffects: []
     },
     {
@@ -84,7 +85,7 @@ var LIFE_DATA = {
       stress: -4,
       support: -2,
       delta: { fatigue: -6, wear: -1, morale: 2 },
-      description: "Тихая неделя наедине с собой даёт телу отдохнуть, но не всегда кормит связь с людьми.",
+      description: "Тихая неделя для сна, режима и головы. Помогает телу, но не укрепляет связи.",
       relationEffects: []
     }
   ]

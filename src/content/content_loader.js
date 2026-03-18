@@ -38,6 +38,9 @@ var ContentLoader = (function () {
     var fightOfferTemplate;
     var housingOption;
     var socialAction;
+    var developmentStyle;
+    var trainingFocus;
+    var perk;
     var contextEvents = [];
     if (cache) {
       return cache;
@@ -62,6 +65,14 @@ var ContentLoader = (function () {
       housingOptionsById: {},
       socialActions: clone((typeof LIFE_DATA !== "undefined" && LIFE_DATA.socialActions) || []),
       socialActionsById: {},
+      developmentStyles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.styles) || []),
+      developmentStylesById: {},
+      trainingFocuses: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainingFocuses) || []),
+      trainingFocusesById: {},
+      developmentPerks: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.perks) || []),
+      developmentPerksById: {},
+      trainerDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainerProfiles) || {}),
+      gymDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.gymProfiles) || {}),
       contextEventTriggerChance: typeof EVENT_DATA !== "undefined" && typeof EVENT_DATA.triggerChance === "number" ? EVENT_DATA.triggerChance : 0,
       contextEvents: []
     };
@@ -107,6 +118,18 @@ var ContentLoader = (function () {
     for (i = 0; i < cache.socialActions.length; i += 1) {
       socialAction = cache.socialActions[i];
       cache.socialActionsById[socialAction.id] = socialAction;
+    }
+    for (i = 0; i < cache.developmentStyles.length; i += 1) {
+      developmentStyle = cache.developmentStyles[i];
+      cache.developmentStylesById[developmentStyle.id] = developmentStyle;
+    }
+    for (i = 0; i < cache.trainingFocuses.length; i += 1) {
+      trainingFocus = cache.trainingFocuses[i];
+      cache.trainingFocusesById[trainingFocus.id] = trainingFocus;
+    }
+    for (i = 0; i < cache.developmentPerks.length; i += 1) {
+      perk = cache.developmentPerks[i];
+      cache.developmentPerksById[perk.id] = perk;
     }
     return cache;
   }
@@ -156,14 +179,8 @@ var ContentLoader = (function () {
     return choice(country.arenas);
   }
 
-  function getOpponentTypeLabels() {
-    var list = ensureCache().opponentTypes;
-    var values = [];
-    var i;
-    for (i = 0; i < list.length; i += 1) {
-      values.push(list[i].label);
-    }
-    return values;
+  function listOpponentTypes() {
+    return ensureCache().opponentTypes;
   }
 
   function getOpponentTier(tierId) {
@@ -238,6 +255,38 @@ var ContentLoader = (function () {
     return ensureCache().npcRolesById[roleId] || null;
   }
 
+  function listDevelopmentStyles() {
+    return ensureCache().developmentStyles;
+  }
+
+  function getDevelopmentStyle(styleId) {
+    return ensureCache().developmentStylesById[styleId] || null;
+  }
+
+  function listTrainingFocuses() {
+    return ensureCache().trainingFocuses;
+  }
+
+  function getTrainingFocus(focusId) {
+    return ensureCache().trainingFocusesById[focusId] || null;
+  }
+
+  function listDevelopmentPerks() {
+    return ensureCache().developmentPerks;
+  }
+
+  function getDevelopmentPerk(perkId) {
+    return ensureCache().developmentPerksById[perkId] || null;
+  }
+
+  function getTrainerDevelopmentProfile(trainerTypeId) {
+    return ensureCache().trainerDevelopmentProfiles[trainerTypeId] || null;
+  }
+
+  function getGymDevelopmentProfile(gymId) {
+    return ensureCache().gymDevelopmentProfiles[gymId] || null;
+  }
+
   return {
     listCountries: listCountries,
     getCountry: getCountry,
@@ -246,7 +295,7 @@ var ContentLoader = (function () {
     getCountryEffects: getCountryEffects,
     getCountryArenas: getCountryArenas,
     getRandomArena: getRandomArena,
-    getOpponentTypeLabels: getOpponentTypeLabels,
+    listOpponentTypes: listOpponentTypes,
     getOpponentTier: getOpponentTier,
     listGyms: listGyms,
     getGym: getGym,
@@ -263,6 +312,14 @@ var ContentLoader = (function () {
     getSocialAction: getSocialAction,
     listNpcRoles: listNpcRoles,
     getNpcRole: getNpcRole,
+    listDevelopmentStyles: listDevelopmentStyles,
+    getDevelopmentStyle: getDevelopmentStyle,
+    listTrainingFocuses: listTrainingFocuses,
+    getTrainingFocus: getTrainingFocus,
+    listDevelopmentPerks: listDevelopmentPerks,
+    getDevelopmentPerk: getDevelopmentPerk,
+    getTrainerDevelopmentProfile: getTrainerDevelopmentProfile,
+    getGymDevelopmentProfile: getGymDevelopmentProfile,
     getContextEventTriggerChance: getContextEventTriggerChance,
     getContextEvents: getContextEvents
   };

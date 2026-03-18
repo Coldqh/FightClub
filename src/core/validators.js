@@ -2,6 +2,7 @@ function validateState(gameState) {
   var errors = [];
   var stats;
   var conditions;
+  var development;
   var eventState;
   var requiredSections = ["meta", "player", "career", "world", "battle", "ui", "feed"];
   var i;
@@ -9,7 +10,7 @@ function validateState(gameState) {
   if (!gameState || typeof gameState !== "object") {
     return {
       valid: false,
-      errors: ["GameState отсутствует или не является объектом."]
+      errors: ["GameState отсутствует или имеет неверный тип."]
     };
   }
 
@@ -65,6 +66,30 @@ function validateState(gameState) {
     }
     if (typeof gameState.player.life.support !== "number") {
       errors.push("player.life.support должен быть числом.");
+    }
+  }
+
+  if (!gameState.player || !gameState.player.development) {
+    errors.push("player.development отсутствует.");
+  } else {
+    development = gameState.player.development;
+    if (typeof development.focusId !== "string") {
+      errors.push("player.development.focusId должен быть строкой.");
+    }
+    if (typeof development.totalXp !== "number") {
+      errors.push("player.development.totalXp должен быть числом.");
+    }
+    if (typeof development.perkPoints !== "number") {
+      errors.push("player.development.perkPoints должен быть числом.");
+    }
+    if (!development.focusProgress || typeof development.focusProgress !== "object") {
+      errors.push("player.development.focusProgress должен быть объектом.");
+    }
+    if (!development.styleProgress || typeof development.styleProgress !== "object") {
+      errors.push("player.development.styleProgress должен быть объектом.");
+    }
+    if (!(development.activePerks instanceof Array)) {
+      errors.push("player.development.activePerks должен быть массивом.");
     }
   }
 
