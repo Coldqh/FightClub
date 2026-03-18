@@ -1,7 +1,7 @@
 ﻿<html>
 <head>
   <title>Fight Simulator</title>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=9" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -70,6 +70,57 @@
       margin-bottom: 0;
       background: #fff4f6;
       color: #8e2039;
+    }
+
+    .debug-dock {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .debug-toggle {
+      min-width: 72px;
+      min-height: 46px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      background: rgba(8, 12, 18, 0.96);
+      color: #f8cf76;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .debug-panel {
+      width: 240px;
+      padding: 12px 14px;
+      border: 1px solid rgba(248, 207, 118, 0.24);
+      border-radius: 16px;
+      background: rgba(8, 12, 18, 0.96);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+      color: #f5f8ff;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .debug-panel strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #f8cf76;
+      font-size: 15px;
+    }
+
+    .debug-row {
+      margin-bottom: 6px;
+    }
+
+    .debug-row:last-child {
+      margin-bottom: 0;
     }
 
     .topbar,
@@ -816,52 +867,62 @@
   </style>
 
   <script type="text/javascript" src="country_data.js"></script>
+  <script type="text/javascript" src="src/content/content_data.js"></script>
+  <script type="text/javascript" src="src/content/content_loader.js"></script>
+  <script type="text/javascript" src="src/core/rng_manager.js"></script>
+  <script type="text/javascript" src="src/core/save_manager.js"></script>
+  <script type="text/javascript" src="src/core/state_factory.js"></script>
+  <script type="text/javascript" src="src/core/validators.js"></script>
+  <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var DATA = {
-      statLabels: {
-        str: "Сила",
-        tec: "Техника",
-        spd: "Скорость",
-        end: "Выносливость",
-        vit: "Здоровье"
-      },
-      statDescriptions: {
-        str: "Увеличивает множитель урона.",
-        tec: "Поднимает точность и шанс крита.",
-        spd: "Даёт уклон и усиливает контратаку.",
-        end: "Повышает максимум стамины.",
-        vit: "Повышает максимум здоровья."
-      }
-    };
-
-    var APP_VERSION = "2026.03.18.2";
+    var APP_VERSION = "2026.03.18.6";
     var SAVE_KEY = "street_boxer_save_v1";
+    var DEBUG_MODE = false;
 
-    var state = {
-      screen: "menu",
-      panel: "home",
-      create: null,
-      fighter: null,
-      opponents: [],
-      fight: null,
-      log: [],
-      endingReason: "",
-      savedPreview: null,
-      updateAvailable: false,
-      remoteVersion: ""
-    };
-
-    function storageRef() {
-      try {
-        if (window.localStorage) {
-          return window.localStorage;
-        }
-      } catch (error) {}
-      return null;
-    }
+    var state = createLegacyRuntimeState({
+      appVersion: APP_VERSION,
+      debugMode: DEBUG_MODE
+    });
 
     function buildSavePreview(sourceState) {
-      return sourceState && sourceState.fighter ? true : null;
+      var gameState;
+      var name;
+      var week;
+      if (!sourceState) {
+        return null;
+      }
+      gameState = sourceState.game ? sourceState.game : buildGameStateFromLegacySnapshot(sourceState, {
+        appVersion: APP_VERSION,
+        debugMode: DEBUG_MODE
+      });
+      name = gameState && gameState.player && gameState.player.profile ? gameState.player.profile.name : "";
+      if (!name) {
+        return null;
+      }
+      week = gameState && gameState.career ? gameState.career.week : 1;
+      return {
+        hasSave: true,
+        name: name,
+        week: week
+      };
+    }
+
+    function syncGameStateFromRuntime() {
+      state.game = buildGameStateFromRuntime(state, {
+        appVersion: APP_VERSION,
+        debugMode: !!(state.debug && state.debug.enabled)
+      });
+      return state.game;
+    }
+
+    function syncRuntimeStateFromGame(gameState) {
+      return applyGameStateToRuntime(state, normalizeGameState(gameState, {
+        appVersion: APP_VERSION,
+        debugMode: DEBUG_MODE
+      }), {
+        appVersion: APP_VERSION,
+        debugMode: DEBUG_MODE
+      });
     }
 
     function supportsRemoteUpdateCheck() {
@@ -903,8 +964,48 @@
           "<div class='panel update-banner'>" +
             "<strong>Доступно обновление</strong>" +
             "<p>На сайте уже лежит новая версия. Прогресс текущего бойца сохранится, если нажать кнопку ниже.</p>" +
-            "<button class='button' onclick='applyAppUpdate()'>Обновить приложение</button>" +
+          "<button class='button' onclick='applyAppUpdate()'>Обновить приложение</button>" +
           "</div>" +
+        "</div>";
+    }
+
+    function debugInfo() {
+      syncGameStateFromRuntime();
+      return {
+        week: state.fighter ? state.fighter.week : "-",
+        seed: RNG.describe(state.rng),
+        saveVersion: state.game && state.game.meta ? state.game.meta.saveVersion : SAVE_VERSION,
+        screen: state.screen,
+        panel: state.panel
+      };
+    }
+
+    function toggleDebugPanel() {
+      if (!state.debug || !state.debug.enabled) {
+        return;
+      }
+      state.debug.open = !state.debug.open;
+      render();
+    }
+
+    function renderDebugPanel() {
+      var info;
+      if (!state.debug || !state.debug.enabled) {
+        return "";
+      }
+      info = debugInfo();
+      return "" +
+        "<div class='debug-dock'>" +
+          (state.debug.open ? (
+            "<div class='debug-panel'>" +
+              "<strong>Debug</strong>" +
+              "<div class='debug-row'>Неделя: " + info.week + "</div>" +
+              "<div class='debug-row'>Seed: " + info.seed + "</div>" +
+              "<div class='debug-row'>Save version: " + info.saveVersion + "</div>" +
+              "<div class='debug-row'>Экран: " + info.screen + " / " + info.panel + "</div>" +
+            "</div>"
+          ) : "") +
+          "<button class='debug-toggle' onclick='toggleDebugPanel()'>" + (state.debug.open ? "Hide" : "Debug") + "</button>" +
         "</div>";
     }
 
@@ -975,6 +1076,7 @@
     }
 
     function buildSaveSnapshot() {
+      var gameState;
       var sanitizedFight;
       if (!state.fighter) {
         return null;
@@ -983,54 +1085,79 @@
       if (state.fight && !sanitizedFight) {
         return null;
       }
+      gameState = syncGameStateFromRuntime();
+      gameState.battle.current = sanitizedFight;
+      gameState.meta.appVersion = APP_VERSION;
+      gameState.meta.saveVersion = SAVE_VERSION;
+      gameState.meta.rng = RNG.cloneState(state.rng);
+      gameState.ui.savedPreview = buildSavePreview({ game: gameState });
       return {
-        version: 1,
-        screen: state.screen,
-        panel: state.panel,
-        create: state.create,
-        fighter: state.fighter,
-        opponents: state.opponents,
-        fight: sanitizedFight,
-        log: state.log,
-        endingReason: state.endingReason
+        version: SAVE_VERSION,
+        saveVersion: SAVE_VERSION,
+        appVersion: APP_VERSION,
+        game: clonePlainData(gameState)
+      };
+    }
+
+    function migrateSave(saveData) {
+      var migrated;
+      var validation;
+      if (!saveData) {
+        return null;
+      }
+      if (saveData.game) {
+        migrated = normalizeGameState(saveData.game, {
+          appVersion: saveData.appVersion || APP_VERSION,
+          debugMode: DEBUG_MODE
+        });
+      } else {
+        migrated = buildGameStateFromLegacySnapshot(saveData, {
+          appVersion: saveData.appVersion || APP_VERSION,
+          debugMode: DEBUG_MODE
+        });
+      }
+      if (saveData.rng && (!migrated.meta.rng || migrated.meta.rng.mode !== "seeded")) {
+        migrated.meta.rng = RNG.cloneState(saveData.rng);
+      }
+      migrated.meta.appVersion = saveData.appVersion || APP_VERSION;
+      migrated.meta.saveVersion = SAVE_VERSION;
+      migrated.ui.savedPreview = buildSavePreview({ game: migrated });
+      validation = validateState(migrated);
+      if (!validation.valid) {
+        migrated = normalizeGameState(migrated, {
+          appVersion: migrated.meta.appVersion,
+          debugMode: DEBUG_MODE
+        });
+        migrated.ui.savedPreview = buildSavePreview({ game: migrated });
+      }
+      return {
+        version: SAVE_VERSION,
+        saveVersion: SAVE_VERSION,
+        appVersion: migrated.meta.appVersion,
+        game: migrated
       };
     }
 
     function saveGameState() {
-      var storage = storageRef();
       var snapshot;
-      if (!storage) {
-        return false;
-      }
       snapshot = buildSaveSnapshot();
       if (!snapshot) {
         return false;
       }
-      try {
-        storage.setItem(SAVE_KEY, JSON.stringify(snapshot));
-        state.savedPreview = buildSavePreview(snapshot);
-        return true;
-      } catch (error) {
-        return false;
-      }
+      state.savedPreview = buildSavePreview(snapshot);
+      return SaveManager.save(SAVE_KEY, snapshot);
     }
 
     function loadSavedSnapshot() {
-      var storage = storageRef();
-      var raw;
-      if (!storage) {
-        return null;
-      }
-      try {
-        raw = storage.getItem(SAVE_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch (error) {
-        return null;
-      }
+      return SaveManager.load(SAVE_KEY, migrateSave);
     }
 
     function refreshSavedPreview() {
-      state.savedPreview = buildSavePreview(loadSavedSnapshot());
+      var saved = loadSavedSnapshot();
+      state.savedPreview = buildSavePreview(saved);
+      if (state.game && state.game.ui) {
+        state.game.ui.savedPreview = state.savedPreview;
+      }
     }
 
     function normalizeLoadedFight(fight) {
@@ -1052,20 +1179,17 @@
 
     function continueSavedGame() {
       var saved = loadSavedSnapshot();
-      if (!saved || !saved.fighter) {
+      var validation;
+      if (!saved || !saved.game) {
         refreshSavedPreview();
         render();
         return;
       }
+      validation = validateState(saved.game);
       clearFightTimers();
-      state.screen = saved.screen === "end" ? "end" : "game";
-      state.panel = saved.panel || "home";
-      state.create = saved.create || null;
-      state.fighter = saved.fighter;
-      state.opponents = saved.opponents || [];
-      state.fight = normalizeLoadedFight(saved.fight);
-      state.log = saved.log || [];
-      state.endingReason = saved.endingReason || "";
+      syncRuntimeStateFromGame(saved.game);
+      state.screen = state.screen === "end" ? "end" : "game";
+      state.fight = normalizeLoadedFight(state.fight);
       state.savedPreview = buildSavePreview(saved);
       if (!state.fight && (state.panel === "fightLive" || state.panel === "fightBreak" || state.panel === "fightResult" || state.panel === "fightSelect")) {
         state.panel = "home";
@@ -1074,20 +1198,10 @@
       if (state.screen === "game" && !state.panel) {
         state.panel = "home";
       }
-      render();
-    }
-
-    function openMainMenu() {
-      clearFightTimers();
-      state.screen = "menu";
-      state.panel = "home";
-      state.create = null;
-      state.fighter = null;
-      state.opponents = [];
-      state.fight = null;
-      state.endingReason = "";
-      state.log = [];
-      refreshSavedPreview();
+      if (!validation.valid) {
+        state.log.unshift({ text: "Сохранение было частично восстановлено через адаптер совместимости.", tone: "warn" });
+      }
+      syncGameStateFromRuntime();
       render();
     }
 
@@ -1095,20 +1209,34 @@
       return Math.max(low, Math.min(high, value));
     }
 
+    function ensureRngState() {
+      if (!state.rng) {
+        state.rng = RNG.createNativeState();
+      } else if (state.rng.mode === "seeded") {
+        state.rng = {
+          mode: "seeded",
+          seed: RNG.createSeededState(state.rng.seed, state.rng.label).seed,
+          value: typeof state.rng.value === "number" ? state.rng.value : RNG.createSeededState(state.rng.seed, state.rng.label).value,
+          label: state.rng.label || String(state.rng.seed)
+        };
+      }
+      return state.rng;
+    }
+
     function rand(min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
+      return RNG.int(ensureRngState(), min, max);
     }
 
     function chance(percent) {
-      return rand(1, 100) <= percent;
+      return RNG.chance(ensureRngState(), percent);
     }
 
     function choice(list) {
-      return list[rand(0, list.length - 1)];
+      return RNG.choice(ensureRngState(), list);
     }
 
     function getCountryPool(countryKey) {
-      return COUNTRY_DATA.pools[countryKey];
+      return ContentLoader.getCountryPool(countryKey);
     }
 
     function flightCost(fromKey, toKey) {
@@ -1123,14 +1251,28 @@
     }
 
     function currentTravelBonus(fighter) {
-      if (fighter.currentCountry === fighter.homeCountry) {
-        return { money: 1.2, fame: 1.0 };
+      var effects = ContentLoader.getCountryEffects(fighter.currentCountry);
+      if (!effects) {
+        return { money: 1.0, fame: 1.0 };
       }
-      return { money: 1.0, fame: 1.2 };
+      if (fighter.currentCountry === fighter.homeCountry) {
+        return {
+          money: effects.homeMoneyMultiplier,
+          fame: effects.homeFameMultiplier
+        };
+      }
+      return {
+        money: 1.0,
+        fame: effects.abroadFameMultiplier
+      };
     }
 
     function baseStats() {
       return { str: 1, tec: 1, spd: 1, end: 1, vit: 1 };
+    }
+
+    function listCountries() {
+      return ContentLoader.listCountries();
     }
 
     function applyBounds(fighter) {
@@ -1164,39 +1306,6 @@
     var ACTION_ANIMATION_MS = 320;
     var COUNT_SHAKE_MS = 260;
     var CRIT_FLASH_MS = 500;
-    var FIGHT_ACTIONS = {
-      move_up: { type: "move", label: "Шаг вверх", dx: 0, dy: -1, stamina: 5 },
-      move_left: { type: "move", label: "Шаг влево", dx: -1, dy: 0, stamina: 5 },
-      move_right: { type: "move", label: "Шаг вправо", dx: 1, dy: 0, stamina: 5 },
-      move_down: { type: "move", label: "Шаг вниз", dx: 0, dy: 1, stamina: 5 },
-      jab: { type: "attack", label: "Джеб", reach: "line", hitBonus: 10, damage: 8, stamina: 7 },
-      cross: { type: "attack", label: "Кросс", reach: "line", hitBonus: 0, damage: 12, stamina: 11 },
-      body: { type: "attack", label: "Удар в корпус", reach: "line", hitBonus: 5, damage: 10, stamina: 10 },
-      hook: { type: "attack", label: "Хук", reach: "close", hitBonus: -6, damage: 16, stamina: 15 },
-      uppercut: { type: "attack", label: "Апперкот", reach: "close", hitBonus: -12, damage: 21, stamina: 18 },
-      block: { type: "defense", label: "Блок", staminaGain: 30 },
-      counter: { type: "defense", label: "Контратака", staminaGain: 15 }
-    };
-
-    var TRAINING_OPTIONS = {
-      light: { label: "Лёгкая", points: 10, health: -6, stress: 6 },
-      medium: { label: "Средняя", points: 20, health: -12, stress: 12 },
-      hard: { label: "Жёсткая", points: 30, health: -18, stress: 18 }
-    };
-
-    var RECOVERY_OPTIONS = {
-      home: { label: "Отлежаться дома", cost: 0, health: 18, stress: -10 },
-      doctor: { label: "Спортивный врач", cost: 60, health: 30, stress: -6 },
-      therapy: { label: "Терапия и массаж", cost: 35, health: 20, stress: -16 }
-    };
-
-    var WEEKLY_EXPENSE = 30;
-    var LEGAL_JOB = {
-      label: "Работа в зале",
-      money: 90,
-      health: -15,
-      stress: 10
-    };
 
     function buildFightState(stats, condition, position) {
       var maxHp = 100 + stats.vit * 10;
@@ -1359,28 +1468,40 @@
 
     function weeklyEvent() {
       var fighter = state.fighter;
+      var available = [];
+      var totalWeight = 0;
+      var eventItem;
       var roll;
-      if (!chance(35)) {
+      var i;
+      var result;
+      if (!chance(ContentLoader.getWeeklyEventTriggerChance())) {
         return;
       }
-      roll = choice(["cash", "pressure", "injury", "fans", "coach"]);
-      if (roll === "cash") {
-        fighter.money += rand(20, 45);
-        pushLog("Случайный калым помог пережить неделю спокойнее.", "good");
-      } else if (roll === "pressure") {
-        fighter.stress += 8;
-        pushLog("Напряжение вокруг боев растет. Голова снова гудит.", "bad");
-      } else if (roll === "injury") {
-        fighter.health -= 8;
-        fighter.stress += 5;
-        pushLog("Старая боль напоминает о себе и тормозит подготовку.", "bad");
-      } else if (roll === "fans") {
-        fighter.fame += 5;
-        pushLog("Район снова говорит о тебе. Известность подросла.", "good");
-      } else {
-        fighter.skillPoints += 5;
-        pushLog("Тренер докрутил мелочи. +5 очков навыков.", "good");
+      for (i = 0; i < ContentLoader.getWeeklyEvents().length; i += 1) {
+        eventItem = ContentLoader.getWeeklyEvents()[i];
+        if (!eventItem.condition || eventItem.condition(fighter, state)) {
+          totalWeight += eventItem.weight || 1;
+          available.push({
+            item: eventItem,
+            total: totalWeight
+          });
+        }
       }
+      if (!available.length) {
+        return;
+      }
+      roll = rand(1, totalWeight);
+      for (i = 0; i < available.length; i += 1) {
+        if (roll <= available[i].total) {
+          eventItem = available[i].item;
+          break;
+        }
+      }
+      if (!eventItem) {
+        return;
+      }
+      result = eventItem.effect ? (eventItem.effect(fighter, state) || {}) : {};
+      pushLog(typeof eventItem.text === "function" ? eventItem.text(result, fighter, state) : eventItem.text, eventItem.tone || "");
       applyBounds(fighter);
     }
 
@@ -1493,55 +1614,26 @@
       spendWeek();
     }
 
-    var COUNTRY_DISPLAY = {
-      mexico: { name: "Мексика", city: "Мехико" },
-      usa: { name: "США", city: "Лас-Вегас" },
-      russia: { name: "Россия", city: "Москва" },
-      cuba: { name: "Куба", city: "Гавана" },
-      japan: { name: "Япония", city: "Токио" },
-      china: { name: "Китай", city: "Шанхай" },
-      uk: { name: "Великобритания", city: "Лондон" },
-      philippines: { name: "Филиппины", city: "Манила" }
-    };
-
-    var RUSSIA_IDENTITY = {
-      first: ["Иван", "Дмитрий", "Сергей", "Алексей", "Михаил", "Виктор", "Николай", "Андрей", "Павел", "Юрий", "Константин", "Артем", "Денис", "Егор", "Максим", "Роман", "Кирилл", "Олег", "Тимур", "Илья"],
-      last: ["Иванов", "Петров", "Сидоров", "Смирнов", "Кузнецов", "Попов", "Васильев", "Федоров", "Волков", "Соловьев", "Морозов", "Лебедев", "Козлов", "Новиков", "Павлов", "Соколов", "Виноградов", "Макаров", "Орлов", "Егоров"],
-      nick: ["Северный Волк", "Железный Молот", "Дикий Волк", "Ледяной Шторм", "Стальной Кулак", "Ночной Ворон", "Грозный Таран", "Красный Град", "Русский Медведь", "Сибирский Лис"]
-    };
-
     function getCountryInfo(countryKey) {
-      var i;
-      var country;
-      var display;
-      for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
-        country = COUNTRY_DATA.countries[i];
-        if (country.key === countryKey) {
-          display = COUNTRY_DISPLAY[countryKey];
-          if (display) {
-            country.name = display.name;
-            country.city = display.city;
-          }
-          return country;
-        }
-      }
-      return null;
+      return ContentLoader.getCountry(countryKey);
     }
 
     function makeIdentity(countryKey) {
       var identity;
-      if (countryKey === "russia") {
+      var country = getCountryInfo(countryKey);
+      var override = country && country.identityOverride;
+      if (override) {
         identity = {
-          firstName: choice(RUSSIA_IDENTITY.first),
-          lastName: choice(RUSSIA_IDENTITY.last),
-          nickname: choice(RUSSIA_IDENTITY.nick)
+          firstName: choice(override.first),
+          lastName: choice(override.last),
+          nickname: choice(override.nick)
         };
         identity.fullName = identity.firstName + ' "' + identity.nickname + '" ' + identity.lastName;
         return identity;
       }
       return window.makeIdentityBase ? window.makeIdentityBase(countryKey) : (function () {
         var pool = getCountryPool(countryKey);
-        var seed = COUNTRY_DATA.seeds[countryKey];
+        var seed = ContentLoader.getCountrySeedConfig(countryKey);
         var surnameParts;
         var firstName;
         var lastName;
@@ -1577,9 +1669,11 @@
     function generateOpponent(tier) {
       var fighter = state.fighter;
       var country = getCountryInfo(fighter.currentCountry);
+      var arena = ContentLoader.getRandomArena(fighter.currentCountry);
       var identity = makeIdentity(fighter.currentCountry);
       var bonus = currentTravelBonus(fighter);
-      var tierBonus = tier === "safe" ? -1 : (tier === "even" ? 1 : 3);
+      var tierData = ContentLoader.getOpponentTier(tier);
+      var tierBonus = tierData.tierBonus;
       var base = clamp(Math.round(combatRating(fighter)) + tierBonus + rand(-1, 1), 1, 40);
       var stats = {
         str: clamp(base + rand(-1, 2), 1, 45),
@@ -1594,14 +1688,14 @@
         nickname: identity.nickname,
         fullName: identity.fullName,
         countryKey: fighter.currentCountry,
-        profile: choice(["Давит по центру", "Любит ловить на блоке", "Работает вторым номером", "Сушит темп и колет джебом", "Лезет в корпус"]),
+        profile: choice(ContentLoader.getOpponentTypeLabels()),
         stats: stats,
-        purse: Math.round(((tier === "safe" ? 65 : (tier === "even" ? 95 : 150)) + base * 8 + rand(0, 24)) * bonus.money),
-        fameReward: Math.round(((tier === "safe" ? 6 : (tier === "even" ? 11 : 17)) + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
+        purse: Math.round((tierData.purseBase + base * 8 + rand(0, 24)) * bonus.money),
+        fameReward: Math.round((tierData.fameBase + Math.max(0, base - 5) * 2 + rand(0, 4)) * bonus.fame),
         condition: rand(72, 100),
-        rounds: tier === "danger" ? choice([6, 7]) : (tier === "even" ? choice([5, 6]) : choice([4, 5])),
-        danger: tier === "safe" ? "Ниже по риску" : (tier === "even" ? "Ровный бой" : "Очень опасен"),
-        venue: country ? country.city : ""
+        rounds: choice(tierData.rounds),
+        danger: tierData.danger,
+        venue: arena ? arena.name : (country ? country.venueName : "")
       };
     }
 
@@ -1897,17 +1991,11 @@
     }
 
     function renderNavigationTabs() {
-      var tabs = [
-        { key: "home", label: "Основное" },
-        { key: "character", label: "Персонаж" },
-        { key: "skills", label: "Навыки" },
-        { key: "careerLog", label: "Лента" }
-      ];
       var html = [];
       var i;
       html.push("<div class='panel'><div class='nav-row'>");
-      for (i = 0; i < tabs.length; i += 1) {
-        html.push("<button class='" + (state.panel === tabs[i].key ? "button" : "ghost") + "' onclick='openPanel(\"" + tabs[i].key + "\")'>" + tabs[i].label + "</button>");
+      for (i = 0; i < NAV_TABS.length; i += 1) {
+        html.push("<button class='" + (state.panel === NAV_TABS[i].key ? "button" : "ghost") + "' onclick='openPanel(\"" + NAV_TABS[i].key + "\")'>" + NAV_TABS[i].label + "</button>");
       }
       html.push("</div></div>");
       return html.join("");
@@ -1995,6 +2083,7 @@
 
     function renderCreate() {
       var html = [];
+      var countries = listCountries();
       var i;
       var country;
       var identityText = state.create.identity ? state.create.identity.fullName : "Сначала выбери стартовую страну";
@@ -2004,11 +2093,11 @@
       html.push("<div class='title'>Собери бойца для подпольной карьеры</div>");
       html.push("<div class='subtitle'>Теперь карьера начинается с выбора стартовой точки. Имя, фамилия и кличка зависят от страны, а позже ты сможешь путешествовать и охотиться за более крупными гонорарами на чужой территории.</div>");
       html.push("<div><h2 class='panel-title'>Стартовая точка</h2><div class='create-grid'>");
-      for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
-        country = COUNTRY_DATA.countries[i];
-        html.push("<div class='create-card" + (state.create.country === country.key ? " selected" : "") + "'>");
-        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ".</p>");
-        html.push("<button class='button' onclick='setCreateCountry(\"" + country.key + "\")'>" + (state.create.country === country.key ? "Выбрана" : "Выбрать") + "</button>");
+      for (i = 0; i < countries.length; i += 1) {
+        country = countries[i];
+        html.push("<div class='create-card" + (state.create.country === country.id ? " selected" : "") + "'>");
+        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ".</p><p>" + country.effectSummary + "</p><p>" + country.schoolStyle + "</p>");
+        html.push("<button class='button' onclick='setCreateCountry(\"" + country.id + "\")'>" + (state.create.country === country.id ? "Выбрана" : "Выбрать") + "</button>");
         html.push("</div>");
       }
       html.push("</div></div>");
@@ -2037,10 +2126,13 @@
       html.push("<div class='chip'>Дом " + (home ? home.name : "-") + "</div>");
       html.push("<div class='chip'>Сейчас " + (current ? current.name : "-") + "</div>");
       html.push("</div>");
+      if (current) {
+        html.push("<div class='muted'>Школа: " + current.schoolStyle + " Жизнь в городе: ~$" + current.baseLivingCost + "/нед. Арена: " + current.city + ".</div>");
+      }
       if (current && home && current.key !== home.key) {
         html.push("<div class='record-row'><div class='chip gold'>Чужая территория</div><div class='chip'>Деньги x" + bonus.money.toFixed(2) + "</div><div class='chip'>Известность x" + bonus.fame.toFixed(2) + "</div></div>");
       } else if (current) {
-        html.push("<div class='record-row'><div class='chip'>Домашняя арена: " + current.city + "</div><div class='chip gold'>Деньги x1.20</div><div class='chip'>Известность x1.00</div></div>");
+        html.push("<div class='record-row'><div class='chip'>Домашняя арена: " + current.city + "</div><div class='chip gold'>Деньги x" + bonus.money.toFixed(2) + "</div><div class='chip'>Известность x" + bonus.fame.toFixed(2) + "</div></div>");
       }
       html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
       html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
@@ -2065,17 +2157,18 @@
     function renderTravelPanel() {
       var html = [];
       var fighter = state.fighter;
+      var countries = listCountries();
       var i;
       var country;
       var cost;
       html.push("<div class='panel'><h2 class='panel-title'>Путешествие</h2><div class='card-grid' style='margin-top:16px'>");
-      for (i = 0; i < COUNTRY_DATA.countries.length; i += 1) {
-        country = COUNTRY_DATA.countries[i];
-        if (country.key === fighter.currentCountry) {
+      for (i = 0; i < countries.length; i += 1) {
+        country = countries[i];
+        if (country.id === fighter.currentCountry) {
           continue;
         }
-        cost = flightCost(fighter.currentCountry, country.key);
-        html.push("<div class='card'><div class='meta'>Перелет $" + cost + "</div><h3>" + country.name + "</h3><div class='chip'>Город: " + country.city + "</div><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.key + "\")'>Лететь</button></div>");
+        cost = flightCost(fighter.currentCountry, country.id);
+        html.push("<div class='card'><div class='meta'>Перелет $" + cost + "</div><h3>" + country.name + "</h3><p>" + country.schoolStyle + "</p><div class='chip'>Город: " + country.city + "</div><div class='chip'>Жизнь ~$" + country.baseLivingCost + "/нед</div><button class='button' " + (fighter.money < cost ? "disabled='disabled'" : "") + " onclick='travelToCountry(\"" + country.id + "\")'>Лететь</button></div>");
       }
       html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
       return html.join("");
@@ -3103,9 +3196,40 @@
       } else {
         html = renderGame();
       }
-      app.innerHTML = renderUpdateBanner() + html;
+      app.innerHTML = renderUpdateBanner() + renderDebugPanel() + html;
       saveGameState();
     }
+
+    window.DEBUG = {
+      enable: function () {
+        state.debug.enabled = true;
+        state.debug.open = true;
+        render();
+      },
+      disable: function () {
+        state.debug.enabled = false;
+        state.debug.open = false;
+        render();
+      },
+      toggle: function () {
+        state.debug.enabled = !state.debug.enabled;
+        state.debug.open = state.debug.enabled;
+        render();
+      },
+      setSeed: function (seed) {
+        state.rng = RNG.createSeededState(seed, seed);
+        saveGameState();
+        render();
+      },
+      useNativeRandom: function () {
+        state.rng = RNG.createNativeState();
+        saveGameState();
+        render();
+      },
+      info: function () {
+        return debugInfo();
+      }
+    };
 
     window.onload = function () {
       refreshSavedPreview();

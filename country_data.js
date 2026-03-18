@@ -31,17 +31,6 @@ var COUNTRY_DATA = (function () {
     return values.slice(0, 200);
   }
 
-  var countries = [
-    { key: "mexico", name: "Мексика", city: "Мехико", awayMoneyBonus: 1.16, awayFameBonus: 1.22, x: 0, y: 1 },
-    { key: "usa", name: "США", city: "Лас-Вегас", awayMoneyBonus: 1.32, awayFameBonus: 1.28, x: 1, y: 1 },
-    { key: "russia", name: "Россия", city: "Москва", awayMoneyBonus: 1.14, awayFameBonus: 1.17, x: 6, y: 0 },
-    { key: "cuba", name: "Куба", city: "Гавана", awayMoneyBonus: 1.18, awayFameBonus: 1.24, x: 1, y: 2 },
-    { key: "japan", name: "Япония", city: "Токио", awayMoneyBonus: 1.28, awayFameBonus: 1.30, x: 9, y: 0 },
-    { key: "china", name: "Китай", city: "Шанхай", awayMoneyBonus: 1.24, awayFameBonus: 1.22, x: 8, y: 1 },
-    { key: "uk", name: "Великобритания", city: "Лондон", awayMoneyBonus: 1.26, awayFameBonus: 1.27, x: 4, y: 0 },
-    { key: "philippines", name: "Филиппины", city: "Манила", awayMoneyBonus: 1.22, awayFameBonus: 1.25, x: 9, y: 2 }
-  ];
-
   var seeds = {
     mexico: {
       firstJoin: "space",
@@ -134,14 +123,21 @@ var COUNTRY_DATA = (function () {
   };
 
   var pools = {};
+  var keys = [];
   var i;
-  var country;
+  var countryKey;
   var seed;
 
-  for (i = 0; i < countries.length; i += 1) {
-    country = countries[i];
-    seed = seeds[country.key];
-    pools[country.key] = {
+  for (countryKey in seeds) {
+    if (seeds.hasOwnProperty(countryKey)) {
+      keys.push(countryKey);
+    }
+  }
+
+  for (i = 0; i < keys.length; i += 1) {
+    countryKey = keys[i];
+    seed = seeds[countryKey];
+    pools[countryKey] = {
       firstNames: buildPool(seed.firstLeft, seed.firstRight, seed.firstJoin),
       lastNames: buildPool(seed.lastLeft, seed.lastRight, seed.lastJoin),
       nicknames: buildPool(seed.nickLeft, seed.nickRight, seed.nickJoin)
@@ -149,7 +145,6 @@ var COUNTRY_DATA = (function () {
   }
 
   return {
-    countries: countries,
     pools: pools,
     seeds: seeds
   };
