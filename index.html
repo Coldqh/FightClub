@@ -835,6 +835,7 @@
     }
 
     function resetCreate() {
+      clearFightStepTimeout();
       state.screen = "create";
       state.panel = "home";
       state.create = {
@@ -1424,6 +1425,8 @@
     function finalizeFight(result, method, lines) {
       var fight = state.fight;
       var extraLines = lines || [];
+      clearFightStepTimeout();
+      clearFightAnimation();
       fight.result = result;
       fight.method = method;
       fight.roundsCompleted = Math.max(fight.roundsCompleted, fight.round);
@@ -1441,6 +1444,7 @@
     }
 
     function closeFightResult() {
+      clearFightStepTimeout();
       state.fight = null;
       state.panel = "home";
       render();
@@ -1729,11 +1733,38 @@
       }
     }
 
+    function clearFightStepTimeout() {
+      if (state.fight && state.fight.pendingTimeout) {
+        window.clearTimeout(state.fight.pendingTimeout);
+        state.fight.pendingTimeout = null;
+      }
+    }
+
+    function scheduleFightStep(callbackName, delay) {
+      if (!state.fight) {
+        return;
+      }
+      clearFightStepTimeout();
+      state.fight.pendingTimeout = window.setTimeout(callbackName + "()", delay);
+    }
+
+    function consumeFightStepTimeout() {
+      if (state.fight) {
+        state.fight.pendingTimeout = null;
+      }
+    }
+
     function tokenClassFor(side) {
       var fight = state.fight;
       var tokenClass = "token " + (side === "player" ? "player" : "opponent");
       var animation;
-      if (!fight || !fight.animation) {
+      if (!fight) {
+        return tokenClass;
+      }
+      if (fight.knockdown && fight.knockdown.victimSide === side && fight.knockdown.count > 0 && fight.knockdown.count <= 10) {
+        tokenClass += " hit-react";
+      }
+      if (!fight.animation) {
         return tokenClass;
       }
       animation = fight.animation;
@@ -1768,22 +1799,46 @@
       return zone === "line";
     }
 
+    function knockdownRiseChance(fight, victimSide, count) {
+      var victim = fightStateBySide(fight, victimSide);
+      var victimStats = fightStatsBySide(fight, victimSide);
+      var overkill = fight.knockdown ? fight.knockdown.overkill : 0;
+      var riseChance = 8 + count * 9 + victimStats.heart * 4 + victimStats.endurance * 2;
+      riseChance -= overkill * 7;
+      riseChance -= victim.knockdowns * 14;
+      return clamp(riseChance, 4, 92);
+    }
+
     function resolveKnockdown(fight, victimSide) {
       var victim = fightStateBySide(fight, victimSide);
       var attackerSide = otherSide(victimSide);
-      var victimStats = fightStatsBySide(fight, victimSide);
       var victimName = fightNameBySide(fight, victimSide);
-      var riseChance = clamp(46 + victimStats.heart * 5 + victimStats.endurance * 2 - victim.knockdowns * 15, 8, 90);
+      var overkill = Math.max(0, 0 - victim.hp);
       awardFightPressure(fight, attackerSide, 12);
+      clearFightStepTimeout();
+      clearFightAnimation();
+      victim.hp = 0;
       fight.knockdown = {
         victimSide: victimSide,
+        victimName: victimName,
         text: "Нокдаун!",
         count: 0,
-        willRise: victim.knockdowns < 2 && chance(riseChance)
+        overkill: overkill
       };
+      pushFightLine(fight, victimName + " отправляется в нокдаун.");
       render();
-      window.setTimeout("advanceKnockdownSequence()", COUNT_STEP_MS);
+      scheduleFightStep("advanceKnockdownSequence", COUNT_STEP_MS);
       return true;
+    }
+
+    function startKnockdownRecovery() {
+      consumeFightStepTimeout();
+      if (!state.fight || !state.fight.knockdown) {
+        return;
+      }
+      state.fight.knockdown.text = "Встал";
+      render();
+      scheduleFightStep("finishKnockdownRecovery", COUNT_STEP_MS);
     }
 
     function finishKnockdownRecovery() {
@@ -1791,40 +1846,52 @@
       var knockdown;
       var victim;
       var victimStats;
-      var victimName;
+      consumeFightStepTimeout();
       if (!fight || !fight.knockdown) {
         return;
       }
       knockdown = fight.knockdown;
       victim = fightStateBySide(fight, knockdown.victimSide);
       victimStats = fightStatsBySide(fight, knockdown.victimSide);
-      victimName = fightNameBySide(fight, knockdown.victimSide);
       victim.knockdowns += 1;
-      victim.hp = 12 + victimStats.heart * 2;
+      victim.hp = Math.max(6, 12 + victimStats.heart * 2 - knockdown.count);
       victim.stamina = clamp(victim.stamina - 12, 0, 100);
       resetRingPositions(fight);
-      pushFightLine(fight, victimName + " поднимается после отсчета и бой продолжается.");
+      clearFightAnimation();
+      pushFightLine(fight, knockdown.victimName + " поднимается на счет " + knockdown.count + " и бой продолжается.");
       fight.knockdown = null;
       render();
-      window.setTimeout("completeFightTurn()", ACTION_DELAY_MS);
+      scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
+    }
+
+    function startKnockdownKnockout() {
+      consumeFightStepTimeout();
+      if (!state.fight || !state.fight.knockdown) {
+        return;
+      }
+      state.fight.knockdown.text = "Нокаут";
+      render();
+      scheduleFightStep("finishKnockdownKnockout", KO_TEXT_MS);
     }
 
     function finishKnockdownKnockout() {
       var fight = state.fight;
-      var victimName;
-      var victimSide;
+      var knockdown;
+      consumeFightStepTimeout();
       if (!fight || !fight.knockdown) {
         return;
       }
-      victimSide = fight.knockdown.victimSide;
-      victimName = fightNameBySide(fight, victimSide);
+      knockdown = fight.knockdown;
+      clearFightAnimation();
       fight.knockdown = null;
-      pushFightLine(fight, victimName + " больше не поднимается после отсчета.");
-      finalizeFight(victimSide === "player" ? "loss" : "win", "KO/TKO", []);
+      pushFightLine(fight, knockdown.victimName + " не поднимается к счету 10.");
+      finalizeFight(knockdown.victimSide === "player" ? "loss" : "win", "KO/TKO", []);
     }
 
     function advanceKnockdownSequence() {
       var fight = state.fight;
+      var riseChance;
+      consumeFightStepTimeout();
       if (!fight || !fight.knockdown) {
         return;
       }
@@ -1832,18 +1899,18 @@
         fight.knockdown.count += 1;
         fight.knockdown.text = String(fight.knockdown.count);
         render();
-        window.setTimeout("advanceKnockdownSequence()", COUNT_STEP_MS);
+        if (fight.knockdown.count >= 10) {
+          scheduleFightStep("startKnockdownKnockout", COUNT_STEP_MS);
+          return;
+        }
+        riseChance = knockdownRiseChance(fight, fight.knockdown.victimSide, fight.knockdown.count);
+        if (chance(riseChance)) {
+          scheduleFightStep("startKnockdownRecovery", COUNT_STEP_MS);
+          return;
+        }
+        scheduleFightStep("advanceKnockdownSequence", COUNT_STEP_MS);
         return;
       }
-      if (fight.knockdown.willRise) {
-        fight.knockdown.text = "Встал";
-        render();
-        window.setTimeout("finishKnockdownRecovery()", COUNT_STEP_MS);
-        return;
-      }
-      fight.knockdown.text = "Нокаут";
-      render();
-      window.setTimeout("finishKnockdownKnockout()", KO_TEXT_MS);
     }
 
     function strikeActor(fight, side, actionKey) {
@@ -2143,6 +2210,7 @@
 
     function startFight(index) {
       var opponent = state.opponents[index];
+      clearFightStepTimeout();
       state.fight = {
         opponent: opponent,
         round: 1,
@@ -2164,7 +2232,8 @@
         roundPoints: { player: 0, opponent: 0 },
         roundCards: [],
         breakSummary: null,
-        knockdown: null
+        knockdown: null,
+        pendingTimeout: null
       };
       state.panel = "fightLive";
       render();
@@ -2185,6 +2254,7 @@
       var opponentHeal;
       var playerStaminaGain;
       var opponentStaminaGain;
+      clearFightStepTimeout();
       if (delta >= 14) {
         opponentCard = 8;
       } else if (delta > 0) {
@@ -2230,6 +2300,7 @@
 
     function completeFightTurn() {
       var fight = state.fight;
+      consumeFightStepTimeout();
       if (!fight || fight.result || fight.knockdown) {
         return;
       }
@@ -2248,6 +2319,7 @@
 
     function startNextRound() {
       var fight = state.fight;
+      clearFightStepTimeout();
       if (!fight || fight.result) {
         return;
       }
@@ -2288,22 +2360,24 @@
     }
 
     function finishPlayerFightAction() {
+      consumeFightStepTimeout();
       if (!state.fight) {
         return;
       }
       applyFightAnimationResult();
-      if (!state.fight || state.fight.result) {
+      if (!state.fight || state.fight.result || state.fight.knockdown) {
         return;
       }
       runAiAfterPlayer();
     }
 
     function finishAiFightAction() {
+      consumeFightStepTimeout();
       if (!state.fight) {
         return;
       }
       applyFightAnimationResult();
-      if (!state.fight || state.fight.result) {
+      if (!state.fight || state.fight.result || state.fight.knockdown) {
         return;
       }
       completeFightTurn();
@@ -2313,7 +2387,8 @@
       var fight = state.fight;
       var aiActionKey;
       var strikeOutcome;
-      if (!fight || fight.result) {
+      consumeFightStepTimeout();
+      if (!fight || fight.result || fight.knockdown) {
         return;
       }
       if (fight.aiActionsLeft <= 0) {
@@ -2331,7 +2406,7 @@
         moveActor(fight, "opponent", aiActionKey);
         fight.aiActionsLeft = 0;
         render();
-        window.setTimeout("completeFightTurn()", ACTION_DELAY_MS);
+        scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
         return;
       }
       strikeOutcome = strikeActor(fight, "opponent", aiActionKey);
@@ -2340,7 +2415,7 @@
       if (strikeOutcome) {
         return;
       }
-      window.setTimeout("finishAiFightAction()", ACTION_DELAY_MS);
+      scheduleFightStep("finishAiFightAction", ACTION_DELAY_MS);
     }
 
     function fightAction(actionKey) {
@@ -2359,7 +2434,7 @@
       if (action.type === "move") {
         moveActor(fight, "player", actionKey);
         render();
-        window.setTimeout("runAiAfterPlayer()", ACTION_DELAY_MS);
+        scheduleFightStep("runAiAfterPlayer", ACTION_DELAY_MS);
         return;
       }
       strikeOutcome = strikeActor(fight, "player", actionKey);
@@ -2367,7 +2442,7 @@
       if (strikeOutcome) {
         return;
       }
-      window.setTimeout("finishPlayerFightAction()", ACTION_DELAY_MS);
+      scheduleFightStep("finishPlayerFightAction", ACTION_DELAY_MS);
     }
 
     function renderFightStatsPanel(fight) {
