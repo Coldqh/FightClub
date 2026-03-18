@@ -1,7 +1,7 @@
 ﻿<html>
 <head>
   <title>Fight Simulator</title>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=9" />
   <style>
 
@@ -289,6 +289,7 @@
       font-weight: 700;
       cursor: pointer;
       text-align: center;
+      white-space: normal;
     }
 
     .button {
@@ -491,6 +492,8 @@
     .battle-actions-row .ghost,
     .battle-actions-row .danger {
       width: 100%;
+      min-height: 98px;
+      padding: 12px 12px 10px 12px;
     }
 
     .battle-mode-row .button,
@@ -559,6 +562,37 @@
 
     .controls-stage .ring-board {
       margin-bottom: 12px;
+    }
+
+    .action-button-title {
+      display: block;
+      font-size: 20px;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .action-button-meta {
+      display: block;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .action-button-meta span {
+      display: inline-block;
+      margin: 0 8px 4px 0;
+    }
+
+    .action-blue {
+      color: #7fd0ff;
+    }
+
+    .action-red {
+      color: #ff8a80;
+    }
+
+    .action-yellow {
+      color: #ffe189;
     }
 
     .knockdown-banner {
@@ -1359,6 +1393,90 @@
       render();
     }
 
+    function previewAttackChain(actor, actionKey) {
+      return actor.lastAttackKey === actionKey ? actor.attackChain + 1 : 1;
+    }
+
+    function previewAttackModifiers(attacker, actionKey) {
+      var chainCount = previewAttackChain(attacker, actionKey);
+      var accuracyPenalty = 0;
+      var damageMultiplier = 1;
+      if (chainCount === 2) {
+        accuracyPenalty -= 10;
+        damageMultiplier *= 0.95;
+      } else if (chainCount >= 3) {
+        accuracyPenalty -= 15;
+        damageMultiplier *= 0.9;
+      }
+      if (staminaIsLow(attacker)) {
+        accuracyPenalty -= 10;
+        damageMultiplier *= 0.9;
+      }
+      return {
+        accuracyPenalty: accuracyPenalty,
+        damageMultiplier: damageMultiplier
+      };
+    }
+
+    function previewHitChance(fight, side, actionKey) {
+      var attacker = fightStateBySide(fight, side);
+      var defender = fightStateBySide(fight, otherSide(side));
+      var attackerStats = fightStatsBySide(fight, side);
+      var defenderStats = fightStatsBySide(fight, otherSide(side));
+      var action = FIGHT_ACTIONS[actionKey];
+      var modifiers;
+      var dodge;
+      if (!action || action.type !== "attack") {
+        return 0;
+      }
+      if (!actionReachAllowed(fight, side, actionKey)) {
+        return 0;
+      }
+      modifiers = previewAttackModifiers(attacker, actionKey);
+      dodge = effectiveDodgeChance(defender, defenderStats);
+      return clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + modifiers.accuracyPenalty - dodge), 25, 95);
+    }
+
+    function previewDamage(fight, side, actionKey) {
+      var attacker = fightStateBySide(fight, side);
+      var defender = fightStateBySide(fight, otherSide(side));
+      var attackerStats = fightStatsBySide(fight, side);
+      var action = FIGHT_ACTIONS[actionKey];
+      var modifiers;
+      var damage;
+      if (!action || action.type !== "attack") {
+        return 0;
+      }
+      modifiers = previewAttackModifiers(attacker, actionKey);
+      damage = action.damage * (1 + attackerStats.str * 0.05) * modifiers.damageMultiplier;
+      if (defender.stamina < 5) {
+        damage *= 1.2;
+      }
+      if (defender.defenseMode === "block") {
+        damage *= 0.5;
+      }
+      return Math.max(1, Math.round(damage));
+    }
+
+    function renderFightActionMeta(actionKey) {
+      var fight = state.fight;
+      var action = FIGHT_ACTIONS[actionKey];
+      var parts = [];
+      if (!fight || !action) {
+        return "";
+      }
+      if (action.type === "move") {
+        parts.push("<span class='action-blue'>Стамина -" + action.stamina + "</span>");
+      } else if (action.type === "defense") {
+        parts.push("<span class='action-blue'>Стамина +" + action.staminaGain + "</span>");
+      } else if (action.type === "attack") {
+        parts.push("<span class='action-blue'>Стамина -" + action.stamina + "</span>");
+        parts.push("<span class='action-red'>Урон " + previewDamage(fight, "player", actionKey) + "</span>");
+        parts.push("<span class='action-yellow'>Точность " + previewHitChance(fight, "player", actionKey) + "%</span>");
+      }
+      return "<div class='action-button-meta'>" + parts.join("") + "</div>";
+    }
+
     function renderFightControlsPanel(fight) {
       var html = [];
       var group = fight.actionGroup || "move";
@@ -1444,7 +1562,7 @@
           "</div>" +
           meter("Здоровье лагеря", state.fighter.health) +
           meter("Стресс", state.fighter.stress) +
-          "<div class='footer-actions'>" +
+          "<div class='footer-actions' style='margin-top:18px'>" +
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
             "<button class='button' onclick='openFightSelect()'>Найти соперника</button>" +
             "<button class='ghost' onclick='openPanel(\"work\")'>Заработать</button>" +
@@ -1620,7 +1738,6 @@
       html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
       html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
       html.push("</div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Статы</h2><div class='stat-grid'>" + renderStatLines(fighter.stats) + "</div></div>");
       html.push("<div class='panel'><h2 class='panel-title'>Прокачка</h2><div class='record-row' style='margin-top:18px'><div class='chip gold'>Очки навыков " + fighter.skillPoints + "</div></div><div class='muted'>Цена роста идёт ступенями: 0-9 стоит 1 очко, 10-19 стоит 2, 20-29 стоит 3 и дальше по той же схеме.</div>" + renderStatUpgradeCards() + "</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div><div class='chip'>Смертей в боях " + fighter.deathsCaused + "</div></div></div>");
       return html.join("");
@@ -2035,9 +2152,7 @@
       var damage;
       var critical;
       var dodge;
-      var chainCount;
-      var accuracyPenalty = 0;
-      var damageMultiplier = 1;
+      var modifiers;
       var defenseMode = defender.defenseMode;
       var allowCounter = !(options && options.counter);
       options = options || {};
@@ -2055,20 +2170,9 @@
       }
       attacker.defenseMode = null;
       attacker.actedAttack = true;
-      chainCount = nextAttackChain(attacker, actionKey);
-      if (chainCount === 2) {
-        accuracyPenalty -= 10;
-        damageMultiplier *= 0.95;
-      } else if (chainCount >= 3) {
-        accuracyPenalty -= 15;
-        damageMultiplier *= 0.9;
-      }
-      if (staminaIsLow(attacker)) {
-        accuracyPenalty -= 10;
-        damageMultiplier *= 0.9;
-      }
+      modifiers = previewAttackModifiers(attacker, actionKey);
       dodge = effectiveDodgeChance(defender, defenderStats);
-      hitChance = clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + accuracyPenalty - dodge), 25, 95);
+      hitChance = clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + modifiers.accuracyPenalty - dodge), 25, 95);
       if (!chance(hitChance)) {
         pushFightLine(fight, attackerName + " промахивается: " + action.label.toLowerCase() + " не доходит до цели.");
         setStrikeAnimation(side, "miss", false);
@@ -2079,7 +2183,7 @@
         applyAttackChain(attacker, actionKey);
         return false;
       }
-      damage = action.damage * (1 + attackerStats.str * 0.05) * damageMultiplier;
+      damage = action.damage * (1 + attackerStats.str * 0.05) * modifiers.damageMultiplier;
       if (defender.stamina < 5) {
         damage *= 1.2;
       }
@@ -2371,7 +2475,7 @@
     function renderFightActionButton(actionKey, className) {
       var fight = state.fight;
       var disabled = !fight || fight.result || fight.actionLock || !canUseFightAction(fight, "player", actionKey);
-      return "<button class='" + className + "' " + (disabled ? "disabled='disabled'" : "") + " onclick='fightAction(\"" + actionKey + "\")'>" + FIGHT_ACTIONS[actionKey].label + "</button>";
+      return "<button class='" + className + "' " + (disabled ? "disabled='disabled'" : "") + " onclick='fightAction(\"" + actionKey + "\")'><span class='action-button-title'>" + FIGHT_ACTIONS[actionKey].label + "</span>" + renderFightActionMeta(actionKey) + "</button>";
     }
 
     function finishFightRound() {
