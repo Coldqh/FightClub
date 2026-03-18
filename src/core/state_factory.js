@@ -1,4 +1,4 @@
-var SAVE_VERSION = 3;
+var SAVE_VERSION = 4;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -11,6 +11,39 @@ function basePlayerStatsSchema() {
     spd: 1,
     end: 1,
     vit: 1
+  };
+}
+
+function basePlayerConditionsSchema() {
+  return {
+    fatigue: 0,
+    wear: 0,
+    morale: 55,
+    startingAge: 22
+  };
+}
+
+function baseWorldSchema() {
+  return {
+    opponents: [],
+    offers: {
+      weekStamp: 0,
+      available: [],
+      headline: ""
+    },
+    npcs: [],
+    relationships: [],
+    contracts: [],
+    lastWeekAction: {
+      type: "idle",
+      label: "",
+      meta: null
+    },
+    scene: {
+      updatedWeek: 0,
+      buzz: 0,
+      temperature: 50
+    }
   };
 }
 
@@ -40,6 +73,7 @@ function createGameState(options) {
         stress: 0,
         fame: 0
       },
+      conditions: basePlayerConditionsSchema(),
       record: {
         wins: 0,
         losses: 0,
@@ -49,12 +83,11 @@ function createGameState(options) {
     },
     career: {
       week: 1,
+      calendar: TimeSystem.createCalendar(),
       create: null,
       endingReason: ""
     },
-    world: {
-      opponents: []
-    },
+    world: baseWorldSchema(),
     battle: {
       current: null
     },
@@ -71,6 +104,33 @@ function createGameState(options) {
       log: []
     }
   };
+}
+
+function normalizeWorldState(sourceWorld) {
+  var normalized = baseWorldSchema();
+  if (!sourceWorld || typeof sourceWorld !== "object") {
+    return normalized;
+  }
+  normalized.opponents = sourceWorld.opponents instanceof Array ? clonePlainData(sourceWorld.opponents) : [];
+  if (sourceWorld.offers && typeof sourceWorld.offers === "object") {
+    normalized.offers.weekStamp = typeof sourceWorld.offers.weekStamp === "number" ? sourceWorld.offers.weekStamp : 0;
+    normalized.offers.available = sourceWorld.offers.available instanceof Array ? clonePlainData(sourceWorld.offers.available) : [];
+    normalized.offers.headline = sourceWorld.offers.headline || "";
+  }
+  normalized.npcs = sourceWorld.npcs instanceof Array ? clonePlainData(sourceWorld.npcs) : [];
+  normalized.relationships = sourceWorld.relationships instanceof Array ? clonePlainData(sourceWorld.relationships) : [];
+  normalized.contracts = sourceWorld.contracts instanceof Array ? clonePlainData(sourceWorld.contracts) : [];
+  if (sourceWorld.lastWeekAction && typeof sourceWorld.lastWeekAction === "object") {
+    normalized.lastWeekAction.type = sourceWorld.lastWeekAction.type || "idle";
+    normalized.lastWeekAction.label = sourceWorld.lastWeekAction.label || "";
+    normalized.lastWeekAction.meta = sourceWorld.lastWeekAction.meta ? clonePlainData(sourceWorld.lastWeekAction.meta) : null;
+  }
+  if (sourceWorld.scene && typeof sourceWorld.scene === "object") {
+    normalized.scene.updatedWeek = typeof sourceWorld.scene.updatedWeek === "number" ? sourceWorld.scene.updatedWeek : 0;
+    normalized.scene.buzz = typeof sourceWorld.scene.buzz === "number" ? sourceWorld.scene.buzz : 0;
+    normalized.scene.temperature = typeof sourceWorld.scene.temperature === "number" ? sourceWorld.scene.temperature : 50;
+  }
+  return normalized;
 }
 
 function normalizeGameState(gameState, options) {
@@ -107,6 +167,12 @@ function normalizeGameState(gameState, options) {
       if (typeof source.player.resources.stress === "number") { normalized.player.resources.stress = source.player.resources.stress; }
       if (typeof source.player.resources.fame === "number") { normalized.player.resources.fame = source.player.resources.fame; }
     }
+    if (source.player.conditions) {
+      if (typeof source.player.conditions.fatigue === "number") { normalized.player.conditions.fatigue = source.player.conditions.fatigue; }
+      if (typeof source.player.conditions.wear === "number") { normalized.player.conditions.wear = source.player.conditions.wear; }
+      if (typeof source.player.conditions.morale === "number") { normalized.player.conditions.morale = source.player.conditions.morale; }
+      if (typeof source.player.conditions.startingAge === "number") { normalized.player.conditions.startingAge = source.player.conditions.startingAge; }
+    }
     if (source.player.record) {
       if (typeof source.player.record.wins === "number") { normalized.player.record.wins = source.player.record.wins; }
       if (typeof source.player.record.losses === "number") { normalized.player.record.losses = source.player.record.losses; }
@@ -119,13 +185,16 @@ function normalizeGameState(gameState, options) {
     if (typeof source.career.week === "number") {
       normalized.career.week = source.career.week;
     }
+    if (source.career.calendar) {
+      normalized.career.calendar = TimeSystem.normalizeCalendar(clonePlainData(source.career.calendar));
+    } else if (typeof source.career.week === "number") {
+      normalized.career.calendar = TimeSystem.createCalendar({ totalWeeks: Math.max(0, source.career.week - 1) });
+    }
     normalized.career.create = source.career.create ? clonePlainData(source.career.create) : null;
     normalized.career.endingReason = source.career.endingReason || "";
   }
 
-  if (source.world && source.world.opponents) {
-    normalized.world.opponents = clonePlainData(source.world.opponents);
-  }
+  normalized.world = normalizeWorldState(source.world);
 
   if (source.battle) {
     normalized.battle.current = source.battle.current ? clonePlainData(source.battle.current) : null;
@@ -145,6 +214,7 @@ function normalizeGameState(gameState, options) {
     normalized.feed.log = clonePlainData(source.feed.log);
   }
 
+  normalized.career.week = TimeSystem.getCalendarView(normalized.career.calendar).weekNumber;
   normalized.meta.saveVersion = SAVE_VERSION;
   return normalized;
 }
@@ -152,6 +222,7 @@ function normalizeGameState(gameState, options) {
 function buildGameStateFromLegacySnapshot(snapshot, options) {
   var gameState = createGameState(options);
   var fighter = snapshot && snapshot.fighter ? snapshot.fighter : null;
+  var calendarSource = null;
   gameState.meta.appVersion = snapshot && snapshot.appVersion ? snapshot.appVersion : gameState.meta.appVersion;
   gameState.meta.rng = RNG.cloneState(snapshot && snapshot.rng);
   gameState.meta.updateAvailable = !!(snapshot && snapshot.updateAvailable);
@@ -164,10 +235,14 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.ui.debug.open = !!snapshot.debug.open;
   }
   gameState.career.create = snapshot && snapshot.create ? clonePlainData(snapshot.create) : null;
-  gameState.world.opponents = snapshot && snapshot.opponents ? clonePlainData(snapshot.opponents) : [];
   gameState.battle.current = snapshot && snapshot.fight ? clonePlainData(snapshot.fight) : null;
   gameState.feed.log = snapshot && snapshot.log ? clonePlainData(snapshot.log) : [];
   gameState.career.endingReason = snapshot && snapshot.endingReason ? snapshot.endingReason : "";
+  if (snapshot && snapshot.world) {
+    gameState.world = normalizeWorldState(snapshot.world);
+  } else if (snapshot && snapshot.opponents) {
+    gameState.world.opponents = clonePlainData(snapshot.opponents);
+  }
   if (fighter) {
     gameState.player.profile.name = fighter.name || "";
     gameState.player.profile.homeCountry = fighter.homeCountry || "";
@@ -178,11 +253,24 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.player.resources.health = typeof fighter.health === "number" ? fighter.health : 100;
     gameState.player.resources.stress = typeof fighter.stress === "number" ? fighter.stress : 0;
     gameState.player.resources.fame = fighter.fame || 0;
+    gameState.player.conditions.fatigue = typeof fighter.fatigue === "number" ? fighter.fatigue : gameState.player.conditions.fatigue;
+    gameState.player.conditions.wear = typeof fighter.wear === "number" ? fighter.wear : gameState.player.conditions.wear;
+    gameState.player.conditions.morale = typeof fighter.morale === "number" ? fighter.morale : gameState.player.conditions.morale;
+    gameState.player.conditions.startingAge = typeof fighter.startingAge === "number" ? fighter.startingAge : gameState.player.conditions.startingAge;
     gameState.player.record.wins = fighter.wins || 0;
     gameState.player.record.losses = fighter.losses || 0;
     gameState.player.record.kos = fighter.kos || 0;
     gameState.player.record.deathsCaused = fighter.deathsCaused || 0;
     gameState.career.week = fighter.week || 1;
+    calendarSource = fighter.calendar ? fighter.calendar : (snapshot && (snapshot.calendar || snapshot.careerCalendar));
+  }
+  if (!calendarSource && snapshot && snapshot.career && snapshot.career.calendar) {
+    calendarSource = snapshot.career.calendar;
+  }
+  if (calendarSource) {
+    gameState.career.calendar = TimeSystem.normalizeCalendar(clonePlainData(calendarSource));
+  } else {
+    gameState.career.calendar = TimeSystem.createCalendar({ totalWeeks: Math.max(0, gameState.career.week - 1) });
   }
   return normalizeGameState(gameState, options);
 }
@@ -195,6 +283,7 @@ function buildGameStateFromRuntime(runtimeState, options) {
     panel: runtimeState ? runtimeState.panel : "home",
     create: runtimeState ? runtimeState.create : null,
     fighter: runtimeState ? runtimeState.fighter : null,
+    world: runtimeState ? runtimeState.world : null,
     opponents: runtimeState ? runtimeState.opponents : [],
     fight: runtimeState ? runtimeState.fight : null,
     log: runtimeState ? runtimeState.log : [],
@@ -216,6 +305,8 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
   target.panel = normalized.ui.panel;
   target.create = normalized.career.create ? clonePlainData(normalized.career.create) : null;
   target.opponents = clonePlainData(normalized.world.opponents);
+  target.world = clonePlainData(normalized.world);
+  target.world.opponents = target.opponents;
   target.fight = normalized.battle.current ? clonePlainData(normalized.battle.current) : null;
   target.log = clonePlainData(normalized.feed.log);
   target.endingReason = normalized.career.endingReason;
@@ -234,6 +325,11 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     health: normalized.player.resources.health,
     stress: normalized.player.resources.stress,
     fame: normalized.player.resources.fame,
+    fatigue: normalized.player.conditions.fatigue,
+    wear: normalized.player.conditions.wear,
+    morale: normalized.player.conditions.morale,
+    startingAge: normalized.player.conditions.startingAge,
+    calendar: clonePlainData(normalized.career.calendar),
     wins: normalized.player.record.wins,
     losses: normalized.player.record.losses,
     kos: normalized.player.record.kos,

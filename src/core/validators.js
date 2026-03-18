@@ -1,6 +1,7 @@
 function validateState(gameState) {
   var errors = [];
   var stats;
+  var conditions;
   var requiredSections = ["meta", "player", "career", "world", "battle", "ui", "feed"];
   var i;
 
@@ -42,8 +43,25 @@ function validateState(gameState) {
     }
   }
 
+  if (!gameState.player || !gameState.player.conditions) {
+    errors.push("player.conditions отсутствует.");
+  } else {
+    conditions = gameState.player.conditions;
+    if (typeof conditions.fatigue !== "number" || typeof conditions.wear !== "number" || typeof conditions.morale !== "number" || typeof conditions.startingAge !== "number") {
+      errors.push("player.conditions должен содержать числовые fatigue/wear/morale/startingAge.");
+    }
+  }
+
+  if (!gameState.career || !gameState.career.calendar || typeof gameState.career.calendar.totalWeeks !== "number") {
+    errors.push("career.calendar должен содержать totalWeeks.");
+  }
+
   if (gameState.meta && gameState.meta.rng && typeof gameState.meta.rng.mode !== "string") {
     errors.push("meta.rng имеет некорректную структуру.");
+  }
+
+  if (gameState.world && gameState.world.offers && !(gameState.world.offers.available instanceof Array)) {
+    errors.push("world.offers.available должен быть массивом.");
   }
 
   return {

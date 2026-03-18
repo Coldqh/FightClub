@@ -25,8 +25,7 @@ var ContentLoader = (function () {
       x: definition.map ? definition.map.x : 0,
       y: definition.map ? definition.map.y : 0,
       city: primaryArena ? primaryArena.city : "",
-      venueName: primaryArena ? primaryArena.name : "",
-      effectSummary: "Дома: деньги x" + definition.homeMoneyMultiplier.toFixed(2) + ", слава x" + definition.homeFameMultiplier.toFixed(2) + ". За рубежом: слава x" + definition.abroadFameMultiplier.toFixed(2) + "."
+      venueName: primaryArena ? primaryArena.name : ""
     };
   }
 
