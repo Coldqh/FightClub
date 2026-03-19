@@ -980,7 +980,7 @@
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.19.7";
+    var APP_VERSION = "2026.03.19.8";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -3793,11 +3793,22 @@
       }
       playerTotal = fighter.stats.str + fighter.stats.tec + fighter.stats.spd + fighter.stats.end + fighter.stats.vit;
       opponentTotal = (snapshot.stats.str || 0) + (snapshot.stats.tec || 0) + (snapshot.stats.spd || 0) + (snapshot.stats.end || 0) + (snapshot.stats.vit || 0);
-      return Math.abs(playerTotal - opponentTotal);
+      return playerTotal - opponentTotal;
     }
 
     function rematchAllowed(snapshot) {
       return totalSkillGapAgainstSnapshot(snapshot) <= 20;
+    }
+
+    function clearOutgrownRematches() {
+      var rivalries = state.world ? state.world.rivalries : [];
+      var i;
+      for (i = 0; i < rivalries.length; i += 1) {
+        if (rivalries[i] && rivalries[i].pendingRematch && rivalries[i].lastOpponentSnapshot && !rematchAllowed(rivalries[i].lastOpponentSnapshot)) {
+          rivalries[i].pendingRematch = false;
+          rivalries[i].holdUntilWeek = 0;
+        }
+      }
     }
 
     function generateConfiguredOpponent(tier, countryKeyOverride, snapshotOverride) {
@@ -3984,6 +3995,7 @@
       var offers = [];
       var i;
       var builtOffer;
+      clearOutgrownRematches();
       if (maxExtra >= 1) {
         ids.push("away_even");
       }
@@ -4733,7 +4745,8 @@
         defenseMode: null,
         lastAttackKey: null,
         attackChain: 0,
-        actedAttack: false
+        actedAttack: false,
+        nextDodgePenalty: false
       };
     }
 
@@ -5415,7 +5428,6 @@
           "<div class='footer-actions' style='margin-top:18px'>" +
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
             "<button class='button' onclick='openFightSelect()'>Офферы боёв</button>" +
-            "<button class='ghost' onclick='openPanel(\"life\")'>Соц. жизнь</button>" +
             "<button class='ghost' onclick='openPanel(\"work\")'>Заработать</button>" +
             "<button class='ghost' onclick='openPanel(\"recover\")'>Восстановиться</button>" +
             "<button class='ghost' onclick='openPanel(\"travel\")'>Путешествие</button>" +
@@ -5458,7 +5470,7 @@
       for (i = 0; i < activeEvent.choices.length; i += 1) {
         choiceLabel = safeUiText(activeEvent.choices[i].label, "Вариант " + (i + 1));
         choiceText = safeUiText(activeEvent.choices[i].resultText, "Этот выбор изменит неделю и отношения вокруг тебя.");
-        html.push("<div class='card'><h3>" + choiceLabel + "</h3><p>" + choiceText + "</p><button class='button' onclick='resolveActiveEventChoice(\"" + activeEvent.choices[i].id + "\")'>Выбрать</button></div>");
+        html.push("<div class='card'><h3>" + choiceLabel + "</h3><div class='muted'>Меняется: " + eventChoiceImpactSummary(activeEvent.choices[i]) + "</div><div class='muted'>Итог: " + choiceText + "</div><button class='button' onclick='resolveActiveEventChoice(\"" + activeEvent.choices[i].id + "\")'>Выбрать</button></div>");
       }
       html.push("</div>");
       html.push("</div>");
@@ -5482,6 +5494,73 @@
 
     function renderCareerLogPage() {
       return "<div class='panel fill-panel'>" + renderLogPanelInner() + "</div>";
+    }
+
+    function eventActorLabel(slot) {
+      var actor = resolveEventActor(slot);
+      if (actor && actor.name) {
+        return actor.name;
+      }
+      return "контакт";
+    }
+
+    function eventEffectPreview(effect) {
+      if (!effect) {
+        return "";
+      }
+      if (effect.type === "resource") {
+        if (effect.key === "money") { return "деньги " + signedMoney(effect.delta || 0); }
+        if (effect.key === "health") { return "здоровье " + signedNumber(effect.delta || 0); }
+        if (effect.key === "stress") { return "стресс " + signedNumber(effect.delta || 0); }
+        if (effect.key === "fame") { return "известность " + signedNumber(effect.delta || 0); }
+        if (effect.key === "skillPoints") { return "очки навыков " + signedNumber(effect.delta || 0); }
+        if (effect.key === "morale") { return "настроение " + signedNumber(effect.delta || 0); }
+      }
+      if (effect.type === "condition") {
+        if (effect.key === "fatigue") { return "усталость " + signedNumber(effect.delta || 0); }
+        if (effect.key === "wear") { return "износ " + signedNumber(effect.delta || 0); }
+        if (effect.key === "morale") { return "настроение " + signedNumber(effect.delta || 0); }
+      }
+      if (effect.type === "life") {
+        if (effect.key === "support") { return "опора " + signedNumber(effect.delta || 0); }
+        if (effect.key === "housingId" && effect.value) { return "жильё: " + effect.value; }
+      }
+      if (effect.type === "relation") {
+        return "отношение с " + eventActorLabel(effect.slot) + " " + relationScoreText(relationScoreDeltaFromEffect(effect));
+      }
+      if (effect.type === "rivalry") {
+        if (typeof effect.deltaTension === "number") { return "напряжение серии " + signedNumber(effect.deltaTension); }
+        if (typeof effect.stakes === "number") { return "ставки серии " + signedNumber(effect.stakes); }
+        if (typeof effect.deltaBuzz === "number") { return "шум вокруг " + signedNumber(effect.deltaBuzz); }
+      }
+      return "";
+    }
+
+    function eventChoiceImpactSummary(choice) {
+      var parts = [];
+      var i;
+      var preview;
+      if (!choice || !(choice.effects instanceof Array)) {
+        return "Изменения по истории недели.";
+      }
+      for (i = 0; i < choice.effects.length; i += 1) {
+        preview = eventEffectPreview(choice.effects[i]);
+        if (preview) {
+          parts.push(preview);
+        }
+      }
+      if (choice.tagChanges) {
+        if ((choice.tagChanges.add && choice.tagChanges.add.length) || (choice.tagChanges.remove && choice.tagChanges.remove.length)) {
+          parts.push("меняются флаги биографии");
+        }
+        if ((choice.tagChanges.npcFlags && choice.tagChanges.npcFlags.length) || (choice.tagChanges.relationTags && choice.tagChanges.relationTags.length)) {
+          parts.push("меняется связь с людьми");
+        }
+      }
+      if (!parts.length) {
+        return "Без прямых цифр, но история пойдёт дальше.";
+      }
+      return parts.join(", ") + ".";
     }
 
     function interactionPreview(npc, interactionKey) {
@@ -5517,7 +5596,7 @@
       ensureNpcWorld();
       html.push("<div class='panel fill-panel'>");
       html.push("<h2 class='panel-title'>Люди</h2>");
-      html.push("<div class='muted'>Здесь люди вокруг тебя. Любое действие тратит неделю и меняет отношения.</div>");
+      html.push("<div class='muted'>Люди вокруг тебя. Любое действие тратит неделю и меняет отношения.</div>");
       html.push("<div class='record-row' style='margin-top:14px'><div class='chip gold'>Активные линии " + activeRelationshipArcs().length + "</div><div class='chip red'>Конфликты " + activeConflictArcCount() + "</div><div class='chip'>Реванши " + activeRematchCount() + "</div></div>");
       if (!visibleNpcs.length) {
         html.push("<div class='empty-state' style='margin-top:14px'>Пока вокруг тебя ещё никого нет.</div></div>");
@@ -5618,7 +5697,7 @@
       var tier;
       var nextTier;
       html.push("<div class='panel fill-panel'>");
-      html.push("<div class='dev-header'><h2 class='panel-title'>Навыки</h2><div class='muted'>Здесь стиль бойца, текущий фокус и активные перки.</div></div>");
+      html.push("<div class='dev-header'><h2 class='panel-title'>Навыки</h2><div class='muted'>Стиль бойца, текущий фокус и активные перки.</div></div>");
       html.push("<div class='dev-highlight'>");
       html.push("<div class='fighter-class'>Текущий стиль</div>");
       html.push("<div class='fighter-name' style='font-size:30px'>" + (styleSnapshot ? styleSnapshot.style.label : "Стиль формируется") + "</div>");
@@ -5678,7 +5757,7 @@
       var action;
       html.push("<div class='panel'>");
       html.push("<h2 class='panel-title'>Социальная жизнь</h2>");
-      html.push("<div class='muted'>Здесь только решения на неделю вне зала и ринга.</div>");
+      html.push("<div class='muted'>Решения на неделю вне зала и ринга.</div>");
       html.push("<div class='record-row'><div class='chip gold'>Опора " + fighter.support + " · " + supportLabel(fighter.support) + "</div><div class='chip'>Дисциплина " + disciplineScore(fighter) + "</div></div>");
       html.push(meter("Настроение", fighter.morale));
       html.push(meter("Социальная опора", fighter.support));
@@ -5765,7 +5844,7 @@
       var i;
       var offer;
       var opponent;
-      html.push("<div class='panel'><h2 class='panel-title'>Предложения боёв</h2><div class='muted'>Здесь все доступные бои: дома, на выезде и реванши. У каждого свои деньги, риск и условия.</div><div class='card-grid' style='margin-top:16px'>");
+      html.push("<div class='panel'><h2 class='panel-title'>Предложения боёв</h2><div class='muted'>Все доступные бои: дома, на выезде и реванши. У каждого свои деньги, риск и условия.</div><div class='card-grid' style='margin-top:16px'>");
       if (!offers.length) {
         html.push("<div class='empty-state'>На этой неделе матчмейкеры молчат. Попробуй обновить неделю через тренировку, работу, восстановление или поездку.</div>");
       }
@@ -5864,6 +5943,7 @@
       html.push("<div>" + meter("Социальная опора", fighter.support) + "</div>");
       html.push("</div>");
       html.push("<div class='panel'><h2 class='panel-title'>Дополнительно</h2><div class='record-row'><div class='chip'>Недель " + fighter.week + "</div><div class='chip'>Побед " + fighter.wins + "</div><div class='chip'>Поражений " + fighter.losses + "</div><div class='chip'>KO " + fighter.kos + "</div></div></div>");
+      html.push("<div class='panel'><h2 class='panel-title'>Жильё</h2><p>" + (currentHousing() ? currentHousing().label : "Нормальные условия") + ".</p><div class='muted'>" + housingEffectSummary(currentHousing()) + "</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerHousing\")'>Сменить жильё</button></div></div>");
       return html.join("");
     }
 
@@ -5880,10 +5960,28 @@
 
     function listCareerGymChoices() {
       var gyms = ContentLoader.listGyms ? ContentLoader.listGyms().slice(0) : [];
+      var picks = [];
+      var indices = [];
+      var i;
       gyms.sort(function (left, right) {
         return (left.cost || 0) - (right.cost || 0);
       });
-      return gyms.slice(0, 5);
+      if (gyms.length <= 5) {
+        return gyms;
+      }
+      indices = [
+        0,
+        Math.round((gyms.length - 1) * 0.25),
+        Math.round((gyms.length - 1) * 0.5),
+        Math.round((gyms.length - 1) * 0.75),
+        gyms.length - 1
+      ];
+      for (i = 0; i < indices.length; i += 1) {
+        if (!picks.length || picks[picks.length - 1].id !== gyms[indices[i]].id) {
+          picks.push(gyms[indices[i]]);
+        }
+      }
+      return picks;
     }
 
     function breakActiveContract() {
@@ -5911,7 +6009,6 @@
       var trainerNpc = currentTrainerNpc();
       var trainerType = currentTrainerType();
       var contract = currentContract();
-      var housing = currentHousing();
       var travelBonus = currentTravelBonus(fighter);
       var html = [];
       html.push("<div class='panel fill-panel'>");
@@ -5937,7 +6034,6 @@
         html.push("<p>Активного контракта пока нет.</p><div class='muted'>Контракт даёт базовый гонорар и бонусы за бой.</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerContract\")'>Посмотреть контракты</button></div>");
       }
       html.push("</div>");
-      html.push("<div class='card'><h3>Жильё</h3><p>" + (housing ? housing.label : "Нормальные условия") + ".</p><div class='muted'>" + housingEffectSummary(housing) + "</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerHousing\")'>Сменить жильё</button></div></div>");
       html.push("<div class='card'><h3>Территория</h3><p>" + getCountryInfo(fighter.currentCountry).name + " · " + getCountryInfo(fighter.currentCountry).city + ".</p><div class='muted'>Дома деньги x" + travelBonus.money.toFixed(2) + ", в гостях известность x" + travelBonus.fame.toFixed(2) + ".</div></div>");
       html.push("</div>");
       return html.join("");
@@ -6245,6 +6341,9 @@
       } else if (defender.defenseMode === "counter") {
         dodge = 20 + defenderStats.spd * 0.5;
       }
+      if (defender.defenseMode !== "counter" && defender.nextDodgePenalty) {
+        dodge = dodge / 1.5;
+      }
       dodge += developmentScalarBonus(fighter, "dodge");
       return clamp(Math.round(dodge), 0, 90);
     }
@@ -6264,6 +6363,7 @@
       stateBoxer.stamina = clamp(stateBoxer.stamina + Math.round(stateBoxer.maxStamina * 0.25), 0, stateBoxer.maxStamina);
       stateBoxer.defenseMode = null;
       stateBoxer.actedAttack = false;
+      stateBoxer.nextDodgePenalty = false;
       resetActionChain(stateBoxer);
     }
 
@@ -6444,6 +6544,7 @@
       var dodge;
       var modifiers;
       var defenseMode = defender.defenseMode;
+      var dodgePenaltyActive = defender.defenseMode !== "counter" && defender.nextDodgePenalty;
       var allowCounter = !(options && options.counter);
       var staminaCost = fightActionStaminaCost(fight, side, actionKey);
       options = options || {};
@@ -6463,10 +6564,16 @@
       attacker.actedAttack = true;
       modifiers = previewAttackModifiers(fight, side, actionKey);
       dodge = effectiveDodgeChance(fight, otherSide(side), defender, defenderStats);
+      if (dodgePenaltyActive) {
+        defender.nextDodgePenalty = false;
+      }
       hitChance = clamp(Math.round(65 + action.hitBonus + attackerStats.tec * 0.5 + modifiers.accuracyShift - dodge), 25, 95);
       if (!chance(hitChance)) {
         pushFightLine(fight, attackerName + " промахивается: " + action.label.toLowerCase() + " не доходит до цели.");
         setStrikeAnimation(side, "miss", false);
+        if (defenseMode !== "counter") {
+          defender.nextDodgePenalty = true;
+        }
         if (allowCounter && defenseMode === "counter") {
           return attemptCounterAttack(fight, otherSide(side));
         }
@@ -6489,6 +6596,7 @@
       defender.hp -= damage;
       defender.damageTaken += damage;
       defender.defenseMode = null;
+      defender.nextDodgePenalty = false;
       awardFightPressure(fight, side, damage + (critical ? 6 : 2));
       if (critical) {
         pushFightLine(fight, attackerName + " ловит критический удар '" + action.label + "' на " + damage + " урона.");
@@ -6891,8 +6999,21 @@
       var offer = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers[index] : null;
       var opponent = offer ? offer.opponent : state.opponents[index];
       var readiness;
+      var rivalry;
       clearFightTimers();
       if (!opponent) {
+        return;
+      }
+      clearOutgrownRematches();
+      if (offer && offer.templateId === "rematch_offer" && !rematchAllowed(opponent)) {
+        rivalry = offer.rematchRivalryId ? findRivalryById(offer.rematchRivalryId) : null;
+        if (rivalry) {
+          rivalry.pendingRematch = false;
+          rivalry.holdUntilWeek = 0;
+        }
+        pushLog("Реванш уже неактуален: разница в уровне стала слишком большой.", "warn");
+        refreshWorldState();
+        render();
         return;
       }
       if (offer && offer.reputationOnAccept) {
