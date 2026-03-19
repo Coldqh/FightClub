@@ -203,12 +203,15 @@ var EventEngine = (function () {
 
   function relationMeets(world, requirement) {
     var relations = listRelationsForRole(world, requirement.role || "");
+    var score;
     var i;
     for (i = 0; i < relations.length; i += 1) {
-      if ((typeof requirement.affinity !== "number" || relations[i].affinity >= requirement.affinity) &&
-          (typeof requirement.respect !== "number" || relations[i].respect >= requirement.respect) &&
-          (typeof requirement.trust !== "number" || relations[i].trust >= requirement.trust) &&
-          (typeof requirement.tension !== "number" || relations[i].tension >= requirement.tension)) {
+      score = typeof relations[i].score === "number" ? relations[i].score : 0;
+      if ((typeof requirement.score !== "number" || score >= requirement.score) &&
+          (typeof requirement.affinity !== "number" || score >= (requirement.affinity * 2 - 100)) &&
+          (typeof requirement.respect !== "number" || score >= (requirement.respect * 2 - 100)) &&
+          (typeof requirement.trust !== "number" || score >= (requirement.trust * 2 - 100)) &&
+          (typeof requirement.tension !== "number" || score <= (100 - requirement.tension * 2))) {
         return true;
       }
     }

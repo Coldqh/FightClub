@@ -169,14 +169,14 @@ var RelationshipArcEngine = (function () {
   function actorScore(world, npc, actorDef) {
     var relation = findRelationship(world, npc.id);
     var sortBy = actorDef && actorDef.sortBy ? actorDef.sortBy : "";
+    var score;
     if (!relation) {
       return 0;
     }
-    if (sortBy === "affinity") { return relation.affinity || 0; }
-    if (sortBy === "respect") { return relation.respect || 0; }
-    if (sortBy === "trust") { return relation.trust || 0; }
-    if (sortBy === "tension") { return relation.tension || 0; }
-    return 0;
+    score = typeof relation.score === "number" ? relation.score : 0;
+    if (sortBy === "affinity" || sortBy === "respect" || sortBy === "trust") { return score; }
+    if (sortBy === "tension") { return -score; }
+    return score;
   }
 
   function sortNpcCandidates(world, candidates, actorDef) {

@@ -1,413 +1,1242 @@
 ﻿var LIFE_EVENT_DATA = {
-  events: [
+  "events": [
     {
-      id: "rough_room_leak",
-      title: "������� ����� ������",
-      text: "������ ����� ���������� � ���� ���� �����: ����, ������� � ��������� ���.",
-      conditions: { housingIs: "rough", minWeek: 2 },
-      weight: 8,
-      cooldown: 6,
-      repeatable: true,
-      choices: [
-        __eventChoice("patch_it", "������ ������", "�� �������� �� ����, �� ���� �� ����������� ������� ������.", [
-          __resource("money", -16),
-          __resource("stress", -3),
-          __condition("wear", -2)
-        ]),
-        __eventChoice("live_with_it", "�����������", "��� ������� ���. ������, ������� ������� � ����� ��� �� ������.", [
-          __resource("stress", 4),
-          __condition("morale", -3),
-          __condition("wear", 2)
-        ])
+      "id": "rough_room_leak",
+      "title": "Комната опять течёт",
+      "text": "В плохом жилье снова что-то ломается. Жить так уже совсем неприятно.",
+      "conditions": {
+        "housingIs": "rough",
+        "minWeek": 2
+      },
+      "weight": 8,
+      "cooldown": 6,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "patch_it",
+          "label": "Подлатать",
+          "resultText": "Деньги ушли, но жить стало чуть легче.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "money",
+              "delta": -16
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -3
+            },
+            {
+              "type": "condition",
+              "key": "wear",
+              "delta": -2
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "live_with_it",
+          "label": "Терпеть",
+          "resultText": "Ты пока оставляешь всё как есть.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 4
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -3
+            },
+            {
+              "type": "condition",
+              "key": "wear",
+              "delta": 2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "rough_neighbors_noise",
-      title: "������ �� ���� ������",
-      text: "������ ����� � ����� �������� ������� ������ ������� ����� ����������.",
-      conditions: { housingIs: "rough", minStress: 20 },
-      weight: 7,
-      cooldown: 5,
-      repeatable: true,
-      choices: [
-        __eventChoice("snap_back", "���������", "�� ��������� ���� ������, �� �� ������.", [
-          __resource("stress", 3),
-          __condition("morale", -1)
-        ]),
-        __eventChoice("walk_it_off", "����� ������������", "���� ������� ������, �� ������ �� ���� �� �� �������� ���������.", [
-          __resource("stress", -2),
-          __condition("fatigue", 2)
-        ])
+      "id": "rough_neighbors_noise",
+      "title": "Соседи не дают спать",
+      "text": "Шум за стеной снова бьёт по голове сильнее, чем хотелось бы.",
+      "conditions": {
+        "housingIs": "rough",
+        "minStress": 20
+      },
+      "weight": 7,
+      "cooldown": 5,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "snap_back",
+          "label": "Ругнуться",
+          "resultText": "Ты выпускаешь пар, но легче не особо.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 3
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -1
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "walk_it_off",
+          "label": "Просто уйти",
+          "resultText": "Ты гасишь это сам, без лишней сцены.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -2
+            },
+            {
+              "type": "condition",
+              "key": "fatigue",
+              "delta": 2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "normal_room_small_order",
-      title: "������� ������� �������� ��� ���",
-      text: "������ ��������� ��������� ����� � �������� ���� ������ ������, ��� ���� ������ ��������.",
-      conditions: { housingIs: "normal", maxStress: 70 },
-      weight: 5,
-      cooldown: 8,
-      repeatable: true,
-      choices: [
-        __eventChoice("keep_order", "������������ �������", "���������� ����� ������� ���� ������.", [
-          __resource("stress", -3),
-          __condition("morale", 3)
-        ], { add: ["keeps_order"] }),
-        __eventChoice("ignore_order", "����� ��� ����", "������ �� �������, �� � ���������� ������ �� ������������.", [
-          __condition("morale", -1)
-        ])
+      "id": "normal_room_small_order",
+      "title": "Порядок в комнате",
+      "text": "Иногда даже мелочь вроде убранной комнаты даёт голове выдохнуть.",
+      "conditions": {
+        "housingIs": "normal",
+        "maxStress": 70
+      },
+      "weight": 5,
+      "cooldown": 8,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "keep_order",
+          "label": "Навести порядок",
+          "resultText": "Становится чуть спокойнее.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -3
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 3
+            }
+          ],
+          "tagChanges": {
+            "add": [
+              "keeps_order"
+            ]
+          }
+        },
+        {
+          "id": "ignore_order",
+          "label": "Оставить как есть",
+          "resultText": "Руки не дошли, и ладно.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -1
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "comfort_first_good_sleep",
-      title: "�������-�� ���������� ���",
-      text: "���������� ������� ���������� ����������, ��� �������� ��������� ��������������.",
-      conditions: { housingIs: "comfortable", minFatigue: 20 },
-      weight: 7,
-      cooldown: 8,
-      repeatable: true,
-      choices: [
-        __eventChoice("lean_into_rest", "���� ���� ���������", "���� ������ ���������� ����� �������.", [
-          __resource("health", 7),
-          __condition("fatigue", -6),
-          __condition("morale", 3)
-        ]),
-        __eventChoice("wake_early", "�� ������ �����", "�� �������� � ����������, �� ��� ������� ������ ���������.", [
-          __condition("morale", 1),
-          __life("support", 1)
-        ])
+      "id": "comfort_first_good_sleep",
+      "title": "Наконец-то выспался",
+      "text": "Нормальный сон вдруг напоминает, как вообще должен чувствовать себя человек.",
+      "conditions": {
+        "housingIs": "comfortable",
+        "minFatigue": 20
+      },
+      "weight": 7,
+      "cooldown": 8,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "lean_into_rest",
+          "label": "Остаться в этом ритме",
+          "resultText": "Ты даёшь телу ещё немного спокойствия.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "health",
+              "delta": 7
+            },
+            {
+              "type": "condition",
+              "key": "fatigue",
+              "delta": -6
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 3
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "wake_early",
+          "label": "Встать раньше и вернуться в режим",
+          "resultText": "Сон был хороший, но день всё равно нужно прожить.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 1
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 1
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "comfort_bills_press",
-      title: "������� ����� ������",
-      text: "������� ��� ������ ����� ������, �� ������ ����������, ��� ��� �� ���������.",
-      conditions: { housingIs: "comfortable", maxMoney: 70 },
-      weight: 7,
-      cooldown: 6,
-      repeatable: true,
-      choices: [
-        __eventChoice("hold_it", "������ ������", "�� ���������� ������� �����, �� ������ �� ������.", [
-          __resource("money", -20),
-          __resource("stress", 3)
-        ]),
-        __eventChoice("downgrade", "������� �� ������� ����", "������� ������, ���� ���������� ����� ������ �� �������.", [
-          __life("housingId", 0, "normal"),
-          __condition("morale", -3),
-          __resource("stress", 1)
-        ])
+      "id": "comfort_bills_press",
+      "title": "Комфорт стоит денег",
+      "text": "Хорошее жильё приятно, но платёж за него тоже чувствуется.",
+      "conditions": {
+        "housingIs": "comfortable",
+        "maxMoney": 70
+      },
+      "weight": 7,
+      "cooldown": 6,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "hold_it",
+          "label": "Тянуть дальше",
+          "resultText": "Ты остаёшься в нормальных условиях, но по карману это бьёт.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "money",
+              "delta": -20
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 3
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "downgrade",
+          "label": "Съехать попроще",
+          "resultText": "Жить станет проще по деньгам, но и удобства уйдут.",
+          "effects": [
+            {
+              "type": "life",
+              "key": "housingId",
+              "delta": 0,
+              "value": "normal"
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -3
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 1
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "friend_pulls_you_out",
-      title: "{friend} ����������� ���� � ����",
-      text: "{friend} �����, ��� �� ��������� ���������� � ����, � �� ��� ���� � ������ � �������.",
-      actors: [{ slot: "friend", role: "friend", required: true }],
-      conditions: { requiresRolesAll: ["friend"], maxSupport: 45, minStress: 30 },
-      weight: 8,
-      cooldown: 6,
-      repeatable: true,
-      choices: [
-        __eventChoice("go_with_friend", "����� � ���", "���� ����� �������� ������������� ����� ���������� ���� � ����������.", [
-          __resource("stress", -7),
-          __condition("morale", 5),
-          __life("support", 8),
-          __relation("friend", 5, 1, 4, -2)
-        ]),
-        __eventChoice("stay_closed", "�������� � ����", "������ ��������� �����, ��� ���������, ��� � ���� ������.", [
-          __resource("stress", 3),
-          __condition("morale", -4),
-          __life("support", -4),
-          __relation("friend", -2, 0, -3, 1)
-        ])
+      "id": "friend_pulls_you_out",
+      "title": "{friend} вытаскивает тебя из ямы",
+      "text": "{friend} видит, что ты совсем закрылся, и не хочет оставлять тебя одного.",
+      "actors": [
+        {
+          "slot": "friend",
+          "role": "friend",
+          "required": true
+        }
+      ],
+      "conditions": {
+        "requiresRolesAll": [
+          "friend"
+        ],
+        "maxSupport": 45,
+        "minStress": 30
+      },
+      "weight": 8,
+      "cooldown": 6,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "go_with_friend",
+          "label": "Пойти с ним",
+          "resultText": "Ты хоть немного выходишь из темноты.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -7
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 5
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 8
+            },
+            {
+              "type": "relation",
+              "slot": "friend",
+              "affinity": 5,
+              "respect": 1,
+              "trust": 4,
+              "tension": -2
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "stay_closed",
+          "label": "Закрыться дома",
+          "resultText": "Ты остаёшься один на один со своей головой.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 3
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -4
+            },
+            {
+              "type": "relation",
+              "slot": "friend",
+              "affinity": -2,
+              "respect": 0,
+              "trust": -3,
+              "tension": 1
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "team_dinner_after_camp",
-      title: "������� ���� �� ����� �����",
-      text: "����� ������ ������ ������� ���������� ������ ������ ��� ������ ����.",
-      conditions: { requiresRolesAny: ["trainer", "sparring"], recentActionAny: ["train", "fight"] },
-      weight: 7,
-      cooldown: 7,
-      repeatable: true,
-      choices: [
-        __eventChoice("join_team", "�����", "������������ ����� ������ ������ ����� � �����.", [
-          __resource("money", -12),
-          __resource("stress", -5),
-          __condition("morale", 4),
-          __life("support", 6)
-        ]),
-        __eventChoice("skip_team", "����������", "�� ���������� ���� ����, �� ������� ������� ����� ����� �������.", [
-          __condition("fatigue", -2),
-          __life("support", -2)
-        ])
+      "id": "team_dinner_after_camp",
+      "title": "Команда зовёт посидеть",
+      "text": "После тяжёлой недели свои хотят просто спокойно посидеть вместе.",
+      "conditions": {
+        "requiresRolesAny": [
+          "trainer",
+          "sparring"
+        ],
+        "recentActionAny": [
+          "train",
+          "fight"
+        ]
+      },
+      "weight": 7,
+      "cooldown": 7,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "join_team",
+          "label": "Пойти",
+          "resultText": "Такие вечера часто держат лучше любой речи.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "money",
+              "delta": -12
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -5
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 6
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "skip_team",
+          "label": "Пропустить",
+          "resultText": "Ты остаёшься в стороне.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "fatigue",
+              "delta": -2
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "family_call_holds_you",
-      title: "������ �� �������",
-      text: "������ ���� �������� ���������� ������ �������, ��� ����� ��������� ������.",
-      conditions: { maxSupport: 70, minStress: 18 },
-      weight: 8,
-      cooldown: 6,
-      repeatable: true,
-      choices: [
-        __eventChoice("answer", "�������� � �� ����������", "�������� ����������� ������, ��� �� �����.", [
-          __resource("stress", -6),
-          __condition("morale", 5),
-          __life("support", 7)
-        ], { add: ["family_grounded"] }),
-        __eventChoice("rush_it", "�������� ������", "�� ������� ������ �������, �� �� ���� ���� � ���� ������.", [
-          __condition("morale", -2),
-          __life("support", -2)
-        ])
+      "id": "family_call_holds_you",
+      "title": "Разговор с близкими держит",
+      "text": "Один нормальный разговор с домом иногда решает больше, чем целая неделя шума.",
+      "conditions": {
+        "maxSupport": 70,
+        "minStress": 18
+      },
+      "weight": 8,
+      "cooldown": 6,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "answer",
+          "label": "Поговорить как есть",
+          "resultText": "Тебя правда становится легче.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -6
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 5
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 7
+            }
+          ],
+          "tagChanges": {
+            "add": [
+              "family_grounded"
+            ]
+          }
+        },
+        {
+          "id": "rush_it",
+          "label": "Сказать, что всё нормально",
+          "resultText": "Ты не грузишь никого, но и сам не разгружаешься.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -2
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "missed_family_day",
-      title: "����������� �������� ����",
-      text: "���� �� ������� �������, ����� ���� ��� ��� ����� � �� ������ ��� ������ ����.",
-      conditions: { minWeek: 4, maxSupport: 65, abroadOnly: true },
-      weight: 6,
-      cooldown: 8,
-      repeatable: true,
-      choices: [
-        __eventChoice("make_time", "����� ����� � ������", "��� �� �������� ����������, �� ������ ���� �����.", [
-          __resource("money", -15),
-          __condition("morale", 4),
-          __life("support", 6)
-        ]),
-        __eventChoice("let_it_pass", "�������� �� �����", "��������� ���� ������� ��� ���� ����� ������� �����.", [
-          __condition("morale", -4),
-          __life("support", -5),
-          __resource("stress", 3)
-        ])
+      "id": "missed_family_day",
+      "title": "Ты снова не приехал",
+      "text": "Близкие ждали, а ты опять не выбрался. Это начинает болеть.",
+      "conditions": {
+        "minWeek": 4,
+        "maxSupport": 65,
+        "abroadOnly": true
+      },
+      "weight": 6,
+      "cooldown": 8,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "make_time",
+          "label": "Позвонить и извиниться",
+          "resultText": "Не то же самое, но хоть честно.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "money",
+              "delta": -15
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 6
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "let_it_pass",
+          "label": "Оставить как есть",
+          "resultText": "Ты делаешь вид, что так и надо.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -5
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 3
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "quiet_evening_clarity",
-      title: "����� ����� �������� �������",
-      text: "������ ����������� �� �����, � �������� �������� ���� �������.",
-      conditions: { maxSupport: 60, maxStress: 55 },
-      weight: 5,
-      cooldown: 7,
-      repeatable: true,
-      choices: [
-        __eventChoice("write_plan", "����� � ��������� �� �� ������", "������� � ������ ���������� ������� �����.", [
-          __condition("morale", 4),
-          __resource("stress", -3)
-        ], { add: ["reflective"] }),
-        __eventChoice("drift", "������� ����� ��� �����", "��������� ��� �� �����, �� � �� ��������.", [
-          __life("support", -1)
-        ])
+      "id": "quiet_evening_clarity",
+      "title": "Тихий вечер всё прояснил",
+      "text": "Без шума и людей мысли вдруг становятся проще.",
+      "conditions": {
+        "maxSupport": 60,
+        "maxStress": 55
+      },
+      "weight": 5,
+      "cooldown": 7,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "write_plan",
+          "label": "Зацепиться за это",
+          "resultText": "Ты немного собираешь себя.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 4
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -3
+            }
+          ],
+          "tagChanges": {
+            "add": [
+              "reflective"
+            ]
+          }
+        },
+        {
+          "id": "drift",
+          "label": "Не копаться",
+          "resultText": "Просто даёшь вечеру пройти.",
+          "effects": [
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -1
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "hotel_loneliness_abroad",
-      title: "����� ����� ����� ������� ��������",
-      text: "�� ������� ���� ������ ������ ������ ��� �������.",
-      conditions: { abroadOnly: true, maxSupport: 40 },
-      weight: 8,
-      cooldown: 5,
-      repeatable: true,
-      choices: [
-        __eventChoice("call_home", "�������� � �����", "�� �������������� ����� ����� � ����, ��� ����� ���� ��� �����.", [
-          __condition("morale", 4),
-          __life("support", 6),
-          __resource("stress", -3)
-        ]),
-        __eventChoice("sit_with_it", "������ � ���� ����", "������ ��� ������ ������ �������.", [
-          __resource("stress", 5),
-          __condition("morale", -4),
-          __life("support", -3)
-        ])
+      "id": "hotel_loneliness_abroad",
+      "title": "Один в чужом номере",
+      "text": "На выезде особенно чувствуется, когда рядом никого своего.",
+      "conditions": {
+        "abroadOnly": true,
+        "maxSupport": 40
+      },
+      "weight": 8,
+      "cooldown": 5,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "call_home",
+          "label": "Собраться",
+          "resultText": "Ты не даёшь этому чувству тебя съесть.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 6
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -3
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "sit_with_it",
+          "label": "Плыть по нему",
+          "resultText": "Одиночество садится глубже.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 5
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -3
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "trainer_sees_stability",
-      title: "{trainer} ��������, ��� �� ���� ���������",
-      text: "{trainer} ����� ������� ����, �� �����, ����� ����� ������ ���� �������� �������������.",
-      actors: [{ slot: "trainer", role: "trainer", required: true }],
-      conditions: { requiresRolesAll: ["trainer"], minMorale: 60, minDiscipline: 55 },
-      weight: 6,
-      cooldown: 10,
-      repeatable: true,
-      choices: [
-        __eventChoice("accept_praise", "������� ��� ��������", "�� �� ���������� ������, �� �� ������� ������ ��� ������� �����.", [
-          __condition("morale", 3),
-          __relation("trainer", 2, 4, 3, -1)
-        ]),
-        __eventChoice("ask_for_more", "��������, ��� ������", "������ �������� ���������� � ���� ��� � ��������, ������� �������� ������.", [
-          __resource("skillPoints", 4),
-          __relation("trainer", 1, 5, 4, 0)
-        ])
+      "id": "trainer_sees_stability",
+      "title": "{trainer} видит, что ты собран",
+      "text": "{trainer} замечает, что в быту ты стал ровнее, и это уже видно в лагере.",
+      "actors": [
+        {
+          "slot": "trainer",
+          "role": "trainer",
+          "required": true
+        }
+      ],
+      "conditions": {
+        "requiresRolesAll": [
+          "trainer"
+        ],
+        "minMorale": 60,
+        "minDiscipline": 55
+      },
+      "weight": 6,
+      "cooldown": 10,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "accept_praise",
+          "label": "Держать линию",
+          "resultText": "Ты просто продолжаешь делать простые вещи правильно.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 3
+            },
+            {
+              "type": "relation",
+              "slot": "trainer",
+              "affinity": 2,
+              "respect": 4,
+              "trust": 3,
+              "tension": -1
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "ask_for_more",
+          "label": "Расслабиться",
+          "resultText": "Хочется отпустить, но это может быстро вернуться назад.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "skillPoints",
+              "delta": 4
+            },
+            {
+              "type": "relation",
+              "slot": "trainer",
+              "affinity": 1,
+              "respect": 5,
+              "trust": 4,
+              "tension": 0
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "trainer_calls_out_slip",
-      title: "{trainer} �����, ��� ��� ���� ���������",
-      text: "{trainer} �������� ���� ������ ������, ��� �� ��� ����� ��� ��������.",
-      actors: [{ slot: "trainer", role: "trainer", required: true }],
-      conditions: { requiresRolesAll: ["trainer"], maxDiscipline: 40, minStress: 40 },
-      weight: 7,
-      cooldown: 7,
-      repeatable: true,
-      choices: [
-        __eventChoice("take_note", "������� ���������", "��� ��������� �������, �� ��� ���������� ���� � �����.", [
-          __condition("morale", 2),
-          __life("support", 2),
-          __relation("trainer", 1, 3, 3, -2)
-        ]),
-        __eventChoice("snap_back", "�������� �����", "�������� ������� ��� ����� �� ������ � ����� �� ������.", [
-          __condition("morale", -3),
-          __relation("trainer", -2, -3, -4, 5)
-        ])
+      "id": "trainer_calls_out_slip",
+      "title": "{trainer} видит, что ты съезжаешь",
+      "text": "{trainer} замечает, что режим трещит, и говорит это прямо.",
+      "actors": [
+        {
+          "slot": "trainer",
+          "role": "trainer",
+          "required": true
+        }
+      ],
+      "conditions": {
+        "requiresRolesAll": [
+          "trainer"
+        ],
+        "maxDiscipline": 40,
+        "minStress": 40
+      },
+      "weight": 7,
+      "cooldown": 7,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "take_note",
+          "label": "Собраться",
+          "resultText": "Неприятно, но полезно.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 2
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 2
+            },
+            {
+              "type": "relation",
+              "slot": "trainer",
+              "affinity": 1,
+              "respect": 3,
+              "trust": 3,
+              "tension": -2
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "snap_back",
+          "label": "Огрызнуться",
+          "resultText": "Тебе это не нравится, и в воздухе становится тяжелее.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -3
+            },
+            {
+              "type": "relation",
+              "slot": "trainer",
+              "affinity": -2,
+              "respect": -3,
+              "trust": -4,
+              "tension": 5
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "friend_after_loss",
-      title: "{friend} �� ��� ���� ��������� ����� ���������",
-      text: "{friend} �������� ��� ������ ���� � ������ ������� �����.",
-      actors: [{ slot: "friend", role: "friend", required: true }],
-      conditions: { requiresRolesAll: ["friend"], lastActionType: "fight", lastFightResult: "loss" },
-      weight: 9,
-      cooldown: 6,
-      repeatable: true,
-      choices: [
-        __eventChoice("let_them_in", "�� ����� ���", "��� �� ����� ���������, �� �� ��� ��� �������� ������.", [
-          __resource("stress", -6),
-          __condition("morale", 5),
-          __life("support", 6),
-          __relation("friend", 5, 1, 5, -2)
-        ]),
-        __eventChoice("push_away", "����� ���������", "����� �� �����, �� ������ ���������� ������.", [
-          __condition("morale", -5),
-          __life("support", -5),
-          __relation("friend", -3, 0, -4, 2)
-        ])
+      "id": "friend_after_loss",
+      "title": "{friend} приходит после поражения",
+      "text": "{friend} не лезет с умными словами. Просто приходит быть рядом.",
+      "actors": [
+        {
+          "slot": "friend",
+          "role": "friend",
+          "required": true
+        }
+      ],
+      "conditions": {
+        "requiresRolesAll": [
+          "friend"
+        ],
+        "lastActionType": "fight",
+        "lastFightResult": "loss"
+      },
+      "weight": 9,
+      "cooldown": 6,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "let_them_in",
+          "label": "Пустить его",
+          "resultText": "Иногда этого уже достаточно.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -6
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 5
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 6
+            },
+            {
+              "type": "relation",
+              "slot": "friend",
+              "affinity": 5,
+              "respect": 1,
+              "trust": 5,
+              "tension": -2
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "push_away",
+          "label": "Остаться одному",
+          "resultText": "Сейчас не хочется никого видеть.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -5
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -5
+            },
+            {
+              "type": "relation",
+              "slot": "friend",
+              "affinity": -3,
+              "respect": 0,
+              "trust": -4,
+              "tension": 2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "team_after_hard_fight",
-      title: "������� ������ ���� ����� ������� ���",
-      text: "����� ��-���������� ������ ������ ����� ����� ������� �� �����, � ����������� ����� �����.",
-      conditions: { requiresRolesAny: ["trainer", "sparring"], lastActionType: "fight", minWear: 20 },
-      weight: 7,
-      cooldown: 8,
-      repeatable: true,
-      choices: [
-        __eventChoice("lean_on_team", "�������� ����� ����� � ����", "������ �������� ���� �� ����� �� ������.", [
-          __resource("health", 5),
-          __resource("stress", -4),
-          __life("support", 5)
-        ]),
-        __eventChoice("keep_mask", "������� ����", "������� �� �����, �� ������ ����� �� ����������.", [
-          __condition("morale", -3),
-          __life("support", -2)
-        ])
+      "id": "team_after_hard_fight",
+      "title": "Команда собирает тебя после боя",
+      "text": "После тяжёлого боя свои пытаются вернуть тебе землю под ноги.",
+      "conditions": {
+        "requiresRolesAny": [
+          "trainer",
+          "sparring"
+        ],
+        "lastActionType": "fight",
+        "minWear": 20
+      },
+      "weight": 7,
+      "cooldown": 8,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "lean_on_team",
+          "label": "Принять это",
+          "resultText": "Команда немного держит тебя на плаву.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "health",
+              "delta": 5
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 5
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "keep_mask",
+          "label": "Отойти в сторону",
+          "resultText": "Ты хочешь пережить это сам.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -3
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "home_needs_repair",
-      title: "����� ����� ����� ������",
-      text: "��� �� ����������, ����� �� �� ������ ������� �� ���� ������.",
-      conditions: { housingAny: ["rough", "normal"], maxMoney: 90, minWeek: 3 },
-      weight: 6,
-      cooldown: 7,
-      repeatable: true,
-      choices: [
-        __eventChoice("pay_for_fix", "������� ������ ��������", "��� ������ �� �������, �� ����� �� ������.", [
-          __resource("money", -22),
-          __resource("stress", -4),
-          __condition("morale", 2)
-        ]),
-        __eventChoice("delay_fix", "�������� ��� �� ������", "�������� ������� � ������� ��� ����� �� ������.", [
-          __resource("stress", 4),
-          __condition("wear", 2)
-        ])
+      "id": "home_needs_repair",
+      "title": "Дома снова что-то сломалось",
+      "text": "Жильё просит денег и внимания ровно тогда, когда их не хочется тратить.",
+      "conditions": {
+        "housingAny": [
+          "rough",
+          "normal"
+        ],
+        "maxMoney": 90,
+        "minWeek": 3
+      },
+      "weight": 6,
+      "cooldown": 7,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "pay_for_fix",
+          "label": "Починить",
+          "resultText": "Бьёт по кошельку, зато жить легче.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "money",
+              "delta": -22
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -4
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 2
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "delay_fix",
+          "label": "Отложить",
+          "resultText": "Проблема остаётся висеть над головой.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 4
+            },
+            {
+              "type": "condition",
+              "key": "wear",
+              "delta": 2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "rival_smells_isolation",
-      title: "{rival} ���������, ��� �� ����",
-      text: "{rival} ��������, ����� ������ ���� ���������� ������ ���������, � ����� ������ ����.",
-      actors: [{ slot: "rival", role: "rival", required: true }],
-      conditions: { requiresRolesAll: ["rival"], maxSupport: 40, minFame: 10 },
-      weight: 6,
-      cooldown: 8,
-      repeatable: true,
-      choices: [
-        __eventChoice("use_it_as_fuel", "������� �� ����� ������", "���� ��� �����, �� �������� � ����� ������ �����.", [
-          __resource("skillPoints", 4),
-          __condition("morale", 1),
-          __relation("rival", 0, 2, 0, 5)
-        ]),
-        __eventChoice("let_it_sink", "���������� ������� �������", "�������� ������ ����, ��� � ��� ���� ���� �����.", [
-          __condition("morale", -4),
-          __resource("stress", 4),
-          __life("support", -3)
-        ])
+      "id": "rival_smells_isolation",
+      "title": "{rival} чувствует слабое место",
+      "text": "{rival} замечает, что ты выпал из людей, и пробует давить в это место.",
+      "actors": [
+        {
+          "slot": "rival",
+          "role": "rival",
+          "required": true
+        }
+      ],
+      "conditions": {
+        "requiresRolesAll": [
+          "rival"
+        ],
+        "maxSupport": 40,
+        "minFame": 10
+      },
+      "weight": 6,
+      "cooldown": 8,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "use_it_as_fuel",
+          "label": "Собраться и закрыться",
+          "resultText": "Ты не даёшь ему бесплатно влезть в голову.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "skillPoints",
+              "delta": 4
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 1
+            },
+            {
+              "type": "relation",
+              "slot": "rival",
+              "affinity": 0,
+              "respect": 2,
+              "trust": 0,
+              "tension": 5
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "let_it_sink",
+          "label": "Вестись",
+          "resultText": "Его слова цепляют сильнее, чем должны.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": -4
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": 4
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": -3
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "doctor_sleep_warning",
-      title: "{doctor} �������, ��� ���� ����� ������ ���",
-      text: "{doctor} ����� ��������, ��� ����� ������� ��� �� �� ���, � �� ����, ��� �� ����� ����� ��������.",
-      actors: [{ slot: "doctor", role: "doctor", required: true }],
-      conditions: { requiresRolesAll: ["doctor"], housingAny: ["rough", "normal"], minWear: 35 },
-      weight: 7,
-      cooldown: 10,
-      repeatable: true,
-      choices: [
-        __eventChoice("listen_to_doctor", "��������� � �������", "�� �������, ��� ��� ���� ���� ������ �� �������.", [
-          __resource("money", -18),
-          __condition("wear", -3),
-          __condition("morale", 2)
-        ]),
-        __eventChoice("brush_it_off", "������� �� ������� ������", "��� ������� �� �������, ���� ���� ����� �� ��������.", [
-          __condition("wear", 3),
-          __relation("doctor", -1, 0, -2, 2)
-        ])
+      "id": "doctor_sleep_warning",
+      "title": "{doctor} говорит про сон",
+      "text": "{doctor} прямо говорит, что без нормального сна всё остальное уже почти не важно.",
+      "actors": [
+        {
+          "slot": "doctor",
+          "role": "doctor",
+          "required": true
+        }
+      ],
+      "conditions": {
+        "requiresRolesAll": [
+          "doctor"
+        ],
+        "housingAny": [
+          "rough",
+          "normal"
+        ],
+        "minWear": 35
+      },
+      "weight": 7,
+      "cooldown": 10,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "listen_to_doctor",
+          "label": "Послушать",
+          "resultText": "Ты наконец ставишь сон выше суеты.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "money",
+              "delta": -18
+            },
+            {
+              "type": "condition",
+              "key": "wear",
+              "delta": -3
+            },
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 2
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "brush_it_off",
+          "label": "Отмахнуться",
+          "resultText": "Ты снова надеешься вытащить всё на упрямстве.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "wear",
+              "delta": 3
+            },
+            {
+              "type": "relation",
+              "slot": "doctor",
+              "affinity": -1,
+              "respect": 0,
+              "trust": -2,
+              "tension": 2
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "family_pride_message",
-      title: "������� ����� ���� ����",
-      text: "�� ��� ��������� �������� ������. ������ ��� �������� ����� �������� ���������� �������.",
-      conditions: { minFame: 14, maxSupport: 80 },
-      weight: 5,
-      cooldown: 12,
-      repeatable: true,
-      choices: [
-        __eventChoice("take_it_in", "������������ � ��������� �����������", "�� �����������, ��� �� ��������� ����� �� �� ��� ���-�� �������.", [
-          __condition("morale", 5),
-          __life("support", 5)
-        ]),
-        __eventChoice("keep_moving", "���������� � ���� ������", "��� �� ����� �����, �� ���������.", [
-          __condition("morale", 1)
-        ])
+      "id": "family_pride_message",
+      "title": "Из дома пишут хорошие слова",
+      "text": "Близкие напоминают, что гордятся тобой, даже когда сам в этом не уверен.",
+      "conditions": {
+        "minFame": 14,
+        "maxSupport": 80
+      },
+      "weight": 5,
+      "cooldown": 12,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "take_it_in",
+          "label": "Принять это",
+          "resultText": "Такие слова правда держат.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 5
+            },
+            {
+              "type": "life",
+              "key": "support",
+              "delta": 5
+            }
+          ],
+          "tagChanges": null
+        },
+        {
+          "id": "keep_moving",
+          "label": "Оставить без ответа",
+          "resultText": "Ты читаешь, но сейчас не можешь в это войти.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 1
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     },
     {
-      id: "good_home_good_habits",
-      title: "���������� ��� �������� ��������",
-      text: "����� ������ ������ �����, ���������� ����� ������ ���������� ��������� ���� ������.",
-      conditions: { housingAny: ["normal", "comfortable"], minDiscipline: 50 },
-      weight: 5,
-      cooldown: 10,
-      repeatable: true,
-      choices: [
-        __eventChoice("keep_routine", "�������� ������", "������ ������������ ����� �������� �������� �� ����.", [
-          __condition("morale", 3),
-          __resource("stress", -2),
-          __resource("skillPoints", 3)
-        ], { add: ["life_in_order"] }),
-        __eventChoice("ease_off", "���� ���� ������ ������", "������ ���� ������� ��� ������� ������ ������� ��� ����������.", [
-          __resource("health", 4),
-          __condition("fatigue", -3)
-        ])
+      "id": "good_home_good_habits",
+      "title": "Нормальный быт даёт режим",
+      "text": "Когда дома спокойно, простые хорошие привычки держатся сами.",
+      "conditions": {
+        "housingAny": [
+          "normal",
+          "comfortable"
+        ],
+        "minDiscipline": 50
+      },
+      "weight": 5,
+      "cooldown": 10,
+      "repeatable": true,
+      "choices": [
+        {
+          "id": "keep_routine",
+          "label": "Держать это",
+          "resultText": "Понемногу это начинает работать на тебя.",
+          "effects": [
+            {
+              "type": "condition",
+              "key": "morale",
+              "delta": 3
+            },
+            {
+              "type": "resource",
+              "key": "stress",
+              "delta": -2
+            },
+            {
+              "type": "resource",
+              "key": "skillPoints",
+              "delta": 3
+            }
+          ],
+          "tagChanges": {
+            "add": [
+              "life_in_order"
+            ]
+          }
+        },
+        {
+          "id": "ease_off",
+          "label": "Расслабиться",
+          "resultText": "Порядок легко теряется, если перестать за ним следить.",
+          "effects": [
+            {
+              "type": "resource",
+              "key": "health",
+              "delta": 4
+            },
+            {
+              "type": "condition",
+              "key": "fatigue",
+              "delta": -3
+            }
+          ],
+          "tagChanges": null
+        }
       ]
     }
   ]
 };
-

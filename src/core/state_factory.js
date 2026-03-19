@@ -194,11 +194,10 @@ function baseNpcSchema() {
     age: 24,
     traits: [],
     status: "",
+    knownToPlayer: false,
+    discoveredWeek: 0,
     relationToPlayer: {
-      affinity: 0,
-      respect: 0,
-      trust: 0,
-      tension: 0,
+      score: 0,
       summary: ""
     },
     history: [],
@@ -209,14 +208,29 @@ function baseNpcSchema() {
 function baseRelationshipSchema() {
   return {
     npcId: "",
-    affinity: 0,
-    respect: 0,
-    trust: 0,
-    tension: 0,
+    score: 0,
     lastInteractionWeek: 0,
     historyEntries: [],
     relationTags: []
   };
+}
+
+function legacyRelationScore(source) {
+  var affinity;
+  var respect;
+  var trust;
+  var tension;
+  if (!source || typeof source !== "object") {
+    return 0;
+  }
+  if (typeof source.score === "number") {
+    return Math.max(-100, Math.min(100, Math.round(source.score)));
+  }
+  affinity = typeof source.affinity === "number" ? source.affinity : 35;
+  respect = typeof source.respect === "number" ? source.respect : 35;
+  trust = typeof source.trust === "number" ? source.trust : 30;
+  tension = typeof source.tension === "number" ? source.tension : 10;
+  return Math.max(-100, Math.min(100, Math.round(((affinity + respect + trust) / 3) - tension)));
 }
 
 function normalizeNpcEntry(sourceNpc) {
@@ -231,11 +245,10 @@ function normalizeNpcEntry(sourceNpc) {
   normalized.age = typeof sourceNpc.age === "number" ? sourceNpc.age : normalized.age;
   normalized.traits = sourceNpc.traits instanceof Array ? clonePlainData(sourceNpc.traits) : [];
   normalized.status = sourceNpc.status || "";
+  normalized.knownToPlayer = typeof sourceNpc.knownToPlayer === "boolean" ? sourceNpc.knownToPlayer : false;
+  normalized.discoveredWeek = typeof sourceNpc.discoveredWeek === "number" ? sourceNpc.discoveredWeek : 0;
   if (sourceNpc.relationToPlayer && typeof sourceNpc.relationToPlayer === "object") {
-    if (typeof sourceNpc.relationToPlayer.affinity === "number") { normalized.relationToPlayer.affinity = sourceNpc.relationToPlayer.affinity; }
-    if (typeof sourceNpc.relationToPlayer.respect === "number") { normalized.relationToPlayer.respect = sourceNpc.relationToPlayer.respect; }
-    if (typeof sourceNpc.relationToPlayer.trust === "number") { normalized.relationToPlayer.trust = sourceNpc.relationToPlayer.trust; }
-    if (typeof sourceNpc.relationToPlayer.tension === "number") { normalized.relationToPlayer.tension = sourceNpc.relationToPlayer.tension; }
+    normalized.relationToPlayer.score = legacyRelationScore(sourceNpc.relationToPlayer);
     normalized.relationToPlayer.summary = sourceNpc.relationToPlayer.summary || "";
   }
   normalized.history = sourceNpc.history instanceof Array ? clonePlainData(sourceNpc.history) : [];
@@ -249,10 +262,7 @@ function normalizeRelationshipEntry(sourceRelationship) {
     return normalized;
   }
   normalized.npcId = sourceRelationship.npcId || "";
-  if (typeof sourceRelationship.affinity === "number") { normalized.affinity = sourceRelationship.affinity; }
-  if (typeof sourceRelationship.respect === "number") { normalized.respect = sourceRelationship.respect; }
-  if (typeof sourceRelationship.trust === "number") { normalized.trust = sourceRelationship.trust; }
-  if (typeof sourceRelationship.tension === "number") { normalized.tension = sourceRelationship.tension; }
+  normalized.score = legacyRelationScore(sourceRelationship);
   if (typeof sourceRelationship.lastInteractionWeek === "number") { normalized.lastInteractionWeek = sourceRelationship.lastInteractionWeek; }
   normalized.historyEntries = sourceRelationship.historyEntries instanceof Array ? clonePlainData(sourceRelationship.historyEntries) : [];
   normalized.relationTags = sourceRelationship.relationTags instanceof Array ? clonePlainData(sourceRelationship.relationTags) : [];
