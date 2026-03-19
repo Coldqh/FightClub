@@ -1056,28 +1056,28 @@
     }
   </style>
 
-  <script type="text/javascript" src="country_data.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/content/content_data.js?v=2026.03.19.16"></script>
-<script type="text/javascript" src="src/content/career_ecosystem_data.js?v=2026.03.19.16"></script>
-<script type="text/javascript" src="src/content/development_data.js?v=2026.03.19.16"></script>
-<script type="text/javascript" src="src/content/combat_state_data.js?v=2026.03.19.16"></script>
-<script type="text/javascript" src="src/content/event_data.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/content/life_data.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/content/life_event_data.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/content/relationship_arc_data.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/content/reputation_legend_data.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/content/content_loader.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/rng_manager.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/save_manager.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/event_engine.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/relationship_arc_engine.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/reputation_engine.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/time_system.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/state_factory.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="src/core/validators.js?v=2026.03.19.16"></script>
-  <script type="text/javascript" src="game_data.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="country_data.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/content/content_data.js?v=2026.03.19.17"></script>
+<script type="text/javascript" src="src/content/career_ecosystem_data.js?v=2026.03.19.17"></script>
+<script type="text/javascript" src="src/content/development_data.js?v=2026.03.19.17"></script>
+<script type="text/javascript" src="src/content/combat_state_data.js?v=2026.03.19.17"></script>
+<script type="text/javascript" src="src/content/event_data.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/content/life_data.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/content/life_event_data.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/content/relationship_arc_data.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/content/reputation_legend_data.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/content/content_loader.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/rng_manager.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/save_manager.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/event_engine.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/relationship_arc_engine.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/reputation_engine.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/time_system.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/state_factory.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="src/core/validators.js?v=2026.03.19.17"></script>
+  <script type="text/javascript" src="game_data.js?v=2026.03.19.17"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.19.16";
+    var APP_VERSION = "2026.03.19.17";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -2119,6 +2119,149 @@ var APP_VERSION = "2026.03.19.16";
       return { str: 1, tec: 1, spd: 1, end: 1, vit: 1 };
     }
 
+    var RUNTIME_GYM_FALLBACK_COSTS = [15, 35, 60, 100, 150];
+    var RUNTIME_TRAINER_FALLBACK_FEES = [15, 35, 60, 100, 150];
+    var runtimeCareerResourceCache = {
+      gymsByCountry: {},
+      gymsById: {},
+      trainersByCountry: {},
+      trainersById: {}
+    };
+
+    function runtimeGymTemplates() {
+      return [
+        { slug: "yard", label: "Районный зал", bonuses: { trainingPoints: 1, safeBias: 1 }, developmentProfile: { focusBoosts: { power: 1 }, styleWeights: { puncher: 1 } } },
+        { slug: "school", label: "Городской зал", bonuses: { trainingPoints: 2, recoveryHealth: 1, safeBias: 1 }, developmentProfile: { focusBoosts: { endurance: 1, defense: 1 }, styleWeights: { tempo: 1, counterpuncher: 1 } } },
+        { slug: "club", label: "Спортивный зал", bonuses: { trainingPoints: 3, fameBonus: 1, purseBonus: 3 }, developmentProfile: { focusBoosts: { technique: 1, endurance: 1 }, styleWeights: { outboxer: 1, tempo: 1 } } },
+        { slug: "camp", label: "Профессиональный зал", bonuses: { trainingPoints: 4, fameBonus: 2, purseBonus: 7, recoveryHealth: 2 }, developmentProfile: { focusBoosts: { power: 1, technique: 1, defense: 1 }, styleWeights: { puncher: 1, outboxer: 1, counterpuncher: 1 } } },
+        { slug: "elite", label: "Большой зал", bonuses: { trainingPoints: 5, fameBonus: 3, purseBonus: 12, koBonus: 15, toxicGuard: 5, safeBias: 1 }, developmentProfile: { focusBoosts: { power: 2, technique: 1, defense: 1, recovery: 1 }, styleWeights: { puncher: 1, outboxer: 1, counterpuncher: 1 } } }
+      ];
+    }
+
+    function runtimeTrainerTemplates() {
+      return [
+        { slug: "trainer_1", label: "Тренер 1", bonuses: { trainingPoints: 1, recoveryHealth: 1 }, developmentProfile: { focusBoosts: { technique: 1 }, styleWeights: { outboxer: 1 } } },
+        { slug: "trainer_2", label: "Тренер 2", bonuses: { trainingPoints: 2, recoveryHealth: 1, stressRelief: 1 }, developmentProfile: { focusBoosts: { endurance: 1, defense: 1 }, styleWeights: { tempo: 1, counterpuncher: 1 } } },
+        { slug: "trainer_3", label: "Тренер 3", bonuses: { trainingPoints: 3, fameBonus: 1, safeBias: 1 }, developmentProfile: { focusBoosts: { technique: 2, defense: 1 }, styleWeights: { outboxer: 1, counterpuncher: 1 } } },
+        { slug: "trainer_4", label: "Тренер 4", bonuses: { trainingPoints: 4, purseBonus: 6, koBonus: 10, toxicGuard: 2 }, developmentProfile: { focusBoosts: { power: 2, endurance: 1 }, styleWeights: { puncher: 2, tempo: 1 } } },
+        { slug: "trainer_5", label: "Тренер 5", bonuses: { trainingPoints: 5, fameBonus: 3, purseBonus: 10, koBonus: 18, toxicGuard: 5, recoveryHealth: 2 }, developmentProfile: { focusBoosts: { power: 2, technique: 1, defense: 1, recovery: 1 }, styleWeights: { puncher: 1, outboxer: 1, counterpuncher: 1 } } }
+      ];
+    }
+
+    function runtimeCountryCity(countryInfo, index) {
+      var arenas = countryInfo && countryInfo.arenas ? countryInfo.arenas : [];
+      if (arenas.length && arenas[index % arenas.length] && arenas[index % arenas.length].city) {
+        return arenas[index % arenas.length].city;
+      }
+      if (countryInfo && countryInfo.city) {
+        return countryInfo.city;
+      }
+      return countryInfo && countryInfo.name ? countryInfo.name : "";
+    }
+
+    function ensureRuntimeCareerResources(countryKey) {
+      var countryInfo;
+      var trainerTemplates;
+      var gymTemplates;
+      var trainers;
+      var gyms;
+      var trainerIds;
+      var i;
+      var city;
+      if (!countryKey || runtimeCareerResourceCache.gymsByCountry[countryKey]) {
+        return;
+      }
+      countryInfo = ContentLoader.getCountry ? ContentLoader.getCountry(countryKey) : null;
+      if (!countryInfo) {
+        return;
+      }
+      trainerTemplates = runtimeTrainerTemplates();
+      gymTemplates = runtimeGymTemplates();
+      trainers = [];
+      gyms = [];
+      trainerIds = [];
+      for (i = 0; i < trainerTemplates.length; i += 1) {
+        city = runtimeCountryCity(countryInfo, i);
+        trainers.push({
+          id: countryKey + "_trainer_" + (i + 1),
+          country: countryKey,
+          city: city,
+          label: trainerTemplates[i].label,
+          monthlyFee: RUNTIME_TRAINER_FALLBACK_FEES[i],
+          weeklyFee: Math.max(4, Math.ceil(RUNTIME_TRAINER_FALLBACK_FEES[i] / 4)),
+          reputation: 35 + i * 5,
+          bonuses: clonePlainData(trainerTemplates[i].bonuses),
+          developmentProfile: clonePlainData(trainerTemplates[i].developmentProfile)
+        });
+        trainerIds.push(countryKey + "_trainer_" + (i + 1));
+      }
+      for (i = 0; i < gymTemplates.length; i += 1) {
+        city = runtimeCountryCity(countryInfo, i);
+        gyms.push({
+          id: countryKey + "_gym_" + (i + 1),
+          country: countryKey,
+          city: city,
+          name: city + " " + gymTemplates[i].label,
+          cost: RUNTIME_GYM_FALLBACK_COSTS[i],
+          weeklyCost: Math.max(4, Math.ceil(RUNTIME_GYM_FALLBACK_COSTS[i] / 4)),
+          reputation: 30 + i * 6,
+          bonuses: clonePlainData(gymTemplates[i].bonuses),
+          trainerTypeIds: trainerIds.slice(0),
+          developmentProfile: clonePlainData(gymTemplates[i].developmentProfile)
+        });
+      }
+      runtimeCareerResourceCache.trainersByCountry[countryKey] = trainers;
+      runtimeCareerResourceCache.gymsByCountry[countryKey] = gyms;
+      for (i = 0; i < trainers.length; i += 1) {
+        runtimeCareerResourceCache.trainersById[trainers[i].id] = trainers[i];
+      }
+      for (i = 0; i < gyms.length; i += 1) {
+        runtimeCareerResourceCache.gymsById[gyms[i].id] = gyms[i];
+      }
+    }
+
+    function runtimeFallbackGymsByCountry(countryKey) {
+      ensureRuntimeCareerResources(countryKey);
+      return clonePlainData(runtimeCareerResourceCache.gymsByCountry[countryKey] || []);
+    }
+
+    function runtimeFallbackTrainersByCountry(countryKey) {
+      ensureRuntimeCareerResources(countryKey);
+      return clonePlainData(runtimeCareerResourceCache.trainersByCountry[countryKey] || []);
+    }
+
+    function runtimeFallbackGymById(gymId) {
+      var countries;
+      var i;
+      if (runtimeCareerResourceCache.gymsById[gymId]) {
+        return clonePlainData(runtimeCareerResourceCache.gymsById[gymId]);
+      }
+      countries = listCountries();
+      for (i = 0; i < countries.length; i += 1) {
+        ensureRuntimeCareerResources(countries[i].id || countries[i].key);
+        if (runtimeCareerResourceCache.gymsById[gymId]) {
+          return clonePlainData(runtimeCareerResourceCache.gymsById[gymId]);
+        }
+      }
+      return null;
+    }
+
+    function runtimeFallbackTrainerById(trainerTypeId) {
+      var countries;
+      var i;
+      if (runtimeCareerResourceCache.trainersById[trainerTypeId]) {
+        return clonePlainData(runtimeCareerResourceCache.trainersById[trainerTypeId]);
+      }
+      countries = listCountries();
+      for (i = 0; i < countries.length; i += 1) {
+        ensureRuntimeCareerResources(countries[i].id || countries[i].key);
+        if (runtimeCareerResourceCache.trainersById[trainerTypeId]) {
+          return clonePlainData(runtimeCareerResourceCache.trainersById[trainerTypeId]);
+        }
+      }
+      return null;
+    }
+
     function listCountries() {
       return ContentLoader.listCountries();
     }
@@ -2128,23 +2271,44 @@ var APP_VERSION = "2026.03.19.16";
     }
 
     function listCountryGyms(countryKey) {
-      return ContentLoader.listGymsByCountry ? ContentLoader.listGymsByCountry(countryKey) : [];
+      var gyms = ContentLoader.listGymsByCountry ? ContentLoader.listGymsByCountry(countryKey) : [];
+      if (!(gyms instanceof Array) || gyms.length < 5) {
+        return runtimeFallbackGymsByCountry(countryKey);
+      }
+      return gyms;
     }
 
     function getGym(gymId) {
-      return ContentLoader.getGym ? ContentLoader.getGym(gymId) : null;
+      var gym = ContentLoader.getGym ? ContentLoader.getGym(gymId) : null;
+      return gym || runtimeFallbackGymById(gymId);
     }
 
     function getTrainerType(typeId) {
-      return ContentLoader.getTrainerType ? ContentLoader.getTrainerType(typeId) : null;
+      var trainerType = ContentLoader.getTrainerType ? ContentLoader.getTrainerType(typeId) : null;
+      return trainerType || runtimeFallbackTrainerById(typeId);
     }
 
     function listTrainerTypes() {
-      return ContentLoader.listTrainerTypes ? ContentLoader.listTrainerTypes() : [];
+      var trainerTypes = ContentLoader.listTrainerTypes ? ContentLoader.listTrainerTypes() : [];
+      var countries;
+      var i;
+      var combined = [];
+      if (trainerTypes instanceof Array && trainerTypes.length >= 40) {
+        return trainerTypes;
+      }
+      countries = listCountries();
+      for (i = 0; i < countries.length; i += 1) {
+        combined = combined.concat(runtimeFallbackTrainersByCountry(countries[i].id || countries[i].key));
+      }
+      return combined;
     }
 
     function listCountryTrainerTypes(countryKey) {
-      return ContentLoader.listTrainerTypesByCountry ? ContentLoader.listTrainerTypesByCountry(countryKey) : [];
+      var trainerTypes = ContentLoader.listTrainerTypesByCountry ? ContentLoader.listTrainerTypesByCountry(countryKey) : [];
+      if (!(trainerTypes instanceof Array) || trainerTypes.length < 5) {
+        return runtimeFallbackTrainersByCountry(countryKey);
+      }
+      return trainerTypes;
     }
 
     function getContractTemplate(templateId) {
@@ -2411,11 +2575,15 @@ var APP_VERSION = "2026.03.19.16";
     }
 
     function trainerDevelopmentProfile(trainerTypeId) {
-      return ContentLoader.getTrainerDevelopmentProfile ? ContentLoader.getTrainerDevelopmentProfile(trainerTypeId) : null;
+      var profile = ContentLoader.getTrainerDevelopmentProfile ? ContentLoader.getTrainerDevelopmentProfile(trainerTypeId) : null;
+      var trainerType = getTrainerType(trainerTypeId);
+      return profile || (trainerType && trainerType.developmentProfile ? clonePlainData(trainerType.developmentProfile) : null);
     }
 
     function gymDevelopmentProfile(gymId) {
-      return ContentLoader.getGymDevelopmentProfile ? ContentLoader.getGymDevelopmentProfile(gymId) : null;
+      var profile = ContentLoader.getGymDevelopmentProfile ? ContentLoader.getGymDevelopmentProfile(gymId) : null;
+      var gym = getGym(gymId);
+      return profile || (gym && gym.developmentProfile ? clonePlainData(gym.developmentProfile) : null);
     }
 
     function listInjuryTypes() {
@@ -4528,6 +4696,32 @@ var APP_VERSION = "2026.03.19.16";
       return identity.fullName || "Новый контакт";
     }
 
+    function shouldKeepOpponentTrainerName(label, trainerType) {
+      if (typeof label !== "string" || !label) {
+        return false;
+      }
+      if (trainerType && (label === trainerType.label || label === trainerType.id)) {
+        return false;
+      }
+      if (/^Тренер\s+\d+$/i.test(label) || /^Trainer\s+\d+$/i.test(label)) {
+        return false;
+      }
+      if (/Финиш|Технар|Старая школа|Кондиц|Медиа|Корпус|Old School|Finisher|Technician|Body/i.test(label)) {
+        return false;
+      }
+      return label.indexOf(" ") > 0;
+    }
+
+    function shouldKeepOpponentGymName(name) {
+      if (typeof name !== "string" || !name) {
+        return false;
+      }
+      if (/[A-Za-z]{3,}/.test(name) && !/[А-Яа-яЁё]/.test(name)) {
+        return false;
+      }
+      return true;
+    }
+
     function makeNpc(countryKey, roleId, overrides) {
       var role = npcRoleInfo(roleId);
       var config = overrides || {};
@@ -5207,8 +5401,8 @@ var APP_VERSION = "2026.03.19.16";
         opponent.injuries = generateOpponentInjuries(opponent, archetype);
       }
       opponent.mainRisks = opponentRiskSummary(opponent);
-      opponent.gymName = gym ? gym.name : (opponent.gymName || "");
-      opponent.trainerLabel = trainerType ? ((opponent.trainerLabel && opponent.trainerLabel !== trainerType.label) ? opponent.trainerLabel : buildNpcName(opponent.countryKey || state.fighter.currentCountry)) : "";
+      opponent.gymName = gym ? gym.name : (shouldKeepOpponentGymName(opponent.gymName) ? opponent.gymName : "");
+      opponent.trainerLabel = trainerType ? (shouldKeepOpponentTrainerName(opponent.trainerLabel, trainerType) ? opponent.trainerLabel : buildNpcName(opponent.countryKey || state.fighter.currentCountry)) : "";
       return opponent;
     }
 
