@@ -1056,28 +1056,28 @@
     }
   </style>
 
-  <script type="text/javascript" src="country_data.js"></script>
-  <script type="text/javascript" src="src/content/content_data.js"></script>
-<script type="text/javascript" src="src/content/career_ecosystem_data.js"></script>
-<script type="text/javascript" src="src/content/development_data.js"></script>
-<script type="text/javascript" src="src/content/combat_state_data.js"></script>
-<script type="text/javascript" src="src/content/event_data.js"></script>
-  <script type="text/javascript" src="src/content/life_data.js"></script>
-  <script type="text/javascript" src="src/content/life_event_data.js"></script>
-  <script type="text/javascript" src="src/content/relationship_arc_data.js"></script>
-  <script type="text/javascript" src="src/content/reputation_legend_data.js"></script>
-  <script type="text/javascript" src="src/content/content_loader.js"></script>
-  <script type="text/javascript" src="src/core/rng_manager.js"></script>
-  <script type="text/javascript" src="src/core/save_manager.js"></script>
-  <script type="text/javascript" src="src/core/event_engine.js"></script>
-  <script type="text/javascript" src="src/core/relationship_arc_engine.js"></script>
-  <script type="text/javascript" src="src/core/reputation_engine.js"></script>
-  <script type="text/javascript" src="src/core/time_system.js"></script>
-  <script type="text/javascript" src="src/core/state_factory.js"></script>
-  <script type="text/javascript" src="src/core/validators.js"></script>
-  <script type="text/javascript" src="game_data.js"></script>
+  <script type="text/javascript" src="country_data.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/content/content_data.js?v=2026.03.19.16"></script>
+<script type="text/javascript" src="src/content/career_ecosystem_data.js?v=2026.03.19.16"></script>
+<script type="text/javascript" src="src/content/development_data.js?v=2026.03.19.16"></script>
+<script type="text/javascript" src="src/content/combat_state_data.js?v=2026.03.19.16"></script>
+<script type="text/javascript" src="src/content/event_data.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/content/life_data.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/content/life_event_data.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/content/relationship_arc_data.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/content/reputation_legend_data.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/content/content_loader.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/rng_manager.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/save_manager.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/event_engine.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/relationship_arc_engine.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/reputation_engine.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/time_system.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/state_factory.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="src/core/validators.js?v=2026.03.19.16"></script>
+  <script type="text/javascript" src="game_data.js?v=2026.03.19.16"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.19.15";
+var APP_VERSION = "2026.03.19.16";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -2041,6 +2041,7 @@ var APP_VERSION = "2026.03.19.15";
       }
       ensureLifeState();
       ensureNpcWorld();
+      normalizeWorldOffers();
       if (!state.world.offers.available.length || !(state.world.offers.fightOffers instanceof Array) || !(state.world.offers.contractOffers instanceof Array)) {
         refreshWorldState();
       }
@@ -5207,7 +5208,7 @@ var APP_VERSION = "2026.03.19.15";
       }
       opponent.mainRisks = opponentRiskSummary(opponent);
       opponent.gymName = gym ? gym.name : (opponent.gymName || "");
-      opponent.trainerLabel = trainerType ? trainerType.label : (opponent.trainerLabel || "");
+      opponent.trainerLabel = trainerType ? ((opponent.trainerLabel && opponent.trainerLabel !== trainerType.label) ? opponent.trainerLabel : buildNpcName(opponent.countryKey || state.fighter.currentCountry)) : "";
       return opponent;
     }
 
@@ -7304,6 +7305,7 @@ var APP_VERSION = "2026.03.19.15";
       if (!state.world.offers || state.world.offers.weekStamp !== state.fighter.week || !(state.world.offers.fightOffers instanceof Array) || !state.world.offers.fightOffers.length) {
         refreshWorldState();
       }
+      normalizeWorldOffers();
       state.opponents = [];
       if (state.world.offers && state.world.offers.fightOffers) {
         var i;
@@ -10057,5 +10059,6 @@ var APP_VERSION = "2026.03.19.15";
   <div id="app"></div>
 </body>
 </html>
+
 
 
