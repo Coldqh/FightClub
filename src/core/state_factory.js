@@ -1,4 +1,4 @@
-var SAVE_VERSION = 11;
+var SAVE_VERSION = 12;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -19,7 +19,19 @@ function basePlayerConditionsSchema() {
     fatigue: 0,
     wear: 0,
     morale: 55,
-    startingAge: 22
+    startingAge: 22,
+    injuries: []
+  };
+}
+
+function baseInjurySchema() {
+  return {
+    id: "",
+    severity: 1,
+    weeksLeft: 0,
+    chronic: false,
+    source: "",
+    appliedWeek: 0
   };
 }
 
@@ -183,6 +195,20 @@ function baseWorldSchema() {
       temperature: 50
     }
   };
+}
+
+function normalizeInjuryEntry(source) {
+  var normalized = baseInjurySchema();
+  if (!source || typeof source !== "object") {
+    return normalized;
+  }
+  normalized.id = source.id || "";
+  normalized.severity = typeof source.severity === "number" ? source.severity : normalized.severity;
+  normalized.weeksLeft = typeof source.weeksLeft === "number" ? source.weeksLeft : normalized.weeksLeft;
+  normalized.chronic = !!source.chronic;
+  normalized.source = source.source || "";
+  normalized.appliedWeek = typeof source.appliedWeek === "number" ? source.appliedWeek : normalized.appliedWeek;
+  return normalized;
 }
 
 function baseNpcSchema() {
@@ -517,6 +543,12 @@ function normalizeGameState(gameState, options) {
       if (typeof source.player.conditions.wear === "number") { normalized.player.conditions.wear = source.player.conditions.wear; }
       if (typeof source.player.conditions.morale === "number") { normalized.player.conditions.morale = source.player.conditions.morale; }
       if (typeof source.player.conditions.startingAge === "number") { normalized.player.conditions.startingAge = source.player.conditions.startingAge; }
+      if (source.player.conditions.injuries instanceof Array) {
+        normalized.player.conditions.injuries = [];
+        for (key = 0; key < source.player.conditions.injuries.length; key += 1) {
+          normalized.player.conditions.injuries.push(normalizeInjuryEntry(source.player.conditions.injuries[key]));
+        }
+      }
     }
     if (source.player.life) {
       normalized.player.life.housingId = source.player.life.housingId || normalized.player.life.housingId;
@@ -628,6 +660,12 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.player.conditions.wear = typeof fighter.wear === "number" ? fighter.wear : gameState.player.conditions.wear;
     gameState.player.conditions.morale = typeof fighter.morale === "number" ? fighter.morale : gameState.player.conditions.morale;
     gameState.player.conditions.startingAge = typeof fighter.startingAge === "number" ? fighter.startingAge : gameState.player.conditions.startingAge;
+    if (fighter.injuries instanceof Array) {
+      gameState.player.conditions.injuries = [];
+      for (key = 0; key < fighter.injuries.length; key += 1) {
+        gameState.player.conditions.injuries.push(normalizeInjuryEntry(fighter.injuries[key]));
+      }
+    }
     gameState.player.life.housingId = fighter.housingId || gameState.player.life.housingId;
     gameState.player.life.support = typeof fighter.support === "number" ? fighter.support : gameState.player.life.support;
     if (fighter.development && typeof fighter.development === "object") {
@@ -712,6 +750,7 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     fatigue: normalized.player.conditions.fatigue,
     wear: normalized.player.conditions.wear,
     morale: normalized.player.conditions.morale,
+    injuries: clonePlainData(normalized.player.conditions.injuries),
     housingId: normalized.player.life.housingId,
     support: normalized.player.life.support,
     development: clonePlainData(normalized.player.development),

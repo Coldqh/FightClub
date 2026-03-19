@@ -3,9 +3,9 @@
     {
       "id": "mexico_barrio_pit",
       "country": "mexico",
-      "city": "������",
+      "city": "Mexico City",
       "name": "Barrio Pit",
-      "cost": 18,
+      "cost": 15,
       "specialization": "рубка и корпус",
       "reputation": 42,
       "bonuses": {
@@ -22,7 +22,7 @@
     {
       "id": "mexico_norte_boxing",
       "country": "mexico",
-      "city": "���������",
+      "city": "Guadalajara",
       "name": "Norte Boxing House",
       "cost": 24,
       "specialization": "мощь и жёсткие серии",
@@ -41,9 +41,9 @@
     {
       "id": "usa_vegas_workshop",
       "country": "usa",
-      "city": "���-�����",
+      "city": "Las Vegas",
       "name": "Vegas Workshop",
-      "cost": 32,
+      "cost": 48,
       "specialization": "контракт и витрина",
       "reputation": 68,
       "bonuses": {
@@ -60,9 +60,9 @@
     {
       "id": "usa_brooklyn_grind",
       "country": "usa",
-      "city": "���-����",
+      "city": "Brooklyn",
       "name": "Brooklyn Grind Gym",
-      "cost": 22,
+      "cost": 35,
       "specialization": "грязная работа и объём",
       "reputation": 51,
       "bonuses": {
@@ -79,9 +79,9 @@
     {
       "id": "russia_yard_team",
       "country": "russia",
-      "city": "������",
-      "name": "�������� �������",
-      "cost": 16,
+      "city": "Moscow",
+      "name": "Yard Team",
+      "cost": 18,
       "specialization": "жёсткая база",
       "reputation": 44,
       "bonuses": {
@@ -98,9 +98,9 @@
     {
       "id": "russia_neva_line",
       "country": "russia",
-      "city": "�����-���������",
+      "city": "Saint Petersburg",
       "name": "Neva Line",
-      "cost": 26,
+      "cost": 32,
       "specialization": "дистанция и холодная голова",
       "reputation": 60,
       "bonuses": {
@@ -117,9 +117,9 @@
     {
       "id": "cuba_malecon_school",
       "country": "cuba",
-      "city": "������",
+      "city": "Havana",
       "name": "Malecon School",
-      "cost": 20,
+      "cost": 22,
       "specialization": "ноги и ритм",
       "reputation": 58,
       "bonuses": {
@@ -136,9 +136,9 @@
     {
       "id": "cuba_santiago_rhythm",
       "country": "cuba",
-      "city": "��������-��-����",
+      "city": "Santiago de Cuba",
       "name": "Santiago Rhythm Hall",
-      "cost": 18,
+      "cost": 27,
       "specialization": "ритм и объём",
       "reputation": 49,
       "bonuses": {
@@ -155,9 +155,9 @@
     {
       "id": "japan_tokyo_discipline",
       "country": "japan",
-      "city": "�����",
+      "city": "Tokyo",
       "name": "Tokyo Discipline Club",
-      "cost": 30,
+      "cost": 55,
       "specialization": "точность и режим",
       "reputation": 66,
       "bonuses": {
@@ -174,9 +174,9 @@
     {
       "id": "japan_osaka_smoke",
       "country": "japan",
-      "city": "�����",
+      "city": "Osaka",
       "name": "Osaka Smoke Works",
-      "cost": 24,
+      "cost": 40,
       "specialization": "техника под давлением",
       "reputation": 53,
       "bonuses": {
@@ -193,9 +193,9 @@
     {
       "id": "china_shanghai_engine",
       "country": "china",
-      "city": "������",
+      "city": "Shanghai",
       "name": "Shanghai Engine",
-      "cost": 28,
+      "cost": 60,
       "specialization": "объём и мотор",
       "reputation": 61,
       "bonuses": {
@@ -212,9 +212,9 @@
     {
       "id": "china_beijing_iron",
       "country": "china",
-      "city": "�����",
+      "city": "Beijing",
       "name": "Beijing Iron Works",
-      "cost": 21,
+      "cost": 45,
       "specialization": "жёсткая защита",
       "reputation": 50,
       "bonuses": {
@@ -231,9 +231,9 @@
     {
       "id": "uk_london_cellar",
       "country": "uk",
-      "city": "������",
+      "city": "London",
       "name": "London Cellar",
-      "cost": 27,
+      "cost": 72,
       "specialization": "джеб и шаг",
       "reputation": 63,
       "bonuses": {
@@ -250,9 +250,9 @@
     {
       "id": "uk_manchester_brick",
       "country": "uk",
-      "city": "���������",
+      "city": "Manchester",
       "name": "Manchester Brick Gym",
-      "cost": 19,
+      "cost": 50,
       "specialization": "выносливость и характер",
       "reputation": 47,
       "bonuses": {
@@ -269,9 +269,9 @@
     {
       "id": "philippines_manila_motor",
       "country": "philippines",
-      "city": "������",
+      "city": "Manila",
       "name": "Manila Motor House",
-      "cost": 20,
+      "cost": 100,
       "specialization": "темп и серия",
       "reputation": 57,
       "bonuses": {
@@ -288,9 +288,9 @@
     {
       "id": "philippines_cebu_storm",
       "country": "philippines",
-      "city": "����",
+      "city": "Cebu",
       "name": "Cebu Storm Camp",
-      "cost": 17,
+      "cost": 85,
       "specialization": "жёсткий спарринг",
       "reputation": 46,
       "bonuses": {

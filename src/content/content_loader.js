@@ -41,6 +41,8 @@ var ContentLoader = (function () {
     var developmentStyle;
     var trainingFocus;
     var perk;
+    var injuryType;
+    var opponentArchetype;
     var contextEvents = [];
     if (cache) {
       return cache;
@@ -73,6 +75,11 @@ var ContentLoader = (function () {
       developmentPerksById: {},
       trainerDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainerProfiles) || {}),
       gymDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.gymProfiles) || {}),
+      injuryTypes: clone((typeof COMBAT_STATE_DATA !== "undefined" && COMBAT_STATE_DATA.injuryTypes) || []),
+      injuryTypesById: {},
+      opponentArchetypes: clone((typeof COMBAT_STATE_DATA !== "undefined" && COMBAT_STATE_DATA.opponentArchetypes) || []),
+      opponentArchetypesById: {},
+      campFightProfiles: clone((typeof COMBAT_STATE_DATA !== "undefined" && COMBAT_STATE_DATA.campFightProfiles) || {}),
       relationshipArcTemplates: clone((typeof RELATIONSHIP_ARC_DATA !== "undefined" && RELATIONSHIP_ARC_DATA.templates) || []),
       contextEventTriggerChance: typeof EVENT_DATA !== "undefined" && typeof EVENT_DATA.triggerChance === "number" ? EVENT_DATA.triggerChance : 0,
       contextEvents: []
@@ -131,6 +138,14 @@ var ContentLoader = (function () {
     for (i = 0; i < cache.developmentPerks.length; i += 1) {
       perk = cache.developmentPerks[i];
       cache.developmentPerksById[perk.id] = perk;
+    }
+    for (i = 0; i < cache.injuryTypes.length; i += 1) {
+      injuryType = cache.injuryTypes[i];
+      cache.injuryTypesById[injuryType.id] = injuryType;
+    }
+    for (i = 0; i < cache.opponentArchetypes.length; i += 1) {
+      opponentArchetype = cache.opponentArchetypes[i];
+      cache.opponentArchetypesById[opponentArchetype.id] = opponentArchetype;
     }
     return cache;
   }
@@ -288,6 +303,26 @@ var ContentLoader = (function () {
     return ensureCache().gymDevelopmentProfiles[gymId] || null;
   }
 
+  function listInjuryTypes() {
+    return ensureCache().injuryTypes;
+  }
+
+  function getInjuryType(injuryId) {
+    return ensureCache().injuryTypesById[injuryId] || null;
+  }
+
+  function listOpponentArchetypes() {
+    return ensureCache().opponentArchetypes;
+  }
+
+  function getOpponentArchetype(archetypeId) {
+    return ensureCache().opponentArchetypesById[archetypeId] || null;
+  }
+
+  function getCampFightProfile(focusId) {
+    return ensureCache().campFightProfiles[focusId] || null;
+  }
+
   function listRelationshipArcTemplates() {
     return ensureCache().relationshipArcTemplates;
   }
@@ -325,6 +360,11 @@ var ContentLoader = (function () {
     getDevelopmentPerk: getDevelopmentPerk,
     getTrainerDevelopmentProfile: getTrainerDevelopmentProfile,
     getGymDevelopmentProfile: getGymDevelopmentProfile,
+    listInjuryTypes: listInjuryTypes,
+    getInjuryType: getInjuryType,
+    listOpponentArchetypes: listOpponentArchetypes,
+    getOpponentArchetype: getOpponentArchetype,
+    getCampFightProfile: getCampFightProfile,
     listRelationshipArcTemplates: listRelationshipArcTemplates,
     getContextEventTriggerChance: getContextEventTriggerChance,
     getContextEvents: getContextEvents

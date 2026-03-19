@@ -964,9 +964,10 @@
 
   <script type="text/javascript" src="country_data.js"></script>
   <script type="text/javascript" src="src/content/content_data.js"></script>
-  <script type="text/javascript" src="src/content/career_ecosystem_data.js"></script>
-  <script type="text/javascript" src="src/content/development_data.js"></script>
-  <script type="text/javascript" src="src/content/event_data.js"></script>
+<script type="text/javascript" src="src/content/career_ecosystem_data.js"></script>
+<script type="text/javascript" src="src/content/development_data.js"></script>
+<script type="text/javascript" src="src/content/combat_state_data.js"></script>
+<script type="text/javascript" src="src/content/event_data.js"></script>
   <script type="text/javascript" src="src/content/life_data.js"></script>
   <script type="text/javascript" src="src/content/life_event_data.js"></script>
   <script type="text/javascript" src="src/content/relationship_arc_data.js"></script>
@@ -980,7 +981,7 @@
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.19.8";
+var APP_VERSION = "2026.03.19.9";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -1172,15 +1173,19 @@
         lines: fight.lines || [],
         playerState: fight.playerState,
         opponentState: fight.opponentState,
+        playerContext: fight.playerContext || null,
+        opponentContext: fight.opponentContext || null,
         result: fight.result,
         method: fight.method,
         roundsCompleted: fight.roundsCompleted,
         judges: fight.judges,
         roundPoints: fight.roundPoints,
+        styleMarks: fight.styleMarks || null,
         roundCards: fight.roundCards,
         breakSummary: fight.breakSummary,
         knockdown: null,
         skipTurnRecovery: fight.skipTurnRecovery,
+        rematchRivalryId: fight.rematchRivalryId || "",
         pendingTimeout: null,
         animation: null,
         animationTimeout: null
@@ -1662,6 +1667,22 @@
 
     function gymDevelopmentProfile(gymId) {
       return ContentLoader.getGymDevelopmentProfile ? ContentLoader.getGymDevelopmentProfile(gymId) : null;
+    }
+
+    function listInjuryTypes() {
+      return ContentLoader.listInjuryTypes ? ContentLoader.listInjuryTypes() : [];
+    }
+
+    function getInjuryType(injuryId) {
+      return ContentLoader.getInjuryType ? ContentLoader.getInjuryType(injuryId) : null;
+    }
+
+    function listOpponentArchetypes() {
+      return ContentLoader.listOpponentArchetypes ? ContentLoader.listOpponentArchetypes() : [];
+    }
+
+    function getOpponentArchetype(archetypeId) {
+      return ContentLoader.getOpponentArchetype ? ContentLoader.getOpponentArchetype(archetypeId) : null;
     }
 
     function buildProgressMap(entries) {
@@ -2221,19 +2242,20 @@
       if (side === "player") {
         return state.fighter;
       }
-      return fight && fight.opponent && fight.opponent.development ? fight.opponent : null;
+      return fight && fight.opponent ? fight.opponent : null;
     }
 
     function fightActionStaminaCost(fight, side, actionKey) {
       var action = FIGHT_ACTIONS[actionKey];
       var fighter = currentFightSideFighter(fight, side);
+      var context = fightContextBySide(fight, side);
       if (!action) {
         return 0;
       }
       if (action.type === "defense") {
         return 0;
       }
-      return Math.max(0, action.stamina + developmentActionBonus(fighter, "staminaCostByAction", actionKey));
+      return Math.max(0, action.stamina + developmentActionBonus(fighter, "staminaCostByAction", actionKey) + (typeof context.actionStamina[actionKey] === "number" ? context.actionStamina[actionKey] : 0));
     }
 
     function markFightStyle(fight, styleId, amount) {
@@ -2358,6 +2380,587 @@
         return -1;
       }
       return 0;
+    }
+
+    function ensureInjuryState(fighter) {
+      if (!fighter) {
+        return [];
+      }
+      if (!(fighter.injuries instanceof Array)) {
+        fighter.injuries = [];
+      }
+      return fighter.injuries;
+    }
+
+    function activeInjuries(fighter) {
+      var injuries = ensureInjuryState(fighter);
+      var active = [];
+      var i;
+      for (i = 0; i < injuries.length; i += 1) {
+        if (injuries[i] && injuries[i].id && injuries[i].severity > 0 && injuries[i].weeksLeft > 0) {
+          active.push(injuries[i]);
+        }
+      }
+      return active;
+    }
+
+    function injurySeverityLabel(severity) {
+      if (severity >= 3) {
+        return "серьёзно";
+      }
+      if (severity >= 2) {
+        return "ощутимо";
+      }
+      return "слегка";
+    }
+
+    function injuryTitle(injury) {
+      var definition = injury && injury.id ? getInjuryType(injury.id) : null;
+      if (!definition) {
+        return "";
+      }
+      return definition.label + " (" + injurySeverityLabel(injury.severity || 1) + ")";
+    }
+
+    function fighterInjurySummary(fighter) {
+      var injuries = activeInjuries(fighter);
+      var parts = [];
+      var i;
+      for (i = 0; i < injuries.length; i += 1) {
+        parts.push(injuryTitle(injuries[i]));
+      }
+      return parts.length ? parts.join(", ") : "свежих травм нет";
+    }
+
+    function hasActiveInjury(fighter, injuryId) {
+      var injuries = activeInjuries(fighter);
+      var i;
+      for (i = 0; i < injuries.length; i += 1) {
+        if (injuries[i].id === injuryId) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function currentCampFightProfile(fighter) {
+      var focus = currentFocus(fighter);
+      return focus ? ContentLoader.getCampFightProfile(focus.id) : null;
+    }
+
+    function emptyFightContext() {
+      return {
+        accuracy: 0,
+        damage: 0,
+        dodge: 0,
+        critChance: 0,
+        blockReduction: 0,
+        counterChance: 0,
+        incomingDamage: 0,
+        startStamina: 0,
+        startHp: 0,
+        turnHealthRecovery: 0,
+        turnStaminaRecovery: 0,
+        roundHealthPercent: 0,
+        roundStaminaPercent: 0,
+        actionAccuracy: {},
+        actionDamage: {},
+        actionStamina: {},
+        notes: [],
+        risks: [],
+        tags: {},
+        ai: {
+          attackBias: 0,
+          defenseBias: 0,
+          counterBias: 0,
+          finishBias: 0,
+          chaseBias: 0,
+          retreatBias: 0,
+          jabBias: 0,
+          crossBias: 0,
+          bodyBias: 0,
+          hookBias: 0,
+          uppercutBias: 0
+        }
+      };
+    }
+
+    function mergeFightContextMap(target, source, multiplier) {
+      var key;
+      multiplier = typeof multiplier === "number" ? multiplier : 1;
+      if (!source) {
+        return;
+      }
+      for (key in source) {
+        if (source.hasOwnProperty(key) && typeof source[key] === "number") {
+          if (typeof target[key] !== "number") {
+            target[key] = 0;
+          }
+          target[key] += source[key] * multiplier;
+        }
+      }
+    }
+
+    function addFightContextNote(context, text, risky) {
+      if (!text) {
+        return;
+      }
+      if (risky) {
+        if (!hasTag(context.risks, text)) {
+          context.risks.push(text);
+        }
+      } else if (!hasTag(context.notes, text)) {
+        context.notes.push(text);
+      }
+    }
+
+    function applyFightContextBonuses(context, bonuses, multiplier) {
+      var keys = ["accuracy", "damage", "dodge", "critChance", "blockReduction", "counterChance", "incomingDamage", "startStamina", "startHp", "turnHealthRecovery", "turnStaminaRecovery", "roundHealthPercent", "roundStaminaPercent"];
+      var i;
+      multiplier = typeof multiplier === "number" ? multiplier : 1;
+      if (!bonuses) {
+        return;
+      }
+      for (i = 0; i < keys.length; i += 1) {
+        if (typeof bonuses[keys[i]] === "number") {
+          context[keys[i]] += bonuses[keys[i]] * multiplier;
+        }
+      }
+      if (typeof bonuses.damageMultiplier === "number") {
+        context.damage += bonuses.damageMultiplier * multiplier;
+      }
+      if (typeof bonuses.incomingDamageMultiplier === "number") {
+        context.incomingDamage += bonuses.incomingDamageMultiplier * multiplier;
+      }
+      mergeFightContextMap(context.actionAccuracy, bonuses.actionAccuracy, multiplier);
+      mergeFightContextMap(context.actionDamage, bonuses.actionDamage, multiplier);
+      mergeFightContextMap(context.actionStamina, bonuses.actionStamina, multiplier);
+      mergeFightContextMap(context.ai, bonuses.ai, multiplier);
+      if (typeof bonuses.injuryRecovery === "number") {
+        context.tags.injuryRecovery = (context.tags.injuryRecovery || 0) + bonuses.injuryRecovery * multiplier;
+      }
+    }
+
+    function moraleFightContext(fighter) {
+      var context = emptyFightContext();
+      if (!fighter) {
+        return context;
+      }
+      if (fighter.morale >= 72) {
+        context.accuracy += 2;
+        context.damage += 0.04;
+        context.dodge += 2;
+        context.turnStaminaRecovery += 1;
+        context.tags.goodMorale = true;
+        addFightContextNote(context, "Хорошее настроение помогает держать темп.", false);
+      } else if (fighter.morale >= 60) {
+        context.accuracy += 1;
+      } else if (fighter.morale <= 30) {
+        context.accuracy -= 4;
+        context.damage -= 0.05;
+        context.dodge -= 3;
+        context.turnStaminaRecovery -= 1;
+        context.tags.lowMorale = true;
+        addFightContextNote(context, "Настроение просело, бой пойдёт тяжелее.", true);
+      } else if (fighter.morale <= 45) {
+        context.accuracy -= 2;
+        context.turnStaminaRecovery -= 1;
+      }
+      return context;
+    }
+
+    function wearFightContext(fighter) {
+      var context = emptyFightContext();
+      if (!fighter) {
+        return context;
+      }
+      if (fighter.wear >= 75) {
+        context.accuracy -= 3;
+        context.damage -= 0.06;
+        context.dodge -= 4;
+        context.turnStaminaRecovery -= 1;
+        context.incomingDamage += 0.08;
+        context.tags.highWear = true;
+        addFightContextNote(context, "Тело забито, износ уже мешает в бою.", true);
+      } else if (fighter.wear >= 50) {
+        context.accuracy -= 1;
+        context.dodge -= 2;
+        context.turnStaminaRecovery -= 1;
+      }
+      return context;
+    }
+
+    function campFightContext(fighter) {
+      var context = emptyFightContext();
+      var profile = currentCampFightProfile(fighter);
+      if (!profile) {
+        return context;
+      }
+      applyFightContextBonuses(context, profile.bonuses, 1);
+      context.tags.campLabel = profile.label || "";
+      addFightContextNote(context, (profile.label || "Текущий лагерь") + ": " + (profile.note || "лагерь влияет на бой") + ".", false);
+      return context;
+    }
+
+    function trainerFightContext(fighter, side) {
+      var context = emptyFightContext();
+      var trainerType;
+      var relation;
+      var score;
+      if (side !== "player") {
+        trainerType = fighter && fighter.trainerTypeId ? getTrainerType(fighter.trainerTypeId) : null;
+        if (trainerType) {
+          context.accuracy += 1;
+          context.turnStaminaRecovery += 1;
+        }
+        return context;
+      }
+      trainerType = currentTrainerType();
+      relation = currentTrainerAssignment() ? findRelationship(currentTrainerAssignment().npcId) : null;
+      if (!trainerType || !relation) {
+        return context;
+      }
+      score = typeof relation.score === "number" ? relation.score : 0;
+      if (score >= 55) {
+        context.accuracy += 2;
+        context.dodge += 1;
+        context.counterChance += 4;
+        context.tags.goodCorner = true;
+        addFightContextNote(context, "Тренер держит угол собранным и помогает по ходу боя.", false);
+      } else if (score >= 20) {
+        context.accuracy += 1;
+      } else if (score <= -35) {
+        context.accuracy -= 3;
+        context.dodge -= 2;
+        context.turnStaminaRecovery -= 1;
+        context.tags.badCorner = true;
+        addFightContextNote(context, "С тренером сейчас плохая связь, угол помогает хуже.", true);
+      } else if (score <= -10) {
+        context.accuracy -= 1;
+      }
+      return context;
+    }
+
+    function injuryFightContext(fighter) {
+      var context = emptyFightContext();
+      var injuries = activeInjuries(fighter);
+      var i;
+      var injury;
+      var definition;
+      var multiplier;
+      for (i = 0; i < injuries.length; i += 1) {
+        injury = injuries[i];
+        definition = getInjuryType(injury.id);
+        if (!definition) {
+          continue;
+        }
+        multiplier = Math.max(1, injury.severity || 1);
+        applyFightContextBonuses(context, definition.combat, multiplier);
+        context.tags[injury.id] = true;
+        addFightContextNote(context, injuryTitle(injury) + ": " + definition.description, true);
+      }
+      return context;
+    }
+
+    function rivalFightContext(offer, side) {
+      var context = emptyFightContext();
+      if (!offer || offer.templateId !== "rematch_offer") {
+        return context;
+      }
+      context.accuracy += 2;
+      context.damage += 0.05;
+      context.startStamina += 4;
+      context.incomingDamage += 0.04;
+      context.tags.rival = true;
+      addFightContextNote(context, (side === "player" ? "Старый счёт заводит тебя сильнее обычного." : "Реванш заводит соперника сильнее обычного."), false);
+      return context;
+    }
+
+    function opponentArchetypeContext(opponent) {
+      var context = emptyFightContext();
+      var archetype = opponent && opponent.archetypeId ? getOpponentArchetype(opponent.archetypeId) : null;
+      if (!archetype) {
+        return context;
+      }
+      mergeFightContextMap(context.ai, archetype.ai, 1);
+      context.tags.archetypeId = archetype.id;
+      addFightContextNote(context, archetype.label + ": " + archetype.riskText + ".", false);
+      return context;
+    }
+
+    function buildFightContextForSide(fighter, opponent, offer, side) {
+      var context = emptyFightContext();
+      var layers = [
+        moraleFightContext(fighter),
+        wearFightContext(fighter),
+        campFightContext(fighter),
+        trainerFightContext(fighter, side),
+        injuryFightContext(fighter),
+        rivalFightContext(offer, side)
+      ];
+      var i;
+      var j;
+      if (side === "opponent") {
+        layers.push(opponentArchetypeContext(fighter));
+      }
+      for (i = 0; i < layers.length; i += 1) {
+        context.accuracy += layers[i].accuracy;
+        context.damage += layers[i].damage;
+        context.dodge += layers[i].dodge;
+        context.critChance += layers[i].critChance;
+        context.blockReduction += layers[i].blockReduction;
+        context.counterChance += layers[i].counterChance;
+        context.incomingDamage += layers[i].incomingDamage;
+        context.startStamina += layers[i].startStamina;
+        context.startHp += layers[i].startHp;
+        context.turnHealthRecovery += layers[i].turnHealthRecovery;
+        context.turnStaminaRecovery += layers[i].turnStaminaRecovery;
+        context.roundHealthPercent += layers[i].roundHealthPercent;
+        context.roundStaminaPercent += layers[i].roundStaminaPercent;
+        mergeFightContextMap(context.actionAccuracy, layers[i].actionAccuracy, 1);
+        mergeFightContextMap(context.actionDamage, layers[i].actionDamage, 1);
+        mergeFightContextMap(context.actionStamina, layers[i].actionStamina, 1);
+        mergeFightContextMap(context.ai, layers[i].ai, 1);
+        for (j in layers[i].tags) {
+          if (layers[i].tags.hasOwnProperty(j)) {
+            context.tags[j] = layers[i].tags[j];
+          }
+        }
+        for (j = 0; j < layers[i].notes.length; j += 1) {
+          addFightContextNote(context, layers[i].notes[j], false);
+        }
+        for (j = 0; j < layers[i].risks.length; j += 1) {
+          addFightContextNote(context, layers[i].risks[j], true);
+        }
+      }
+      return context;
+    }
+
+    function fightContextBySide(fight, side) {
+      if (!fight) {
+        return emptyFightContext();
+      }
+      if (side === "player") {
+        if (!fight.playerContext) {
+          fight.playerContext = buildFightContextForSide(state.fighter, fight.opponent, fight.offer || null, "player");
+        }
+        return fight.playerContext;
+      }
+      if (!fight.opponentContext) {
+        fight.opponentContext = buildFightContextForSide(fight.opponent, state.fighter, fight.offer || null, "opponent");
+      }
+      return fight.opponentContext;
+    }
+
+    function fightConditionSummary(fighter) {
+      var parts = [];
+      var focus = currentCampFightProfile(fighter);
+      if (!fighter) {
+        return "Состояние не определено.";
+      }
+      if (fighter.morale <= 40) {
+        parts.push("настроение низкое");
+      } else if (fighter.morale >= 70) {
+        parts.push("настрой хороший");
+      }
+      if (fighter.wear >= 60) {
+        parts.push("износ высокий");
+      }
+      if (focus && focus.label) {
+        parts.push(focus.label.toLowerCase());
+      }
+      if (activeInjuries(fighter).length) {
+        parts.push("травмы: " + fighterInjurySummary(fighter));
+      }
+      if (!parts.length) {
+        parts.push("состояние ровное");
+      }
+      return parts.join(", ");
+    }
+
+    function opponentRiskSummary(opponent) {
+      var parts = [];
+      var archetype = opponent && opponent.archetypeId ? getOpponentArchetype(opponent.archetypeId) : null;
+      if (archetype && archetype.riskText) {
+        parts.push(archetype.riskText);
+      }
+      if (opponent && opponent.styleLabel) {
+        parts.push("стиль: " + opponent.styleLabel.toLowerCase());
+      }
+      if (opponent && activeInjuries(opponent).length) {
+        parts.push("но есть проблемы: " + fighterInjurySummary(opponent));
+      }
+      if (!parts.length) {
+        parts.push("бой без ярких перекосов");
+      }
+      return parts;
+    }
+
+    function opponentArchetypeForProfile(profileDef) {
+      var mapping = {
+        pressure: ["aggressor", "knockout", "aggressor", "technician"],
+        block_trap: ["counter", "patient", "counter"],
+        counterpace: ["counter", "patient", "technician"],
+        jab_control: ["technician", "patient", "technician"],
+        body_hunter: ["aggressor", "knockout", "aggressor"]
+      };
+      var pool = profileDef && mapping[profileDef.id] ? mapping[profileDef.id] : ["technician"];
+      return getOpponentArchetype(choice(pool));
+    }
+
+    function createInjuryEntry(injuryId, severity, weeksLeft, chronic, source) {
+      return {
+        id: injuryId,
+        severity: clamp(Math.round(severity || 1), 1, 3),
+        weeksLeft: Math.max(1, Math.round(weeksLeft || 1)),
+        chronic: !!chronic,
+        source: source || "",
+        appliedWeek: state.fighter ? state.fighter.week : 0
+      };
+    }
+
+    function addOrUpdateInjury(fighter, injuryId, severity, weeksLeft, source) {
+      var injuries = ensureInjuryState(fighter);
+      var i;
+      var existing;
+      for (i = 0; i < injuries.length; i += 1) {
+        if (injuries[i] && injuries[i].id === injuryId) {
+          existing = injuries[i];
+          existing.severity = clamp(existing.severity + Math.max(1, severity) - 1, 1, 3);
+          existing.weeksLeft = Math.max(existing.weeksLeft, weeksLeft || 1) + 1;
+          existing.chronic = existing.chronic || existing.severity >= 3;
+          existing.source = source || existing.source;
+          existing.appliedWeek = state.fighter ? state.fighter.week : existing.appliedWeek;
+          return existing;
+        }
+      }
+      existing = createInjuryEntry(injuryId, severity, weeksLeft, severity >= 3, source);
+      injuries.push(existing);
+      return existing;
+    }
+
+    function generateOpponentInjuries(opponent, archetype) {
+      var injuries = [];
+      var condition = opponent ? opponent.condition || 100 : 100;
+      if (condition <= 78 && chance(35)) {
+        injuries.push(createInjuryEntry(choice(["nose", "cut", "ribs"]), 1, rand(1, 2), false, "camp"));
+      }
+      if (condition <= 65 && chance(30)) {
+        injuries.push(createInjuryEntry(archetype && archetype.id === "knockout" ? "hand" : "exhaustion", 1, rand(1, 2), false, "camp"));
+      }
+      return injuries;
+    }
+
+    function applyInjuryWeekEffects(fighter, action) {
+      var injuries = activeInjuries(fighter);
+      var kept = [];
+      var healed = [];
+      var i;
+      var injury;
+      var definition;
+      var recoveryStep;
+      var recoveryKind = action && action.meta ? action.meta.kind : "";
+      var extraHealthLoss = 0;
+      var extraWear = 0;
+      var extraStress = 0;
+      var trainingPenaltyLogged = false;
+      for (i = 0; i < injuries.length; i += 1) {
+        injury = injuries[i];
+        definition = getInjuryType(injury.id);
+        if (!definition) {
+          continue;
+        }
+        fighter.health += (definition.career && definition.career.weeklyHealth ? definition.career.weeklyHealth * injury.severity : 0);
+        if (action && action.type === "train") {
+          extraHealthLoss += definition.career && definition.career.trainHealth ? definition.career.trainHealth * injury.severity : 0;
+          extraWear += definition.career && definition.career.trainWear ? definition.career.trainWear * injury.severity : 0;
+          trainingPenaltyLogged = trainingPenaltyLogged || !!(definition.career && (definition.career.trainHealth || definition.career.trainWear));
+        }
+        if (action && action.type === "travel") {
+          extraStress += definition.career && definition.career.travelStress ? definition.career.travelStress * injury.severity : 0;
+        }
+        recoveryStep = 1;
+        if (action && action.type === "recover") {
+          if (recoveryKind === "doctor" || recoveryKind === "therapy") {
+            recoveryStep += 2;
+          } else {
+            recoveryStep += 1;
+          }
+        }
+        if (currentCampFightProfile(fighter) && currentCampFightProfile(fighter).bonuses && typeof currentCampFightProfile(fighter).bonuses.injuryRecovery === "number") {
+          recoveryStep += currentCampFightProfile(fighter).bonuses.injuryRecovery;
+        }
+        injury.weeksLeft -= recoveryStep;
+        if (injury.weeksLeft <= 0) {
+          if (injury.chronic && injury.severity > 1) {
+            injury.severity -= 1;
+            injury.weeksLeft = 2 + injury.severity;
+            injury.chronic = injury.severity > 1;
+            kept.push(injury);
+          } else {
+            healed.push(definition.label.toLowerCase());
+          }
+        } else {
+          kept.push(injury);
+        }
+      }
+      fighter.injuries = kept;
+      fighter.health += extraHealthLoss;
+      fighter.wear += extraWear;
+      fighter.stress += extraStress;
+      if (trainingPenaltyLogged) {
+        pushLog("Старые травмы мешают лагерю сильнее обычного.", "warn");
+      }
+      if (extraStress > 0 && action && action.type === "travel") {
+        pushLog("Дорога далась тяжелее из-за старых повреждений.", "warn");
+      }
+      if (healed.length) {
+        pushLog("Тело отпускает: " + healed.join(", ") + ".", "good");
+      }
+    }
+
+    function maybeRegisterPostFightInjury(results, fighter, injuryId, severity, weeksLeft, chanceValue, source) {
+      var injury;
+      var definition;
+      if (!fighter || !chance(chanceValue)) {
+        return;
+      }
+      injury = addOrUpdateInjury(fighter, injuryId, severity, weeksLeft, source);
+      definition = getInjuryType(injuryId);
+      if (definition) {
+        results.push(injuryTitle(injury) + " — " + definition.description);
+      }
+    }
+
+    function applyPostFightInjuries(fight) {
+      var fighter = state.fighter;
+      var profile = fight ? fight.playerState : null;
+      var results = [];
+      var bodyHits;
+      var headHits;
+      var heavyThrown;
+      if (!fighter || !profile || !profile.impactProfile) {
+        return results;
+      }
+      bodyHits = profile.impactProfile.bodyHitsTaken || 0;
+      headHits = profile.impactProfile.headHitsTaken || 0;
+      heavyThrown = profile.impactProfile.heavyPunchesThrown || 0;
+      if (bodyHits >= 2 || profile.damageTaken >= 28) {
+        maybeRegisterPostFightInjury(results, fighter, "ribs", profile.knockdowns >= 1 ? 2 : 1, 2 + Math.min(3, bodyHits), clamp(10 + bodyHits * 10 + profile.knockdowns * 12, 5, 80), "fight");
+      }
+      if (headHits >= 3) {
+        maybeRegisterPostFightInjury(results, fighter, "nose", profile.knockdowns >= 1 ? 2 : 1, 2 + Math.min(2, headHits), clamp(12 + headHits * 9 + profile.knockdowns * 8, 5, 75), "fight");
+      }
+      if (headHits >= 4 || profile.knockdowns >= 1) {
+        maybeRegisterPostFightInjury(results, fighter, "cut", 1 + (profile.knockdowns >= 2 ? 1 : 0), 2 + Math.min(2, headHits), clamp(8 + headHits * 8 + profile.knockdowns * 10, 5, 70), "fight");
+      }
+      if (heavyThrown >= 4) {
+        maybeRegisterPostFightInjury(results, fighter, "hand", heavyThrown >= 7 ? 2 : 1, 2 + Math.min(3, Math.floor(heavyThrown / 2)), clamp(heavyThrown * 8, 5, 70), "fight");
+      }
+      if (profile.damageTaken >= 40 || fight.roundsCompleted >= 4 || profile.knockdowns >= 1) {
+        maybeRegisterPostFightInjury(results, fighter, "exhaustion", profile.knockdowns >= 1 ? 2 : 1, 2 + fight.roundsCompleted, clamp(14 + Math.round(profile.damageTaken / 4) + fight.roundsCompleted * 4, 10, 85), "fight");
+      }
+      return results;
     }
 
     function applyHousingWeekEffects(fighter) {
@@ -3784,6 +4387,33 @@
       return opponent ? clonePlainData(opponent) : null;
     }
 
+    function applyOpponentMetadata(opponent, opponentType, gym, trainerType, tier) {
+      var archetype;
+      var baseMorale;
+      if (!opponent) {
+        return opponent;
+      }
+      archetype = opponent.archetypeId ? getOpponentArchetype(opponent.archetypeId) : opponentArchetypeForProfile(opponentType);
+      if (archetype) {
+        opponent.archetypeId = archetype.id;
+        opponent.archetypeLabel = archetype.label;
+      }
+      baseMorale = 52 + (tier === "danger" ? 8 : (tier === "even" ? 4 : 0)) + (archetype && (archetype.id === "aggressor" || archetype.id === "knockout") ? 4 : 0);
+      if (typeof opponent.morale !== "number") {
+        opponent.morale = clamp(baseMorale + rand(-8, 8), 25, 90);
+      }
+      if (typeof opponent.wear !== "number") {
+        opponent.wear = clamp(Math.round(Math.max(0, 100 - (opponent.condition || 100)) * 0.55) + rand(0, 8), 0, 100);
+      }
+      if (!(opponent.injuries instanceof Array)) {
+        opponent.injuries = generateOpponentInjuries(opponent, archetype);
+      }
+      opponent.mainRisks = opponentRiskSummary(opponent);
+      opponent.gymName = gym ? gym.name : (opponent.gymName || "");
+      opponent.trainerLabel = trainerType ? trainerType.label : (opponent.trainerLabel || "");
+      return opponent;
+    }
+
     function totalSkillGapAgainstSnapshot(snapshot) {
       var fighter = state.fighter;
       var playerTotal;
@@ -3828,6 +4458,7 @@
       var trainerType;
       var development;
       var styleSnapshot;
+      var archetype;
       var opponentClone;
       var types;
       var i;
@@ -3870,6 +4501,7 @@
           styleSnapshot = currentStyleSnapshot(opponentClone);
           opponentClone.styleLabel = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "";
         }
+        applyOpponentMetadata(opponentClone, opponentType, gym, trainerType, tier);
         return opponentClone;
       }
       opponentCountryKey = countryKeyOverride || fighter.currentCountry;
@@ -3896,7 +4528,8 @@
         stats: stats,
         development: development
       });
-      return {
+      archetype = opponentArchetypeForProfile(opponentType);
+      opponentClone = {
         firstName: identity.firstName,
         lastName: identity.lastName,
         nickname: identity.nickname,
@@ -3918,6 +4551,12 @@
         danger: tierData.danger,
         venue: arena ? arena.name : (country ? country.venueName : "")
       };
+      if (archetype) {
+        opponentClone.archetypeId = archetype.id;
+        opponentClone.archetypeLabel = archetype.label;
+      }
+      applyOpponentMetadata(opponentClone, opponentType, gym, trainerType, tier);
+      return opponentClone;
     }
 
     function buildFightOffer(templateId, rematchSnapshot, rivalry) {
@@ -4624,6 +5263,7 @@
       }
       action = state.world.lastWeekAction || { type: "idle" };
       applyHousingWeekEffects(fighter);
+      applyInjuryWeekEffects(fighter, action);
       fighter.fatigue = clamp(fighter.fatigue - 3, 0, 100);
       if (action.type === "recover") {
         fighter.fatigue = clamp(fighter.fatigue - 4, 0, 100);
@@ -4692,6 +5332,7 @@
       fighter.support = clamp(typeof fighter.support === "number" ? fighter.support : 50, 0, 100);
       fighter.housingId = typeof fighter.housingId === "string" && getHousingOption(fighter.housingId) ? fighter.housingId : "normal";
       fighter.startingAge = Math.max(16, Math.min(40, typeof fighter.startingAge === "number" ? fighter.startingAge : 22));
+      fighter.injuries = activeInjuries(fighter);
       ensureDevelopmentState(fighter);
       if (fighter.development) {
         var focusKey;
@@ -4746,7 +5387,12 @@
         lastAttackKey: null,
         attackChain: 0,
         actedAttack: false,
-        nextDodgePenalty: false
+        nextDodgePenalty: false,
+        impactProfile: {
+          bodyHitsTaken: 0,
+          headHitsTaken: 0,
+          heavyPunchesThrown: 0
+        }
       };
     }
 
@@ -4758,6 +5404,14 @@
       stateSlice.stamina = clamp(stateSlice.stamina + readiness, 1, stateSlice.maxStamina);
       stateSlice.hp = clamp(stateSlice.hp + Math.round(readiness / 2), 1, stateSlice.maxHp);
       return readiness;
+    }
+
+    function applyFightContextStart(stateSlice, context) {
+      if (!stateSlice || !context) {
+        return;
+      }
+      stateSlice.stamina = clamp(stateSlice.stamina + Math.round(context.startStamina || 0), 1, stateSlice.maxStamina);
+      stateSlice.hp = clamp(stateSlice.hp + Math.round(context.startHp || 0), 1, stateSlice.maxHp);
     }
 
     function startRingPosition(side) {
@@ -5015,6 +5669,9 @@
         }
         pushLog("Фокус '" + developmentSummary.focus + "' даёт +" + developmentSummary.focusXp + " XP развития" + (developmentSummary.perkPointGain > 0 ? (" и +" + developmentSummary.perkPointGain + " очко перка") : "") + (styleParts.length ? (". Стили: " + styleParts.join(", ") + ".") : "."), "warn");
       }
+      if (activeInjuries(fighter).length) {
+        pushLog("Старые травмы могут сделать эту неделю жёстче обычного.", "warn");
+      }
       spendWeek();
     }
 
@@ -5047,6 +5704,9 @@
       registerWeeklyAction("recover", option.label, recoveryDelta, { kind: kind });
       applyBounds(fighter);
       pushLog(option.label + " возвращает " + (option.health + bonusHealth) + " здоровья и меняет стресс на " + stressShift + ".", "good");
+      if (activeInjuries(fighter).length && (kind === "doctor" || kind === "therapy")) {
+        pushLog("Этот вариант ещё и помогает старым травмам заживать быстрее.", "good");
+      }
       spendWeek();
     }
 
@@ -5227,6 +5887,7 @@
     function previewAttackModifiers(fight, side, actionKey) {
       var attacker = fightStateBySide(fight, side);
       var fighter = currentFightSideFighter(fight, side);
+      var context = fightContextBySide(fight, side);
       var chainCount = previewAttackChain(attacker, actionKey);
       var accuracyShift = 0;
       var damageMultiplier = 1;
@@ -5243,15 +5904,16 @@
         damageMultiplier *= 0.9;
       }
       return {
-        accuracyShift: accuracyShift + developmentActionBonus(fighter, "accuracyByAction", actionKey),
-        damageMultiplier: damageMultiplier,
+        accuracyShift: accuracyShift + developmentActionBonus(fighter, "accuracyByAction", actionKey) + (context.accuracy || 0) + (typeof context.actionAccuracy[actionKey] === "number" ? context.actionAccuracy[actionKey] : 0),
+        damageMultiplier: damageMultiplier * (1 + (context.damage || 0)),
         flatDamage: flatDamage
       };
     }
 
     function blockDamageMultiplier(fight, side) {
       var defenderFighter = currentFightSideFighter(fight, side);
-      var reduction = 0.5 + developmentScalarBonus(defenderFighter, "blockReduction");
+      var context = fightContextBySide(fight, side);
+      var reduction = 0.5 + developmentScalarBonus(defenderFighter, "blockReduction") + (context.blockReduction || 0);
       return clamp(1 - reduction, 0.15, 0.95);
     }
 
@@ -5275,6 +5937,7 @@
 
     function previewDamage(fight, side, actionKey) {
       var defender = fightStateBySide(fight, otherSide(side));
+      var defenderContext = fightContextBySide(fight, otherSide(side));
       var attackerStats = fightStatsBySide(fight, side);
       var action = FIGHT_ACTIONS[actionKey];
       var modifiers;
@@ -5290,6 +5953,7 @@
       if (defender.defenseMode === "block") {
         damage *= blockDamageMultiplier(fight, otherSide(side));
       }
+      damage *= 1 + (defenderContext.incomingDamage || 0);
       return Math.max(1, Math.round(damage));
     }
 
@@ -5844,7 +6508,8 @@
       var i;
       var offer;
       var opponent;
-      html.push("<div class='panel'><h2 class='panel-title'>Предложения боёв</h2><div class='muted'>Все доступные бои: дома, на выезде и реванши. У каждого свои деньги, риск и условия.</div><div class='card-grid' style='margin-top:16px'>");
+      var playerSummary = fightConditionSummary(state.fighter);
+      html.push("<div class='panel'><h2 class='panel-title'>Предложения боёв</h2><div class='muted'>Все доступные бои: дома, на выезде и реванши. У каждого свои деньги, риск и условия.</div><div class='card' style='margin-top:14px'><h3>Твоё состояние</h3><div class='muted'>" + playerSummary + ".</div></div><div class='card-grid' style='margin-top:16px'>");
       if (!offers.length) {
         html.push("<div class='empty-state'>На этой неделе матчмейкеры молчат. Попробуй обновить неделю через тренировку, работу, восстановление или поездку.</div>");
       }
@@ -5855,7 +6520,8 @@
         html.push("<div class='meta'>" + offer.label + "</div>");
         html.push("<h3>" + fullOpponentName(opponent) + "</h3>");
         html.push("<p>" + offer.description + " " + opponent.profile + ". " + offer.countryName + ", " + offer.venue + ".</p>");
-        html.push("<div class='record-row'><div class='chip'>Стиль: " + (opponent.styleLabel || "Базовый") + "</div><div class='chip'>Зал: " + (opponent.gymName || "Уличная база") + "</div><div class='chip'>Тренер: " + (opponent.trainerLabel || "Сам себе угол") + "</div></div>");
+        html.push("<div class='record-row'><div class='chip'>Стиль: " + (opponent.styleLabel || "Базовый") + "</div><div class='chip'>Архетип: " + (opponent.archetypeLabel || "Базовый") + "</div><div class='chip'>Зал: " + (opponent.gymName || "Уличная база") + "</div></div>");
+        html.push("<div class='muted'>Риски: " + (opponent.mainRisks && opponent.mainRisks.length ? opponent.mainRisks.join(", ") : "бой без явного перекоса") + ".</div>");
         html.push("<div class='record-row'><div class='chip gold'>Гарантия $" + offer.guaranteedPurse + "</div><div class='chip'>Победа $" + offer.winBonus + "</div><div class='chip'>KO $" + offer.koBonus + "</div></div>");
         html.push("<div class='record-row'><div class='chip'>Известность +" + offer.fameReward + "</div><div class='chip'>Токсичность " + offer.toxicRisk + "%</div><div class='chip'>Контракт: " + offer.contractLabel + "</div></div>");
         if (offer.seriesLabel || offer.stakesText) {
@@ -5934,6 +6600,7 @@
       html.push("</div>");
       html.push("<div class='record-row'><div class='chip'>Время " + calendar.monthName + " " + calendar.year + "</div><div class='chip'>Неделя " + fighter.week + "</div><div class='chip'>Возраст " + age.label + "</div></div>");
       html.push("<div class='record-row'><div class='chip'>Контактов " + knownNpcCount() + "</div><div class='chip'>Жильё " + (currentHousing() ? currentHousing().label : "Норма") + "</div><div class='chip'>Опора " + fighter.support + "</div><div class='chip'>Дисциплина " + disciplineScore(fighter) + "</div></div>");
+      html.push("<div class='muted'>Травмы: " + fighterInjurySummary(fighter) + ".</div>");
       html.push("<div class='muted'>Дом: " + (home ? home.name : "-") + ". Сейчас: " + (current ? current.name : "-") + ".</div>");
       html.push("<div>" + meter("Здоровье", fighter.health) + "</div>");
       html.push("<div>" + meter("Стресс", fighter.stress) + "</div>");
@@ -6332,6 +6999,7 @@
 
     function effectiveDodgeChance(fight, side, defender, defenderStats) {
       var fighter = currentFightSideFighter(fight, side);
+      var context = fightContextBySide(fight, side);
       var dodge = 5 + defenderStats.spd * 0.5;
       if (defender.stamina < 5) {
         return 0;
@@ -6344,7 +7012,7 @@
       if (defender.defenseMode !== "counter" && defender.nextDodgePenalty) {
         dodge = dodge / 1.5;
       }
-      dodge += developmentScalarBonus(fighter, "dodge");
+      dodge += developmentScalarBonus(fighter, "dodge") + (context.dodge || 0);
       return clamp(Math.round(dodge), 0, 90);
     }
 
@@ -6367,8 +7035,10 @@
       resetActionChain(stateBoxer);
     }
 
-    function turnHealthRecovery(actor) {
-      return actor.actedAttack ? 1 : 2;
+    function turnHealthRecovery(fight, side) {
+      var actor = fightStateBySide(fight, side);
+      var context = fightContextBySide(fight, side);
+      return Math.max(0, (actor.actedAttack ? 1 : 2) + Math.round(context.turnHealthRecovery || 0));
     }
 
     function roundHealthRecoveryPercent(roundNumber) {
@@ -6513,13 +7183,14 @@
       var defender = fightStateBySide(fight, defenderSide);
       var defenderStats = fightStatsBySide(fight, defenderSide);
       var defenderFighter = currentFightSideFighter(fight, defenderSide);
+      var defenderContext = fightContextBySide(fight, defenderSide);
       var choices = counterAttackChoices(fight, defenderSide);
       var chanceToCounter;
       var pickedAction;
       if (!choices.length || defender.stamina < 5) {
         return false;
       }
-      chanceToCounter = clamp(Math.round(50 + defenderStats.tec * 0.5 + developmentScalarBonus(defenderFighter, "counterChance")), 5, 95);
+      chanceToCounter = clamp(Math.round(50 + defenderStats.tec * 0.5 + developmentScalarBonus(defenderFighter, "counterChance") + (defenderContext.counterChance || 0)), 5, 95);
       defender.defenseMode = null;
       if (!chance(chanceToCounter)) {
         pushFightLine(fight, fightNameBySide(fight, defenderSide) + " хотел ответить на контратаке, но окно закрылось.");
@@ -6537,6 +7208,8 @@
       var defenderStats = fightStatsBySide(fight, otherSide(side));
       var attackerFighter = currentFightSideFighter(fight, side);
       var attackerName = fightNameBySide(fight, side);
+      var attackerContext = fightContextBySide(fight, side);
+      var defenderContext = fightContextBySide(fight, otherSide(side));
       var action = FIGHT_ACTIONS[actionKey];
       var hitChance;
       var damage;
@@ -6588,13 +7261,28 @@
       if (defenseMode === "block") {
         damage *= blockDamageMultiplier(fight, otherSide(side));
       }
-      critical = chance(clamp(Math.round(5 + attackerStats.tec * 0.2 + developmentScalarBonus(attackerFighter, "critChance")), 5, 95));
+      damage *= 1 + (defenderContext.incomingDamage || 0);
+      critical = chance(clamp(Math.round(5 + attackerStats.tec * 0.2 + developmentScalarBonus(attackerFighter, "critChance") + (attackerContext.critChance || 0)), 5, 95));
       if (critical) {
         damage *= 1.5;
       }
       damage = Math.max(1, Math.round(damage));
       defender.hp -= damage;
       defender.damageTaken += damage;
+      if (!defender.impactProfile) {
+        defender.impactProfile = { bodyHitsTaken: 0, headHitsTaken: 0, heavyPunchesThrown: 0 };
+      }
+      if (!attacker.impactProfile) {
+        attacker.impactProfile = { bodyHitsTaken: 0, headHitsTaken: 0, heavyPunchesThrown: 0 };
+      }
+      if (actionKey === "body") {
+        defender.impactProfile.bodyHitsTaken += 1;
+      } else {
+        defender.impactProfile.headHitsTaken += 1;
+      }
+      if (actionKey === "cross" || actionKey === "hook" || actionKey === "uppercut") {
+        attacker.impactProfile.heavyPunchesThrown += 1;
+      }
       defender.defenseMode = null;
       defender.nextDodgePenalty = false;
       awardFightPressure(fight, side, damage + (critical ? 6 : 2));
@@ -6602,6 +7290,18 @@
         pushFightLine(fight, attackerName + " ловит критический удар '" + action.label + "' на " + damage + " урона.");
       } else {
         pushFightLine(fight, attackerName + " попадает ударом '" + action.label + "' и снимает " + damage + " прочности.");
+      }
+      if (attackerContext.tags.hand && (actionKey === "cross" || actionKey === "hook" || actionKey === "uppercut") && chance(28)) {
+        pushFightLine(fight, attackerName + " бережёт кисть, поэтому удар идёт не так свободно.");
+      }
+      if (defenderContext.tags.ribs && actionKey === "body" && chance(45)) {
+        pushFightLine(fight, fightNameBySide(fight, otherSide(side)) + " болезненно складывается после попадания по корпусу.");
+      }
+      if (attackerContext.tags.rival && chance(22)) {
+        pushFightLine(fight, attackerName + " явно заведён старым счётом.");
+      }
+      if (side === "player" && attackerContext.tags.badCorner && chance(18)) {
+        pushFightLine(fight, "Угол не достучался до тебя, и момент вышел рваным.");
       }
       setStrikeAnimation(side, "hit", critical);
       applyAttackChain(attacker, actionKey);
@@ -6665,86 +7365,119 @@
       return best.length ? choice(best) : null;
     }
 
+    function considerAiAction(best, actionKey, score) {
+      if (!actionKey) {
+        return best;
+      }
+      if (!best || score > best.score) {
+        return { actionKey: actionKey, score: score };
+      }
+      if (best && score === best.score && chance(50)) {
+        return { actionKey: actionKey, score: score };
+      }
+      return best;
+    }
+
+    function styleAttackBias(styleId, actionKey) {
+      var table = {
+        outboxer: { jab: 14, cross: 7, body: 2, hook: -4, uppercut: -6, move: 8, block: 2, counter: 4 },
+        counterpuncher: { jab: 6, cross: 5, body: 1, hook: -1, uppercut: 0, move: 4, block: 9, counter: 14 },
+        puncher: { jab: 1, cross: 9, body: 2, hook: 12, uppercut: 10, move: 2, block: -1, counter: 0 },
+        tempo: { jab: 7, cross: 3, body: 11, hook: 4, uppercut: 2, move: 5, block: 3, counter: 1 }
+      };
+      return table[styleId] && typeof table[styleId][actionKey] === "number" ? table[styleId][actionKey] : 0;
+    }
+
     function pickAiAction(fight) {
       var ai = fight.opponentState;
       var player = fight.playerState;
       var opponentFighter = currentFightSideFighter(fight, "opponent");
       var styleSnapshot = currentStyleSnapshot(opponentFighter);
       var styleId = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.id : "";
-      var attacks = availableFightActions(fight, "opponent", "attack");
+      var context = fightContextBySide(fight, "opponent");
+      var distance = attackZone(ai.position, player.position);
       var retreat = ai.hp < ai.maxHp * 0.3 || ai.stamina < ai.maxStamina * 0.2;
-      if (ai.stamina < ai.maxStamina * 0.15 && canUseFightAction(fight, "opponent", "block") && chance(65)) {
+      var approachMove = pickAIMove(fight, false);
+      var retreatMove = pickAIMove(fight, true);
+      var best = null;
+      var attackKeys = ["jab", "cross", "body", "hook", "uppercut"];
+      var i;
+      var key;
+      var score;
+
+      if (ai.stamina < ai.maxStamina * 0.15 && canUseFightAction(fight, "opponent", "block")) {
         return "block";
       }
-      if (styleId === "counterpuncher") {
-        if (canUseFightAction(fight, "opponent", "counter") && chance(52)) {
-          return "counter";
+
+      if (approachMove) {
+        score = 18 + styleAttackBias(styleId, "move") + (context.ai.chaseBias || 0);
+        if (distance !== "close") {
+          score += 8;
         }
-        if (canUseFightAction(fight, "opponent", "block") && chance(40)) {
-          return "block";
-        }
-        if (canUseFightAction(fight, "opponent", "jab") && chance(55)) {
-          return "jab";
-        }
-        if (canUseFightAction(fight, "opponent", "cross") && chance(45)) {
-          return "cross";
-        }
+        best = considerAiAction(best, approachMove, score + rand(0, 4));
       }
-      if (styleId === "outboxer") {
-        if (canUseFightAction(fight, "opponent", "jab") && chance(72)) {
-          return "jab";
+      if (retreatMove) {
+        score = 14 + (context.ai.retreatBias || 0);
+        if (retreat) {
+          score += 14;
         }
-        if (canUseFightAction(fight, "opponent", "cross") && chance(48)) {
-          return "cross";
-        }
-        if (chance(40)) {
-          return pickAIMove(fight, false) || "jab";
-        }
+        best = considerAiAction(best, retreatMove, score + rand(0, 4));
       }
-      if (styleId === "puncher") {
-        if (player.hp < player.maxHp * 0.45 && canUseFightAction(fight, "opponent", "uppercut") && chance(45)) {
-          return "uppercut";
+
+      if (canUseFightAction(fight, "opponent", "block")) {
+        score = 18 + styleAttackBias(styleId, "block") + (context.ai.defenseBias || 0);
+        if (retreat) {
+          score += 10;
         }
-        if (canUseFightAction(fight, "opponent", "hook") && chance(55)) {
-          return "hook";
-        }
-        if (canUseFightAction(fight, "opponent", "cross") && chance(65)) {
-          return "cross";
-        }
+        best = considerAiAction(best, "block", score + rand(0, 4));
       }
-      if (styleId === "tempo") {
-        if (canUseFightAction(fight, "opponent", "body") && chance(62)) {
-          return "body";
+      if (canUseFightAction(fight, "opponent", "counter")) {
+        score = 16 + styleAttackBias(styleId, "counter") + (context.ai.counterBias || 0);
+        if (player.actedAttack) {
+          score += 6;
         }
-        if (canUseFightAction(fight, "opponent", "jab") && chance(52)) {
-          return "jab";
+        if (retreat) {
+          score += 4;
         }
-        if (chance(35)) {
-          return pickAIMove(fight, false) || "jab";
-        }
+        best = considerAiAction(best, "counter", score + rand(0, 4));
       }
-      if (ai.hp < ai.maxHp * 0.45 && canUseFightAction(fight, "opponent", "counter") && chance(40)) {
-        return "counter";
+
+      for (i = 0; i < attackKeys.length; i += 1) {
+        key = attackKeys[i];
+        if (!canUseFightAction(fight, "opponent", key)) {
+          continue;
+        }
+        score = 20 + styleAttackBias(styleId, key) + (context.ai.attackBias || 0);
+        if (key === "jab") {
+          score += context.ai.jabBias || 0;
+        } else if (key === "cross") {
+          score += context.ai.crossBias || 0;
+        } else if (key === "body") {
+          score += context.ai.bodyBias || 0;
+        } else if (key === "hook") {
+          score += context.ai.hookBias || 0;
+        } else if (key === "uppercut") {
+          score += context.ai.uppercutBias || 0;
+        }
+        if (player.hp < player.maxHp * 0.4 && (key === "hook" || key === "uppercut" || key === "cross")) {
+          score += 10 + (context.ai.finishBias || 0);
+        }
+        if (distance === "close" && (key === "hook" || key === "uppercut")) {
+          score += 6;
+        }
+        if (distance !== "close" && (key === "hook" || key === "uppercut")) {
+          score -= 8;
+        }
+        if (distance === "line" && (key === "jab" || key === "cross" || key === "body")) {
+          score += 4;
+        }
+        if (retreat) {
+          score -= 6;
+        }
+        best = considerAiAction(best, key, score + rand(0, 5));
       }
-      if (attacks.length) {
-        if (player.hp < player.maxHp * 0.3 && canUseFightAction(fight, "opponent", "uppercut")) {
-          return "uppercut";
-        }
-        if (canUseFightAction(fight, "opponent", "cross") && chance(50)) {
-          return "cross";
-        }
-        if (canUseFightAction(fight, "opponent", "jab") && chance(65)) {
-          return "jab";
-        }
-        if (canUseFightAction(fight, "opponent", "body") && chance(45)) {
-          return "body";
-        }
-        if (canUseFightAction(fight, "opponent", "hook") && chance(35)) {
-          return "hook";
-        }
-        return choice(attacks);
-      }
-      return pickAIMove(fight, retreat);
+
+      return best ? best.actionKey : (retreat ? retreatMove : approachMove);
     }
 
     function renderFightResultPanel() {
@@ -6794,6 +7527,7 @@
       var toxicPenalty = offer ? Math.round(guarantee * (offer.toxicRisk || 0) / 220) : 0;
       var repGain = offer ? offer.reputationOnAccept : 0;
       var supportBuffer = socialSupportBuffer(fighter);
+      var injuryResults;
       var styleSummary = [];
       var styleId;
       var styleGain;
@@ -6887,6 +7621,10 @@
       }
       if (styleSummary.length) {
         pushLog("Бой закрепляет школу: " + styleSummary.join(", ") + ".", "warn");
+      }
+      injuryResults = applyPostFightInjuries(fight);
+      if (injuryResults.length) {
+        pushLog("После боя тянется за тобой: " + injuryResults.join("; ") + ".", "bad");
       }
       var updatedRivalry = recordFightRivalry(fight);
       if (updatedRivalry && updatedRivalry.pendingRematch) {
@@ -7031,6 +7769,8 @@
         aiActionsLeft: 1,
         playerState: buildFightState(state.fighter.stats, state.fighter.health, startRingPosition("player")),
         opponentState: buildFightState(opponent.stats, opponent.condition, startRingPosition("opponent")),
+        playerContext: buildFightContextForSide(state.fighter, opponent, offer, "player"),
+        opponentContext: buildFightContextForSide(opponent, state.fighter, offer, "opponent"),
         lines: [
           (offer ? (offer.label + ": " + fullOpponentName(opponent) + ". Гарантия $" + offer.guaranteedPurse + ", победа $" + offer.winBonus + ", KO $" + offer.koBonus + ".") : ("Бой против " + fullOpponentName(opponent) + " начинается. Ринг 5x5, в каждом раунде 15 ходов."))
         ],
@@ -7054,9 +7794,23 @@
         animationTimeout: null,
         rematchRivalryId: offer ? (offer.rematchRivalryId || "") : ""
       };
+      applyFightContextStart(state.fight.playerState, state.fight.playerContext);
+      applyFightContextStart(state.fight.opponentState, state.fight.opponentContext);
       readiness = applyFightReadiness(state.fight.playerState, state.fighter);
       if (readiness !== 0) {
         state.fight.lines.unshift("Личное состояние влияет на старт боя: " + (readiness > 0 ? "+" : "") + readiness + " к стартовой стамине.");
+      }
+      if (state.fight.playerContext.notes.length) {
+        state.fight.lines.unshift("Твой угол: " + state.fight.playerContext.notes[0]);
+      }
+      if (state.fight.playerContext.risks.length) {
+        state.fight.lines.unshift("Твой риск: " + state.fight.playerContext.risks[0]);
+      }
+      if (state.fight.opponentContext.notes.length) {
+        state.fight.lines.unshift(fullOpponentName(opponent) + ": " + state.fight.opponentContext.notes[0]);
+      }
+      if (state.fight.opponentContext.risks.length) {
+        state.fight.lines.unshift("Риск соперника: " + state.fight.opponentContext.risks[0]);
       }
       state.panel = "fightLive";
       render();
@@ -7102,10 +7856,10 @@
         );
         return;
       }
-      playerHeal = Math.min(fight.playerState.maxHp - fight.playerState.hp, Math.round(fight.playerState.maxHp * healthRecoveryPercent / 100));
-      opponentHeal = Math.min(fight.opponentState.maxHp - fight.opponentState.hp, Math.round(fight.opponentState.maxHp * healthRecoveryPercent / 100));
-      playerStaminaGain = Math.min(fight.playerState.maxStamina - fight.playerState.stamina, Math.round(fight.playerState.maxStamina * 0.4));
-      opponentStaminaGain = Math.min(fight.opponentState.maxStamina - fight.opponentState.stamina, Math.round(fight.opponentState.maxStamina * 0.4));
+      playerHeal = Math.min(fight.playerState.maxHp - fight.playerState.hp, Math.round(fight.playerState.maxHp * Math.max(0, healthRecoveryPercent + fightContextBySide(fight, "player").roundHealthPercent) / 100));
+      opponentHeal = Math.min(fight.opponentState.maxHp - fight.opponentState.hp, Math.round(fight.opponentState.maxHp * Math.max(0, healthRecoveryPercent + fightContextBySide(fight, "opponent").roundHealthPercent) / 100));
+      playerStaminaGain = Math.min(fight.playerState.maxStamina - fight.playerState.stamina, Math.round(fight.playerState.maxStamina * Math.max(0, 40 + fightContextBySide(fight, "player").roundStaminaPercent) / 100));
+      opponentStaminaGain = Math.min(fight.opponentState.maxStamina - fight.opponentState.stamina, Math.round(fight.opponentState.maxStamina * Math.max(0, 40 + fightContextBySide(fight, "opponent").roundStaminaPercent) / 100));
       fight.playerState.hp = clamp(fight.playerState.hp + playerHeal, 0, fight.playerState.maxHp);
       fight.opponentState.hp = clamp(fight.opponentState.hp + opponentHeal, 0, fight.opponentState.maxHp);
       fight.playerState.stamina = clamp(fight.playerState.stamina + playerStaminaGain, 0, fight.playerState.maxStamina);
@@ -7133,10 +7887,10 @@
       }
       pushFightLine(fight, "Ход " + fight.turn + " завершен.");
       if (!fight.skipTurnRecovery) {
-        fight.playerState.hp = clamp(fight.playerState.hp + turnHealthRecovery(fight.playerState), 0, fight.playerState.maxHp);
-        fight.opponentState.hp = clamp(fight.opponentState.hp + turnHealthRecovery(fight.opponentState), 0, fight.opponentState.maxHp);
-        playerStaminaRecovery = (fight.playerState.actedAttack ? 2 : 4) + developmentScalarBonus(state.fighter, "turnRecoveryStamina");
-        opponentStaminaRecovery = (fight.opponentState.actedAttack ? 2 : 4) + developmentScalarBonus(currentFightSideFighter(fight, "opponent"), "turnRecoveryStamina");
+        fight.playerState.hp = clamp(fight.playerState.hp + turnHealthRecovery(fight, "player"), 0, fight.playerState.maxHp);
+        fight.opponentState.hp = clamp(fight.opponentState.hp + turnHealthRecovery(fight, "opponent"), 0, fight.opponentState.maxHp);
+        playerStaminaRecovery = Math.max(0, (fight.playerState.actedAttack ? 2 : 4) + developmentScalarBonus(state.fighter, "turnRecoveryStamina") + Math.round(fightContextBySide(fight, "player").turnStaminaRecovery || 0));
+        opponentStaminaRecovery = Math.max(0, (fight.opponentState.actedAttack ? 2 : 4) + developmentScalarBonus(currentFightSideFighter(fight, "opponent"), "turnRecoveryStamina") + Math.round(fightContextBySide(fight, "opponent").turnStaminaRecovery || 0));
         fight.playerState.stamina = clamp(fight.playerState.stamina + playerStaminaRecovery, 0, fight.playerState.maxStamina);
         fight.opponentState.stamina = clamp(fight.opponentState.stamina + opponentStaminaRecovery, 0, fight.opponentState.maxStamina);
       }
@@ -7304,8 +8058,8 @@
       var html = [];
       html.push("<div class='battle-panel'><strong>Статистика</strong>");
       html.push("<div class='battle-chip-line'><div class='chip'>Раунд " + fight.round + " / " + fight.opponent.rounds + "</div><div class='chip'>Ход " + fight.turn + " / " + fight.turnsPerRound + "</div></div>");
-      html.push("<div class='battle-panel inset-panel'><strong>Ты</strong>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.playerState.defenseMode ? FIGHT_ACTIONS[fight.playerState.defenseMode].label : "Нет") + "</div></div></div>");
-      html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.opponentState.defenseMode ? FIGHT_ACTIONS[fight.opponentState.defenseMode].label : "Нет") + "</div></div><div class='battle-chip-line'><div class='chip'>Стиль " + (fight.opponent.styleLabel || "Базовый") + "</div><div class='chip'>Зал " + (fight.opponent.gymName || "Уличная база") + "</div><div class='chip'>Тренер " + (fight.opponent.trainerLabel || "Сам себе угол") + "</div></div></div>");
+      html.push("<div class='battle-panel inset-panel'><strong>Ты</strong>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.playerState.defenseMode ? FIGHT_ACTIONS[fight.playerState.defenseMode].label : "Нет") + "</div></div><div class='battle-chip-line'><div class='chip'>Состояние " + fightConditionSummary(state.fighter) + "</div></div></div>");
+      html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.opponentState.defenseMode ? FIGHT_ACTIONS[fight.opponentState.defenseMode].label : "Нет") + "</div></div><div class='battle-chip-line'><div class='chip'>Стиль " + (fight.opponent.styleLabel || "Базовый") + "</div><div class='chip'>Архетип " + (fight.opponent.archetypeLabel || "Базовый") + "</div><div class='chip'>Риски " + ((fight.opponent.mainRisks && fight.opponent.mainRisks.length) ? fight.opponent.mainRisks[0] : "ровный бой") + "</div></div></div>");
       if (fight.roundCards.length) {
         html.push("<div class='battle-panel inset-panel'><strong>Карточки</strong>");
         html.push("<div class='log-entry'>" + fight.roundCards[0] + "</div>");
