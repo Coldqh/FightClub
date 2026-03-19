@@ -3,7 +3,6 @@
     {
       "id": "outboxer",
       "label": "Аутбоксер",
-      "description": "Дистанция, джеб и много ног.",
       "tiers": [
         {
           "threshold": 12,
@@ -63,7 +62,6 @@
     {
       "id": "puncher",
       "label": "Панчер",
-      "description": "Силовой бой и тяжёлые удары.",
       "tiers": [
         {
           "threshold": 12,
@@ -114,7 +112,6 @@
     {
       "id": "counterpuncher",
       "label": "Контрпанчер",
-      "description": "Ждёт, ловит и больно отвечает.",
       "tiers": [
         {
           "threshold": 12,
@@ -154,7 +151,6 @@
     {
       "id": "tempo",
       "label": "Темповик",
-      "description": "Мотор, давление и постоянный ритм.",
       "tiers": [
         {
           "threshold": 12,
@@ -213,7 +209,6 @@
     {
       "id": "endurance",
       "label": "Выносливость",
-      "description": "Длинная работа и крепкий мотор.",
       "xpByTraining": {
         "light": 6,
         "medium": 10,
@@ -227,7 +222,6 @@
     {
       "id": "technique",
       "label": "Техника",
-      "description": "Точность, дистанция и чистые решения.",
       "xpByTraining": {
         "light": 7,
         "medium": 11,
@@ -241,7 +235,6 @@
     {
       "id": "power",
       "label": "Ударная мощь",
-      "description": "Сила ударов и жёсткая концовка.",
       "xpByTraining": {
         "light": 6,
         "medium": 10,
@@ -255,7 +248,6 @@
     {
       "id": "defense",
       "label": "Защита",
-      "description": "Блок, уклон и ответ по таймингу.",
       "xpByTraining": {
         "light": 6,
         "medium": 11,
@@ -269,7 +261,6 @@
     {
       "id": "sparring",
       "label": "Спарринги",
-      "description": "Живые раунды и бой под давлением.",
       "xpByTraining": {
         "light": 7,
         "medium": 12,
@@ -284,7 +275,6 @@
     {
       "id": "recovery",
       "label": "Восстановление",
-      "description": "Сон, режим и сохранение ресурса.",
       "xpByTraining": {
         "light": 5,
         "medium": 8,
@@ -301,7 +291,6 @@
       "id": "needle_jab",
       "label": "Игла джеба",
       "category": "combat",
-      "description": "Джеб лучше находит цель.",
       "requirements": {
         "styleAtLeast": {
           "outboxer": 12
@@ -323,7 +312,6 @@
       "id": "rangemaster",
       "label": "Хозяин дистанции",
       "category": "combat",
-      "description": "Проще держать шаг и дистанцию.",
       "requirements": {
         "styleAtLeast": {
           "outboxer": 24
@@ -346,7 +334,6 @@
       "id": "thunder_cross",
       "label": "Громовой кросс",
       "category": "combat",
-      "description": "Кросс бьёт плотнее.",
       "requirements": {
         "styleAtLeast": {
           "puncher": 12
@@ -366,7 +353,6 @@
       "id": "basement_hook",
       "label": "Подвальный хук",
       "category": "combat",
-      "description": "Хук лучше проходит рядом.",
       "requirements": {
         "styleAtLeast": {
           "puncher": 24
@@ -388,7 +374,6 @@
       "id": "kill_switch",
       "label": "Добивающий импульс",
       "category": "combat",
-      "description": "Апперкот опаснее в концовке.",
       "requirements": {
         "styleAtLeast": {
           "puncher": 36
@@ -409,7 +394,6 @@
       "id": "mirror_step",
       "label": "Зеркальный шаг",
       "category": "combat",
-      "description": "Проще уйти и поймать в ответ.",
       "requirements": {
         "styleAtLeast": {
           "counterpuncher": 12
@@ -427,7 +411,6 @@
       "id": "trap_guard",
       "label": "Ловушка в блоке",
       "category": "combat",
-      "description": "Блок крепче, окно для ответа шире.",
       "requirements": {
         "styleAtLeast": {
           "counterpuncher": 24
@@ -447,7 +430,6 @@
       "id": "body_tax",
       "label": "Налог на корпус",
       "category": "combat",
-      "description": "Удары по корпусу сильнее выматывают.",
       "requirements": {
         "styleAtLeast": {
           "tempo": 12
@@ -467,7 +449,6 @@
       "id": "swarm_breath",
       "label": "Дыхание темпа",
       "category": "combat",
-      "description": "Темп стоит меньше сил.",
       "requirements": {
         "styleAtLeast": {
           "tempo": 24
@@ -492,7 +473,6 @@
       "id": "gym_rat",
       "label": "Крыса зала",
       "category": "career",
-      "description": "Ты лучше выжимаешь пользу из тяжёлой недели.",
       "requirements": {
         "focusAtLeast": {
           "sparring": 10
@@ -508,7 +488,6 @@
       "id": "camp_engineer",
       "label": "Инженер лагеря",
       "category": "career",
-      "description": "Подготовка растёт ровнее.",
       "requirements": {
         "focusAtLeast": {
           "technique": 10
@@ -525,7 +504,6 @@
       "id": "contract_eye",
       "label": "Чтение контрактов",
       "category": "career",
-      "description": "Легче видеть плохие условия.",
       "requirements": {
         "fameAtLeast": 12,
         "statAtLeast": {
@@ -541,7 +519,6 @@
       "id": "road_wallet",
       "label": "Дорожный кошелёк",
       "category": "career",
-      "description": "Поездки бьют по карману меньше.",
       "requirements": {
         "fameAtLeast": 18,
         "statAtLeast": {
@@ -557,7 +534,6 @@
       "id": "crowd_echo",
       "label": "Эхо толпы",
       "category": "career",
-      "description": "Имя лучше превращается в офферы.",
       "requirements": {
         "fameAtLeast": 25,
         "moraleAtLeast": 55
@@ -571,7 +547,6 @@
       "id": "cold_head",
       "label": "Холодная голова",
       "category": "psychological",
-      "description": "После тяжёлых недель проще держать себя.",
       "requirements": {
         "moraleAtLeast": 60,
         "statAtLeast": {
@@ -587,7 +562,6 @@
       "id": "anchor_circle",
       "label": "Круг опоры",
       "category": "psychological",
-      "description": "Поддержка людей работает сильнее.",
       "requirements": {
         "supportAtLeast": 60
       },
@@ -816,3 +790,5 @@
     }
   }
 };
+
+

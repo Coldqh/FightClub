@@ -36,7 +36,6 @@
             {
               "id": "answer",
               "label": "Ответить жёстко",
-              "resultText": "Ты подливаешь масла в огонь.",
               "effects": [
                 {
                   "type": "resource",
@@ -84,7 +83,6 @@
             {
               "id": "cool",
               "label": "Держать холод",
-              "resultText": "Ты не даёшь ему устроить шоу за твой счёт.",
               "effects": [
                 {
                   "type": "resource",
@@ -128,7 +126,6 @@
             {
               "id": "feed_fire",
               "label": "Дать резкую цитату",
-              "resultText": "Пара слов, и шум становится ещё громче.",
               "effects": [
                 {
                   "type": "resource",
@@ -167,7 +164,6 @@
             {
               "id": "decline",
               "label": "Не кормить прессу",
-              "resultText": "Ты не даёшь им лишнего мяса.",
               "effects": [
                 {
                   "type": "resource",
@@ -208,7 +204,6 @@
             {
               "id": "take_rematch",
               "label": "Взять реванш как личное дело",
-              "resultText": "Ты поднимаешь ставки между вами.",
               "effects": [
                 {
                   "type": "resource",
@@ -245,7 +240,6 @@
             {
               "id": "walk_away",
               "label": "Закрыть тему",
-              "resultText": "Ты не даёшь чужой злости рулить своей карьерой.",
               "effects": [
                 {
                   "type": "resource",
@@ -310,7 +304,6 @@
             {
               "id": "reach_out",
               "label": "Попробовать сгладить",
-              "resultText": "Ты первым делаешь шаг к миру.",
               "effects": [
                 {
                   "type": "relation",
@@ -337,7 +330,6 @@
             {
               "id": "snap_back",
               "label": "Огрызнуться",
-              "resultText": "Трещина только растёт.",
               "effects": [
                 {
                   "type": "relation",
@@ -385,7 +377,6 @@
             {
               "id": "repair",
               "label": "Сесть и поговорить",
-              "resultText": "Разговор тяжёлый, но честный.",
               "effects": [
                 {
                   "type": "relation",
@@ -423,7 +414,6 @@
             {
               "id": "break",
               "label": "Рвать связь",
-              "resultText": "Старый друг становится частью чужого шума.",
               "effects": [
                 {
                   "type": "relation",
@@ -512,7 +502,6 @@
             {
               "id": "double_down",
               "label": "Ужесточить режим",
-              "resultText": "Ты принимаешь давление и работаешь дальше.",
               "effects": [
                 {
                   "type": "condition",
@@ -547,7 +536,6 @@
             {
               "id": "brush_off",
               "label": "Отмахнуться",
-              "resultText": "Ты даёшь понять, что сам знаешь, как жить.",
               "effects": [
                 {
                   "type": "relation",
@@ -591,7 +579,6 @@
             {
               "id": "fight_for_him",
               "label": "Бороться за него",
-              "resultText": "Ты пытаешься вернуть человека в свой угол.",
               "effects": [
                 {
                   "type": "resource",
@@ -616,7 +603,6 @@
             {
               "id": "let_go",
               "label": "Отпустить",
-              "resultText": "Ты не держишь того, кто уже вышел головой.",
               "effects": [
                 {
                   "type": "resource",
@@ -701,7 +687,6 @@
             {
               "id": "play_along",
               "label": "Подыграть",
-              "resultText": "Ты сам добавляешь этой истории огня.",
               "effects": [
                 {
                   "type": "resource",
@@ -741,7 +726,6 @@
             {
               "id": "deny",
               "label": "Отрицать",
-              "resultText": "Ты не хочешь быть частью этого шоу.",
               "effects": [
                 {
                   "type": "resource",
@@ -777,7 +761,6 @@
             {
               "id": "embrace",
               "label": "Принять шум",
-              "resultText": "Ты решаешь выжать из него всё что можно.",
               "effects": [
                 {
                   "type": "resource",
@@ -806,7 +789,6 @@
             {
               "id": "reset",
               "label": "Сбросить обороты",
-              "resultText": "Ты пытаешься вытащить себя из этой мясорубки.",
               "effects": [
                 {
                   "type": "resource",
@@ -869,7 +851,6 @@
             {
               "id": "trust",
               "label": "Поверить",
-              "resultText": "Ты вкладываешься в обещание по полной.",
               "effects": [
                 {
                   "type": "resource",
@@ -895,7 +876,6 @@
             {
               "id": "hedge",
               "label": "Держать ухо востро",
-              "resultText": "Ты не веришь словам без бумаги.",
               "effects": [
                 {
                   "type": "relation",
@@ -930,7 +910,6 @@
             {
               "id": "call_out",
               "label": "Вызывать его вслух",
-              "resultText": "Ты не даёшь ему уйти тихо.",
               "effects": [
                 {
                   "type": "resource",
@@ -972,7 +951,6 @@
             {
               "id": "swallow",
               "label": "Проглотить",
-              "resultText": "Ты не забываешь, но пока молчишь.",
               "effects": [
                 {
                   "type": "resource",
@@ -1024,7 +1002,6 @@
             {
               "id": "sign",
               "label": "Подписать реванш",
-              "resultText": "Ты идёшь навстречу старой истории.",
               "effects": [
                 {
                   "type": "resource",
@@ -1061,7 +1038,6 @@
             {
               "id": "delay",
               "label": "Потянуть время",
-              "resultText": "Сейчас ты не готов бросаться в это с головой.",
               "effects": [
                 {
                   "type": "resource",
@@ -1126,7 +1102,6 @@
             {
               "id": "accept",
               "label": "Принять помощь",
-              "resultText": "Ты разрешаешь себе не держать всё одному.",
               "effects": [
                 {
                   "type": "resource",
@@ -1169,7 +1144,6 @@
             {
               "id": "refuse",
               "label": "Отказаться",
-              "resultText": "Ты снова тянешь это на себе.",
               "effects": [
                 {
                   "type": "resource",
@@ -1234,7 +1208,6 @@
             {
               "id": "listen",
               "label": "Слушать",
-              "resultText": "Ты даёшь людям рядом хоть немного помочь.",
               "effects": [
                 {
                   "type": "resource",
@@ -1269,7 +1242,6 @@
             {
               "id": "shut_down",
               "label": "Закрыться",
-              "resultText": "Сейчас ты не хочешь никого подпускать.",
               "effects": [
                 {
                   "type": "resource",
@@ -1332,7 +1304,6 @@
             {
               "id": "rest",
               "label": "Сделать паузу",
-              "resultText": "Ты выбираешь себя, а не только гонку.",
               "effects": [
                 {
                   "type": "resource",
@@ -1366,7 +1337,6 @@
             {
               "id": "push",
               "label": "Лезть дальше",
-              "resultText": "Гордость снова идёт впереди здравого смысла.",
               "effects": [
                 {
                   "type": "condition",
@@ -1430,7 +1400,6 @@
             {
               "id": "back_trainer",
               "label": "Встать за тренера",
-              "resultText": "Ты выбираешь лагерь и качество.",
               "effects": [
                 {
                   "type": "relation",
@@ -1460,7 +1429,6 @@
             {
               "id": "back_promoter",
               "label": "Встать за промоутера",
-              "resultText": "Ты идёшь туда, где быстрее шум и деньги.",
               "effects": [
                 {
                   "type": "relation",
@@ -1528,7 +1496,6 @@
             {
               "id": "respect",
               "label": "Принять уважение",
-              "resultText": "Ты не обязан любить его, чтобы признать силу.",
               "effects": [
                 {
                   "type": "relation",
@@ -1553,7 +1520,6 @@
             {
               "id": "spit",
               "label": "Плюнуть на это",
-              "resultText": "Ты оставляешь между вами только злость.",
               "effects": [
                 {
                   "type": "relation",
@@ -1585,3 +1551,4 @@
     }
   ]
 };
+

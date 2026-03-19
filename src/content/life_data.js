@@ -3,38 +3,35 @@
     {
       "id": "rough",
       "label": "Плохие условия",
-      "weeklyCost": 0,
+      "weeklyCost": 15,
       "weeklyStress": 4,
       "weeklyMorale": -4,
       "weeklyWear": 2,
       "recoveryHealthBonus": -4,
       "recoveryStressRelief": -1,
-      "disciplineBonus": -6,
-      "description": "Тесно, шумно и нормально не отдохнёшь."
+      "disciplineBonus": -6
     },
     {
       "id": "normal",
       "label": "Нормальные условия",
-      "weeklyCost": 12,
+      "weeklyCost": 50,
       "weeklyStress": 0,
       "weeklyMorale": 1,
       "weeklyWear": 0,
       "recoveryHealthBonus": 0,
       "recoveryStressRelief": 0,
-      "disciplineBonus": 0,
-      "description": "Обычный быт без роскоши и без лишней боли."
+      "disciplineBonus": 0
     },
     {
       "id": "comfortable",
       "label": "Комфортные условия",
-      "weeklyCost": 28,
+      "weeklyCost": 100,
       "weeklyStress": -3,
       "weeklyMorale": 4,
       "weeklyWear": -1,
       "recoveryHealthBonus": 4,
       "recoveryStressRelief": 3,
-      "disciplineBonus": 6,
-      "description": "Тихо, чисто и легче держать режим."
+      "disciplineBonus": 6
     }
   ],
   "socialActions": [
@@ -50,15 +47,11 @@
         "wear": 0,
         "morale": 5
       },
-      "description": "Просто выйти из бойцовской суеты и побыть с другом.",
       "relationEffects": [
         {
           "role": "friend",
-          "affinity": 6,
-          "respect": 1,
-          "trust": 4,
-          "tension": -3,
-          "note": "����� � ������"
+          "score": 8,
+          "note": ""
         }
       ]
     },
@@ -74,23 +67,16 @@
         "wear": -1,
         "morale": 4
       },
-      "description": "Спокойно посидеть со своими после лагеря.",
       "relationEffects": [
         {
           "role": "trainer",
-          "affinity": 2,
-          "respect": 3,
-          "trust": 2,
-          "tension": -1,
-          "note": "����� � ��������"
+          "score": 6,
+          "note": ""
         },
         {
           "role": "sparring",
-          "affinity": 3,
-          "respect": 2,
-          "trust": 1,
-          "tension": -1,
-          "note": "����� � ��������"
+          "score": 5,
+          "note": ""
         }
       ]
     },
@@ -106,7 +92,6 @@
         "wear": -1,
         "morale": 7
       },
-      "description": "Напомнить себе, что жизнь не только про бои.",
       "relationEffects": []
     },
     {
@@ -121,8 +106,8 @@
         "wear": -1,
         "morale": 2
       },
-      "description": "Тихая неделя для сна, головы и режима.",
       "relationEffects": []
     }
   ]
 };
+

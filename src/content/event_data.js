@@ -16,7 +16,6 @@
         {
           "id": "pay",
           "label": "Заплатить сейчас",
-          "resultText": "Ты отдаёшь деньги и закрываешь вопрос.",
           "effects": [
             {
               "type": "resource",
@@ -41,7 +40,6 @@
         {
           "id": "delay",
           "label": "Потянуть ещё",
-          "resultText": "Платёж откладывается. На душе только хуже.",
           "effects": [
             {
               "type": "resource",
@@ -90,7 +88,6 @@
         {
           "id": "accept",
           "label": "Согласиться",
-          "resultText": "Пару дней можно спокойно выдохнуть.",
           "effects": [
             {
               "type": "resource",
@@ -120,7 +117,6 @@
         {
           "id": "refuse",
           "label": "Отказаться",
-          "resultText": "Гордость остаётся, но легче не становится.",
           "effects": [
             {
               "type": "resource",
@@ -168,7 +164,6 @@
         {
           "id": "take_shift",
           "label": "Взять смену",
-          "resultText": "Деньги пришли, но неделя стала тяжелее.",
           "effects": [
             {
               "type": "resource",
@@ -204,7 +199,6 @@
         {
           "id": "decline_shift",
           "label": "Отказаться",
-          "resultText": "Ты бережёшь себя, но хозяин это запомнит.",
           "effects": [
             {
               "type": "condition",
@@ -239,7 +233,6 @@
         {
           "id": "buy_gear",
           "label": "Купить новые",
-          "resultText": "Деньги ушли, зато руки снова в порядке.",
           "effects": [
             {
               "type": "resource",
@@ -262,7 +255,6 @@
         {
           "id": "save_money",
           "label": "Потерпеть",
-          "resultText": "Сэкономил сейчас, но телу это не нравится.",
           "effects": [
             {
               "type": "condition",
@@ -294,7 +286,6 @@
         {
           "id": "eat_clean",
           "label": "Взять нормальную еду",
-          "resultText": "Дороже, зато телу легче.",
           "effects": [
             {
               "type": "resource",
@@ -317,7 +308,6 @@
         {
           "id": "eat_cheap",
           "label": "Съесть что под руку",
-          "resultText": "Деньги остались, а самочувствие нет.",
           "effects": [
             {
               "type": "resource",
@@ -354,7 +344,6 @@
         {
           "id": "force_rest",
           "label": "Сбавить темп",
-          "resultText": "Неделя выходит тише, но ты хоть немного приходишь в себя.",
           "effects": [
             {
               "type": "condition",
@@ -376,7 +365,6 @@
         {
           "id": "push_through",
           "label": "Дожать себя",
-          "resultText": "Ты тянешь дальше, но расплата приходит быстро.",
           "effects": [
             {
               "type": "condition",
@@ -434,7 +422,6 @@
         {
           "id": "agree",
           "label": "Пойти ещё раз",
-          "resultText": "Неделя становится жёстче, зато тренер доволен.",
           "effects": [
             {
               "type": "resource",
@@ -469,7 +456,6 @@
         {
           "id": "decline",
           "label": "Оставить как есть",
-          "resultText": "Ты не перегружаешь себя, но тренеру это не нравится.",
           "effects": [
             {
               "type": "condition",
@@ -518,7 +504,6 @@
         {
           "id": "listen",
           "label": "Послушать",
-          "resultText": "Ты делаешь шаг назад и собираешь себя заново.",
           "effects": [
             {
               "type": "condition",
@@ -549,7 +534,6 @@
         {
           "id": "ignore",
           "label": "Упереться",
-          "resultText": "Ты идёшь дальше через силу.",
           "effects": [
             {
               "type": "condition",
@@ -602,7 +586,6 @@
         {
           "id": "go_hard",
           "label": "Принять",
-          "resultText": "Хорошая проверка, но цена у неё есть.",
           "effects": [
             {
               "type": "resource",
@@ -633,7 +616,6 @@
         {
           "id": "keep_light",
           "label": "Пропустить",
-          "resultText": "Ты бережёшь себя и не лезешь в мясо.",
           "effects": [
             {
               "type": "resource",
@@ -682,7 +664,6 @@
         {
           "id": "answer_cold",
           "label": "Ответить резко",
-          "resultText": "Слова летят жёстко, и шум только растёт.",
           "effects": [
             {
               "type": "resource",
@@ -708,7 +689,6 @@
         {
           "id": "snap_back",
           "label": "Не вестись",
-          "resultText": "Ты не даёшь ему устроить шоу за твой счёт.",
           "effects": [
             {
               "type": "resource",
@@ -767,7 +747,6 @@
         {
           "id": "take_respect",
           "label": "Принять это",
-          "resultText": "На секунду между вами становится тише.",
           "effects": [
             {
               "type": "relation",
@@ -787,7 +766,6 @@
         {
           "id": "twist_knife",
           "label": "Оставить холод",
-          "resultText": "Ты не веришь в резкие повороты.",
           "effects": [
             {
               "type": "resource",
@@ -831,7 +809,6 @@
         {
           "id": "take_it",
           "label": "Взять",
-          "resultText": "Деньги небольшие, но это нормальный шаг вперёд.",
           "effects": [
             {
               "type": "resource",
@@ -861,7 +838,6 @@
         {
           "id": "stay_raw",
           "label": "Подождать лучшее",
-          "resultText": "Ты не хватаешься за первое попавшееся.",
           "effects": [
             {
               "type": "condition",
@@ -908,7 +884,6 @@
         {
           "id": "take_dirty",
           "label": "Взять деньги",
-          "resultText": "Кошелёк становится толще, а внутри неприятно.",
           "effects": [
             {
               "type": "resource",
@@ -941,7 +916,6 @@
         {
           "id": "refuse_dirty",
           "label": "Отказаться",
-          "resultText": "Деньги уходят мимо, зато совесть чище.",
           "effects": [
             {
               "type": "condition",
@@ -995,7 +969,6 @@
         {
           "id": "lean_in",
           "label": "Рискнуть",
-          "resultText": "Ты идёшь туда, где ставок больше.",
           "effects": [
             {
               "type": "resource",
@@ -1026,7 +999,6 @@
         {
           "id": "stay_low",
           "label": "Остаться дома",
-          "resultText": "Ты не гонишься за шумом любой ценой.",
           "effects": [
             {
               "type": "resource",
@@ -1070,7 +1042,6 @@
         {
           "id": "open_up",
           "label": "Поговорить",
-          "resultText": "Твоё имя снова мелькает в разговорах.",
           "effects": [
             {
               "type": "resource",
@@ -1095,7 +1066,6 @@
         {
           "id": "stay_closed",
           "label": "Отказать",
-          "resultText": "Шума меньше, но и внимания тоже.",
           "effects": [
             {
               "type": "resource",
@@ -1143,7 +1113,6 @@
         {
           "id": "buy_silence",
           "label": "Ответить",
-          "resultText": "Ты выходишь в ответ и поднимаешь ещё больше шума.",
           "effects": [
             {
               "type": "resource",
@@ -1169,7 +1138,6 @@
         {
           "id": "stand_tall",
           "label": "Промолчать",
-          "resultText": "Ты не кормишь это, но неприятный осадок остаётся.",
           "effects": [
             {
               "type": "resource",
@@ -1225,7 +1193,6 @@
         {
           "id": "take_help",
           "label": "Согласиться",
-          "resultText": "Немного выправляешь тело без большой дыры в бюджете.",
           "effects": [
             {
               "type": "resource",
@@ -1256,7 +1223,6 @@
         {
           "id": "save_cash",
           "label": "Сэкономить",
-          "resultText": "Ты бережёшь деньги, но не себя.",
           "effects": [
             {
               "type": "resource",
@@ -1298,7 +1264,6 @@
         {
           "id": "hide_it",
           "label": "Спрятать",
-          "resultText": "Проблема не исчезла, ты просто сделал вид.",
           "effects": [
             {
               "type": "resource",
@@ -1328,7 +1293,6 @@
         {
           "id": "tell_truth",
           "label": "Играть честно",
-          "resultText": "Ты не рисуешь здорового из того, кто уже посыпался.",
           "effects": [
             {
               "type": "resource",
@@ -1374,7 +1338,6 @@
         {
           "id": "go_out",
           "label": "Пойти",
-          "resultText": "Голова разгружается, и неделя уже не так давит.",
           "effects": [
             {
               "type": "resource",
@@ -1400,7 +1363,6 @@
         {
           "id": "stay_locked",
           "label": "Остаться",
-          "resultText": "Ты сохраняешь режим, но остаёшься в своих мыслях.",
           "effects": [
             {
               "type": "condition",
@@ -1444,7 +1406,6 @@
         {
           "id": "lend",
           "label": "Помочь",
-          "resultText": "Кошелёк худеет, но друг это помнит.",
           "effects": [
             {
               "type": "resource",
@@ -1469,7 +1430,6 @@
         {
           "id": "refuse",
           "label": "Не дать",
-          "resultText": "Ты сохраняешь деньги, но осадок остаётся у обоих.",
           "effects": [
             {
               "type": "relation",
@@ -1519,7 +1479,6 @@
         {
           "id": "accept_cover",
           "label": "Принять помощь",
-          "resultText": "Ты принимаешь опору и чуть легче держишься.",
           "effects": [
             {
               "type": "resource",
@@ -1545,7 +1504,6 @@
         {
           "id": "pay_back_now",
           "label": "Не брать",
-          "resultText": "Ты стоишь сам, но тяжесть никуда не девается.",
           "effects": [
             {
               "type": "resource",
@@ -1589,7 +1547,6 @@
         {
           "id": "help",
           "label": "Помочь",
-          "resultText": "Ты тратишь время, но район это видит.",
           "effects": [
             {
               "type": "resource",
@@ -1619,7 +1576,6 @@
         {
           "id": "skip",
           "label": "Отмахнуться",
-          "resultText": "Ты выбираешь себя, и хозяин это замечает.",
           "effects": [
             {
               "type": "relation",
@@ -1661,7 +1617,6 @@
         {
           "id": "show_respect",
           "label": "Принять",
-          "resultText": "Ты не споришь и сглаживаешь углы.",
           "effects": [
             {
               "type": "condition",
@@ -1682,7 +1637,6 @@
         {
           "id": "brush_off",
           "label": "Встать в позу",
-          "resultText": "Ты идёшь лоб в лоб, и воздух сразу тяжелеет.",
           "effects": [
             {
               "type": "relation",
@@ -1714,7 +1668,6 @@
         {
           "id": "pay_fast",
           "label": "Разрулить деньгами",
-          "resultText": "Проблема уходит быстрее, но не бесплатно.",
           "effects": [
             {
               "type": "resource",
@@ -1732,7 +1685,6 @@
         {
           "id": "endure",
           "label": "Терпеть",
-          "resultText": "Ты сохраняешь деньги, но съедаешь кучу нервов.",
           "effects": [
             {
               "type": "resource",
@@ -1768,7 +1720,6 @@
         {
           "id": "explore",
           "label": "Собраться и выйти",
-          "resultText": "Ты не сидишь в углу и понемногу вживаешься.",
           "effects": [
             {
               "type": "resource",
@@ -1790,7 +1741,6 @@
         {
           "id": "hide",
           "label": "Закрыться",
-          "resultText": "Неделя проходит тише, но внутри пусто.",
           "effects": [
             {
               "type": "resource",
@@ -1826,7 +1776,6 @@
         {
           "id": "lean_into_it",
           "label": "Поддержать разговор",
-          "resultText": "Ты ловишь этот момент и работаешь на имя.",
           "effects": [
             {
               "type": "resource",
@@ -1844,7 +1793,6 @@
         {
           "id": "stay_workman",
           "label": "Держать дистанцию",
-          "resultText": "Ты не лезешь в лишний шум.",
           "effects": [
             {
               "type": "condition",
@@ -1875,7 +1823,6 @@
         {
           "id": "pick_up",
           "label": "Ответить и поговорить",
-          "resultText": "Разговор немного ставит всё на место.",
           "effects": [
             {
               "type": "resource",
@@ -1897,7 +1844,6 @@
         {
           "id": "ignore",
           "label": "Сбросить и потом",
-          "resultText": "Сейчас не до этого, но осадок остаётся.",
           "effects": [
             {
               "type": "resource",
@@ -1929,7 +1875,6 @@
         {
           "id": "ride_buzz",
           "label": "Поймать волну",
-          "resultText": "Ты забираешь этот шум себе в плюс.",
           "effects": [
             {
               "type": "resource",
@@ -1951,7 +1896,6 @@
         {
           "id": "stay_quiet",
           "label": "Остыть",
-          "resultText": "Ты не даёшь победе вскружить голову.",
           "effects": [
             {
               "type": "resource",
@@ -1983,7 +1927,6 @@
         {
           "id": "watch_tape",
           "label": "Принять удар",
-          "resultText": "Ты смотришь на это трезво и не убегаешь.",
           "effects": [
             {
               "type": "resource",
@@ -2005,7 +1948,6 @@
         {
           "id": "avoid_it",
           "label": "Закрыться",
-          "resultText": "Ты прячешься в себе, и неделя становится тяжелее.",
           "effects": [
             {
               "type": "resource",
@@ -2037,7 +1979,6 @@
         {
           "id": "embrace",
           "label": "Выйти в свет",
-          "resultText": "Ты добираешь ещё шума себе в актив.",
           "effects": [
             {
               "type": "resource",
@@ -2059,7 +2000,6 @@
         {
           "id": "downplay",
           "label": "Уйти в тень",
-          "resultText": "Ты не разгоняешь эту волну лишний раз.",
           "effects": [
             {
               "type": "condition",
@@ -2101,7 +2041,6 @@
         {
           "id": "trust_process",
           "label": "Слушать",
-          "resultText": "Ты возвращаешься к базе и понемногу приходишь в норму.",
           "effects": [
             {
               "type": "resource",
@@ -2127,7 +2066,6 @@
         {
           "id": "close_off",
           "label": "Упереться",
-          "resultText": "Ты не хочешь назад, даже если сейчас это было бы полезно.",
           "effects": [
             {
               "type": "resource",
@@ -2172,7 +2110,6 @@
         {
           "id": "meet",
           "label": "Слушать",
-          "resultText": "Ты не упускаешь момент, пока имя горячее.",
           "effects": [
             {
               "type": "resource",
@@ -2193,7 +2130,6 @@
         {
           "id": "stay_busy",
           "label": "Притормозить",
-          "resultText": "Ты не прыгаешь в следующий бой с разбега.",
           "effects": [
             {
               "type": "condition",
@@ -2238,7 +2174,6 @@
         {
           "id": "accept_heat",
           "label": "Ответить",
-          "resultText": "Ты сам поднимаешь ставки между вами.",
           "effects": [
             {
               "type": "resource",
@@ -2263,7 +2198,6 @@
         {
           "id": "freeze_out",
           "label": "Не кормить",
-          "resultText": "Ты не даёшь ему бесплатно влезть в твою победу.",
           "effects": [
             {
               "type": "resource",
@@ -2298,7 +2232,6 @@
         {
           "id": "take_risk_cash",
           "label": "Взять грязный вариант",
-          "resultText": "Деньги приходят быстро, но легко не становится.",
           "effects": [
             {
               "type": "resource",
@@ -2321,7 +2254,6 @@
         {
           "id": "stay_clean",
           "label": "Перетерпеть",
-          "resultText": "Тяжело, зато без новой грязи на плечах.",
           "effects": [
             {
               "type": "condition",
@@ -2352,7 +2284,6 @@
         {
           "id": "write_it_down",
           "label": "Разобрать всё",
-          "resultText": "Немного неприятно, зато честно.",
           "effects": [
             {
               "type": "resource",
@@ -2374,7 +2305,6 @@
         {
           "id": "bury_it",
           "label": "Отогнать мысли",
-          "resultText": "Становится тише, но вопрос никуда не уходит.",
           "effects": [
             {
               "type": "resource",
@@ -2405,7 +2335,6 @@
         {
           "id": "respect_body",
           "label": "Сбавить",
-          "resultText": "Ты слушаешь тело и даёшь ему шанс не развалиться.",
           "effects": [
             {
               "type": "condition",
@@ -2428,7 +2357,6 @@
         {
           "id": "ignore_body",
           "label": "Давить дальше",
-          "resultText": "Ты делаешь вид, что всё нормально. Тело не согласно.",
           "effects": [
             {
               "type": "condition",
@@ -2474,7 +2402,6 @@
         {
           "id": "lock_in",
           "label": "Продолжать",
-          "resultText": "Ты видишь, что тяжёлая работа всё же не зря.",
           "effects": [
             {
               "type": "resource",
@@ -2492,7 +2419,6 @@
         {
           "id": "overcook",
           "label": "Ослабить хватку",
-          "resultText": "Ты не хочешь сгореть даже ради прогресса.",
           "effects": [
             {
               "type": "resource",
@@ -2534,7 +2460,6 @@
         {
           "id": "accept",
           "label": "Принять это",
-          "resultText": "Чужая поддержка ложится на плечи как что-то хорошее.",
           "effects": [
             {
               "type": "resource",
@@ -2561,7 +2486,6 @@
         {
           "id": "stay_hungry",
           "label": "Держать дистанцию",
-          "resultText": "Ты благодарен, но не хочешь зависеть от этого.",
           "effects": [
             {
               "type": "resource",
@@ -2585,3 +2509,4 @@
     null
   ]
 };
+

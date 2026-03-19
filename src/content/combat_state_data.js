@@ -1,4 +1,4 @@
-var COMBAT_STATE_DATA = {
+﻿var COMBAT_STATE_DATA = {
   "injuryTypes": [
     {
       "id": "ribs",
@@ -236,3 +236,4 @@ var COMBAT_STATE_DATA = {
     }
   }
 };
+

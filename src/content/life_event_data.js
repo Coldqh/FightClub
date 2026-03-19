@@ -15,7 +15,6 @@
         {
           "id": "patch_it",
           "label": "Подлатать",
-          "resultText": "Деньги ушли, но жить стало чуть легче.",
           "effects": [
             {
               "type": "resource",
@@ -38,7 +37,6 @@
         {
           "id": "live_with_it",
           "label": "Терпеть",
-          "resultText": "Ты пока оставляешь всё как есть.",
           "effects": [
             {
               "type": "resource",
@@ -75,7 +73,6 @@
         {
           "id": "snap_back",
           "label": "Ругнуться",
-          "resultText": "Ты выпускаешь пар, но легче не особо.",
           "effects": [
             {
               "type": "resource",
@@ -93,7 +90,6 @@
         {
           "id": "walk_it_off",
           "label": "Просто уйти",
-          "resultText": "Ты гасишь это сам, без лишней сцены.",
           "effects": [
             {
               "type": "resource",
@@ -125,7 +121,6 @@
         {
           "id": "keep_order",
           "label": "Навести порядок",
-          "resultText": "Становится чуть спокойнее.",
           "effects": [
             {
               "type": "resource",
@@ -147,7 +142,6 @@
         {
           "id": "ignore_order",
           "label": "Оставить как есть",
-          "resultText": "Руки не дошли, и ладно.",
           "effects": [
             {
               "type": "condition",
@@ -174,7 +168,6 @@
         {
           "id": "lean_into_rest",
           "label": "Остаться в этом ритме",
-          "resultText": "Ты даёшь телу ещё немного спокойствия.",
           "effects": [
             {
               "type": "resource",
@@ -197,7 +190,6 @@
         {
           "id": "wake_early",
           "label": "Встать раньше и вернуться в режим",
-          "resultText": "Сон был хороший, но день всё равно нужно прожить.",
           "effects": [
             {
               "type": "condition",
@@ -229,7 +221,6 @@
         {
           "id": "hold_it",
           "label": "Тянуть дальше",
-          "resultText": "Ты остаёшься в нормальных условиях, но по карману это бьёт.",
           "effects": [
             {
               "type": "resource",
@@ -247,7 +238,6 @@
         {
           "id": "downgrade",
           "label": "Съехать попроще",
-          "resultText": "Жить станет проще по деньгам, но и удобства уйдут.",
           "effects": [
             {
               "type": "life",
@@ -295,7 +285,6 @@
         {
           "id": "go_with_friend",
           "label": "Пойти с ним",
-          "resultText": "Ты хоть немного выходишь из темноты.",
           "effects": [
             {
               "type": "resource",
@@ -326,7 +315,6 @@
         {
           "id": "stay_closed",
           "label": "Закрыться дома",
-          "resultText": "Ты остаёшься один на один со своей головой.",
           "effects": [
             {
               "type": "resource",
@@ -377,7 +365,6 @@
         {
           "id": "join_team",
           "label": "Пойти",
-          "resultText": "Такие вечера часто держат лучше любой речи.",
           "effects": [
             {
               "type": "resource",
@@ -405,7 +392,6 @@
         {
           "id": "skip_team",
           "label": "Пропустить",
-          "resultText": "Ты остаёшься в стороне.",
           "effects": [
             {
               "type": "condition",
@@ -437,7 +423,6 @@
         {
           "id": "answer",
           "label": "Поговорить как есть",
-          "resultText": "Тебя правда становится легче.",
           "effects": [
             {
               "type": "resource",
@@ -464,7 +449,6 @@
         {
           "id": "rush_it",
           "label": "Сказать, что всё нормально",
-          "resultText": "Ты не грузишь никого, но и сам не разгружаешься.",
           "effects": [
             {
               "type": "condition",
@@ -497,7 +481,6 @@
         {
           "id": "make_time",
           "label": "Позвонить и извиниться",
-          "resultText": "Не то же самое, но хоть честно.",
           "effects": [
             {
               "type": "resource",
@@ -520,7 +503,6 @@
         {
           "id": "let_it_pass",
           "label": "Оставить как есть",
-          "resultText": "Ты делаешь вид, что так и надо.",
           "effects": [
             {
               "type": "condition",
@@ -557,7 +539,6 @@
         {
           "id": "write_plan",
           "label": "Зацепиться за это",
-          "resultText": "Ты немного собираешь себя.",
           "effects": [
             {
               "type": "condition",
@@ -579,7 +560,6 @@
         {
           "id": "drift",
           "label": "Не копаться",
-          "resultText": "Просто даёшь вечеру пройти.",
           "effects": [
             {
               "type": "life",
@@ -606,7 +586,6 @@
         {
           "id": "call_home",
           "label": "Собраться",
-          "resultText": "Ты не даёшь этому чувству тебя съесть.",
           "effects": [
             {
               "type": "condition",
@@ -629,7 +608,6 @@
         {
           "id": "sit_with_it",
           "label": "Плыть по нему",
-          "resultText": "Одиночество садится глубже.",
           "effects": [
             {
               "type": "resource",
@@ -676,7 +654,6 @@
         {
           "id": "accept_praise",
           "label": "Держать линию",
-          "resultText": "Ты просто продолжаешь делать простые вещи правильно.",
           "effects": [
             {
               "type": "condition",
@@ -697,7 +674,6 @@
         {
           "id": "ask_for_more",
           "label": "Расслабиться",
-          "resultText": "Хочется отпустить, но это может быстро вернуться назад.",
           "effects": [
             {
               "type": "resource",
@@ -742,7 +718,6 @@
         {
           "id": "take_note",
           "label": "Собраться",
-          "resultText": "Неприятно, но полезно.",
           "effects": [
             {
               "type": "condition",
@@ -768,7 +743,6 @@
         {
           "id": "snap_back",
           "label": "Огрызнуться",
-          "resultText": "Тебе это не нравится, и в воздухе становится тяжелее.",
           "effects": [
             {
               "type": "condition",
@@ -813,7 +787,6 @@
         {
           "id": "let_them_in",
           "label": "Пустить его",
-          "resultText": "Иногда этого уже достаточно.",
           "effects": [
             {
               "type": "resource",
@@ -844,7 +817,6 @@
         {
           "id": "push_away",
           "label": "Остаться одному",
-          "resultText": "Сейчас не хочется никого видеть.",
           "effects": [
             {
               "type": "condition",
@@ -888,7 +860,6 @@
         {
           "id": "lean_on_team",
           "label": "Принять это",
-          "resultText": "Команда немного держит тебя на плаву.",
           "effects": [
             {
               "type": "resource",
@@ -911,7 +882,6 @@
         {
           "id": "keep_mask",
           "label": "Отойти в сторону",
-          "resultText": "Ты хочешь пережить это сам.",
           "effects": [
             {
               "type": "condition",
@@ -947,7 +917,6 @@
         {
           "id": "pay_for_fix",
           "label": "Починить",
-          "resultText": "Бьёт по кошельку, зато жить легче.",
           "effects": [
             {
               "type": "resource",
@@ -970,7 +939,6 @@
         {
           "id": "delay_fix",
           "label": "Отложить",
-          "resultText": "Проблема остаётся висеть над головой.",
           "effects": [
             {
               "type": "resource",
@@ -1012,7 +980,6 @@
         {
           "id": "use_it_as_fuel",
           "label": "Собраться и закрыться",
-          "resultText": "Ты не даёшь ему бесплатно влезть в голову.",
           "effects": [
             {
               "type": "resource",
@@ -1038,7 +1005,6 @@
         {
           "id": "let_it_sink",
           "label": "Вестись",
-          "resultText": "Его слова цепляют сильнее, чем должны.",
           "effects": [
             {
               "type": "condition",
@@ -1088,7 +1054,6 @@
         {
           "id": "listen_to_doctor",
           "label": "Послушать",
-          "resultText": "Ты наконец ставишь сон выше суеты.",
           "effects": [
             {
               "type": "resource",
@@ -1111,7 +1076,6 @@
         {
           "id": "brush_it_off",
           "label": "Отмахнуться",
-          "resultText": "Ты снова надеешься вытащить всё на упрямстве.",
           "effects": [
             {
               "type": "condition",
@@ -1146,7 +1110,6 @@
         {
           "id": "take_it_in",
           "label": "Принять это",
-          "resultText": "Такие слова правда держат.",
           "effects": [
             {
               "type": "condition",
@@ -1164,7 +1127,6 @@
         {
           "id": "keep_moving",
           "label": "Оставить без ответа",
-          "resultText": "Ты читаешь, но сейчас не можешь в это войти.",
           "effects": [
             {
               "type": "condition",
@@ -1194,7 +1156,6 @@
         {
           "id": "keep_routine",
           "label": "Держать это",
-          "resultText": "Понемногу это начинает работать на тебя.",
           "effects": [
             {
               "type": "condition",
@@ -1221,7 +1182,6 @@
         {
           "id": "ease_off",
           "label": "Расслабиться",
-          "resultText": "Порядок легко теряется, если перестать за ним следить.",
           "effects": [
             {
               "type": "resource",
@@ -1240,3 +1200,4 @@
     }
   ]
 };
+

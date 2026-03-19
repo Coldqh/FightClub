@@ -409,7 +409,6 @@ var RelationshipArcEngine = (function () {
       choices.push({
         id: stage.choices[i].id,
         label: replaceTokens(stage.choices[i].label, actorMap),
-        resultText: replaceTokens(stage.choices[i].resultText, actorMap),
         effects: clone(stage.choices[i].effects || []),
         tagChanges: clone(stage.choices[i].tagChanges || null),
         nextStageId: stage.choices[i].nextStageId || "",

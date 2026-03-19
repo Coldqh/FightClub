@@ -1,4 +1,4 @@
-var ContentLoader = (function () {
+﻿var ContentLoader = (function () {
   var cache = null;
 
   function clone(value) {
@@ -370,3 +370,4 @@ var ContentLoader = (function () {
     getContextEvents: getContextEvents
   };
 }());
+

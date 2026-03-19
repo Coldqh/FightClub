@@ -140,12 +140,12 @@ var EventEngine = (function () {
       fatigue: typeof conditions.fatigue === "number" ? conditions.fatigue : 0,
       wear: typeof conditions.wear === "number" ? conditions.wear : 0,
       morale: typeof conditions.morale === "number" ? conditions.morale : 55,
-      housingId: life.housingId || "normal",
+      housingId: life.housingId || "rough",
       support: typeof life.support === "number" ? life.support : 50,
       discipline: deriveDiscipline(conditions, {
         stress: typeof resources.stress === "number" ? resources.stress : 0,
         support: typeof life.support === "number" ? life.support : 50,
-        housingId: life.housingId || "normal"
+        housingId: life.housingId || "rough"
       }),
       biographyFlags: bioFlags,
       roles: uniqueStrings(roles),
@@ -358,7 +358,6 @@ var EventEngine = (function () {
       choices.push({
         id: eventDef.choices[i].id,
         label: replaceTokens(eventDef.choices[i].label, actors),
-        resultText: replaceTokens(eventDef.choices[i].resultText, actors),
         effects: clone(eventDef.choices[i].effects || []),
         tagChanges: clone(eventDef.choices[i].tagChanges || null)
       });

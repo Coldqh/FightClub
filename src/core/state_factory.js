@@ -37,8 +37,9 @@ function baseInjurySchema() {
 
 function basePlayerLifeSchema() {
   return {
-    housingId: "normal",
-    support: 50
+    housingId: "rough",
+    support: 50,
+    debtWeeks: 0
   };
 }
 
@@ -80,7 +81,6 @@ function baseGymMembershipSchema() {
     city: "",
     weeklyCost: 0,
     reputation: 0,
-    specialization: "",
     bonuses: {}
   };
 }
@@ -455,7 +455,6 @@ function normalizeWorldState(sourceWorld) {
     normalized.gymMembership.city = sourceWorld.gymMembership.city || "";
     if (typeof sourceWorld.gymMembership.weeklyCost === "number") { normalized.gymMembership.weeklyCost = sourceWorld.gymMembership.weeklyCost; }
     if (typeof sourceWorld.gymMembership.reputation === "number") { normalized.gymMembership.reputation = sourceWorld.gymMembership.reputation; }
-    normalized.gymMembership.specialization = sourceWorld.gymMembership.specialization || "";
     normalized.gymMembership.bonuses = sourceWorld.gymMembership.bonuses ? clonePlainData(sourceWorld.gymMembership.bonuses) : {};
   }
   if (sourceWorld.trainerAssignment && typeof sourceWorld.trainerAssignment === "object") {
@@ -553,6 +552,7 @@ function normalizeGameState(gameState, options) {
     if (source.player.life) {
       normalized.player.life.housingId = source.player.life.housingId || normalized.player.life.housingId;
       if (typeof source.player.life.support === "number") { normalized.player.life.support = source.player.life.support; }
+      if (typeof source.player.life.debtWeeks === "number") { normalized.player.life.debtWeeks = source.player.life.debtWeeks; }
     }
     if (source.player.development) {
       normalized.player.development.focusId = source.player.development.focusId || normalized.player.development.focusId;
@@ -652,7 +652,7 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.player.profile.currentCountry = fighter.currentCountry || "";
     gameState.player.stats = clonePlainData(fighter.stats || basePlayerStatsSchema());
     gameState.player.resources.skillPoints = fighter.skillPoints || 0;
-    gameState.player.resources.money = fighter.money || 0;
+    gameState.player.resources.money = typeof fighter.money === "number" ? fighter.money : 0;
     gameState.player.resources.health = typeof fighter.health === "number" ? fighter.health : 100;
     gameState.player.resources.stress = typeof fighter.stress === "number" ? fighter.stress : 0;
     gameState.player.resources.fame = fighter.fame || 0;
@@ -668,6 +668,7 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     }
     gameState.player.life.housingId = fighter.housingId || gameState.player.life.housingId;
     gameState.player.life.support = typeof fighter.support === "number" ? fighter.support : gameState.player.life.support;
+    gameState.player.life.debtWeeks = typeof fighter.debtWeeks === "number" ? fighter.debtWeeks : gameState.player.life.debtWeeks;
     if (fighter.development && typeof fighter.development === "object") {
       gameState.player.development = normalizeGameState({
         player: {
@@ -753,6 +754,7 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     injuries: clonePlainData(normalized.player.conditions.injuries),
     housingId: normalized.player.life.housingId,
     support: normalized.player.life.support,
+    debtWeeks: normalized.player.life.debtWeeks,
     development: clonePlainData(normalized.player.development),
     startingAge: normalized.player.conditions.startingAge,
     bioFlags: clonePlainData(normalized.player.biography.flags),

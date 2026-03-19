@@ -79,6 +79,9 @@ function validateState(gameState) {
     if (typeof gameState.player.life.support !== "number") {
       pushError("player.life.support должен быть числом.");
     }
+    if (typeof gameState.player.life.debtWeeks !== "number") {
+      pushError("player.life.debtWeeks должен быть числом.");
+    }
   }
 
   if (!gameState.player || !gameState.player.development) {
