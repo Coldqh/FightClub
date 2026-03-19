@@ -1077,7 +1077,7 @@
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.19.13";
+var APP_VERSION = "2026.03.19.14";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -4769,25 +4769,29 @@ var APP_VERSION = "2026.03.19.13";
       var i;
       var trainerType = getTrainerType(trainerTypeId);
       var npc;
-      if (!gym || !trainerType) {
+      var countryKey;
+      var countryInfo;
+      if (!trainerType) {
         return null;
       }
+      countryKey = gym ? gym.country : trainerType.country;
+      countryInfo = getCountryInfo(countryKey);
       ensureNpcWorld();
       for (i = 0; i < state.world.npcs.length; i += 1) {
         npc = state.world.npcs[i];
-        if (npc.role === "trainer" && containsTag(npc.flags, gym.id) && containsTag(npc.flags, trainerTypeId)) {
+        if (npc.role === "trainer" && npc.country === countryKey && containsTag(npc.flags, trainerTypeId)) {
           return npc;
         }
       }
-      npc = makeNpc(gym.country, "trainer", {
-        status: "работает в " + gym.name,
-        flags: [gym.id, trainerTypeId, "trainer_offer"],
+      npc = makeNpc(countryKey, "trainer", {
+        status: "работает в " + (countryInfo ? countryInfo.name : countryKey),
+        flags: [trainerTypeId, "trainer_offer"],
         age: rand(29, 58)
       });
       npc.history = appendHistoryEntry(npc.history, {
         week: relationWeekStamp(),
         type: "career",
-        text: "Доступен для найма в " + gym.name + "."
+        text: "Доступен для найма."
       }, 12);
       return npc;
     }
@@ -4845,12 +4849,12 @@ var APP_VERSION = "2026.03.19.13";
         joinedWeek: state.fighter.week,
         country: gym.country,
         city: gym.city,
-        weeklyCost: gym.cost,
+        weeklyCost: typeof gym.weeklyCost === "number" ? gym.weeklyCost : Math.max(4, Math.ceil(gym.cost / 4)),
         reputation: gym.reputation,
         bonuses: clonePlainData(gym.bonuses || {})
       };
-      if (state.world.trainerAssignment && state.world.trainerAssignment.gymId !== gym.id) {
-        releaseTrainer("смена зала оборвала прежний лагерь", true);
+      if (state.world.trainerAssignment) {
+        state.world.trainerAssignment.gymId = gym.id;
       }
       ownerRelation = findRelationship(findNpcByRoleInCountry("gym_owner", gym.country) ? findNpcByRoleInCountry("gym_owner", gym.country).id : "");
       if (ownerRelation) {
@@ -4866,26 +4870,20 @@ var APP_VERSION = "2026.03.19.13";
     }
 
     function hireTrainer(trainerTypeId) {
-      var gym = currentGym();
       var trainerType = getTrainerType(trainerTypeId);
       var trainerNpc;
       var relation;
-      if (!gym) {
-        pushLog("Сначала нужен зал, чтобы собрать тренерский штаб.", "bad");
-        render();
-        return;
-      }
       if (!trainerType) {
-        pushLog("Этот тренер не работает в текущем зале.", "bad");
+        pushLog("Этот тренер сейчас недоступен.", "bad");
         render();
         return;
       }
-      if (trainerType.country !== gym.country) {
+      if (trainerType.country !== state.fighter.currentCountry) {
         pushLog("Этот тренер сейчас не работает в выбранной стране.", "bad");
         render();
         return;
       }
-      trainerNpc = ensureTrainerNpcForGym(gym, trainerTypeId);
+      trainerNpc = ensureTrainerNpcForGym(null, trainerTypeId);
       if (!trainerNpc) {
         return;
       }
@@ -4894,8 +4892,8 @@ var APP_VERSION = "2026.03.19.13";
         render();
         return;
       }
-      if (state.fighter.money < trainerType.weeklyFee) {
-        pushLog("На этого тренера нужно хотя бы $" + trainerType.weeklyFee + " на балансе.", "bad");
+      if (state.fighter.money < (trainerType.monthlyFee || trainerType.weeklyFee)) {
+        pushLog("На этого тренера нужно хотя бы $" + (trainerType.monthlyFee || trainerType.weeklyFee) + " на балансе.", "bad");
         render();
         return;
       }
@@ -4905,14 +4903,14 @@ var APP_VERSION = "2026.03.19.13";
       state.world.trainerAssignment = {
         npcId: trainerNpc.id,
         trainerTypeId: trainerType.id,
-        gymId: gym.id,
+        gymId: currentGym() ? currentGym().id : "",
         hiredWeek: state.fighter.week,
         weeklyFee: trainerType.weeklyFee,
         status: "active"
       };
       relation = ensureRelationshipForNpc(trainerNpc);
       relation.score = clampRelationshipScore(relation.score + 14);
-      trainerNpc.status = "ведёт твой лагерь в " + gym.name;
+      trainerNpc.status = "ведёт твой лагерь";
       revealNpc(trainerNpc.id);
       syncNpcRelationSnapshot(trainerNpc.id);
       chronicleFacts().trainerChanges += 1;
@@ -5305,7 +5303,7 @@ var APP_VERSION = "2026.03.19.13";
           opponentClone.gymId = gym ? gym.id : "";
           opponentClone.gymName = gym ? gym.name : "";
           opponentClone.trainerTypeId = trainerType ? trainerType.id : "";
-          opponentClone.trainerLabel = trainerType ? trainerType.label : "";
+          opponentClone.trainerLabel = trainerType ? buildNpcName(opponentCountryKey) : "";
           opponentClone.development = development;
           opponentClone.styleLabel = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "";
         } else if (opponentClone && opponentClone.development && !opponentClone.styleLabel) {
@@ -5361,7 +5359,7 @@ var APP_VERSION = "2026.03.19.13";
         gymId: gym ? gym.id : "",
         gymName: gym ? gym.name : "",
         trainerTypeId: trainerType ? trainerType.id : "",
-        trainerLabel: trainerType ? trainerType.label : "",
+        trainerLabel: trainerType ? buildNpcName(opponentCountryKey) : "",
         development: development,
         styleLabel: styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "",
         purse: Math.round((tierData.purseBase + base * 8 + rand(0, 24)) * bonus.money),
@@ -6864,7 +6862,8 @@ var APP_VERSION = "2026.03.19.13";
         country: null,
         identity: null,
         styleId: "outboxer",
-        focusId: "technique"
+        focusId: "technique",
+        openSection: ""
       };
       state.fighter = null;
       state.opponents = [];
@@ -6883,7 +6882,7 @@ var APP_VERSION = "2026.03.19.13";
       if (!state.create.country || !state.create.identity) {
         return;
       }
-      startingAge = rand(18, 32);
+      startingAge = 21;
       state.fighter = {
         name: state.create.identity.fullName,
         stats: stats,
@@ -6948,6 +6947,7 @@ var APP_VERSION = "2026.03.19.13";
     function setCreateCountry(key) {
       state.create.country = key;
       state.create.identity = makeIdentity(key);
+      state.create.openSection = "";
       render();
     }
 
@@ -6956,6 +6956,7 @@ var APP_VERSION = "2026.03.19.13";
         return;
       }
       state.create.styleId = styleId;
+      state.create.openSection = "";
       render();
     }
 
@@ -6964,6 +6965,12 @@ var APP_VERSION = "2026.03.19.13";
         return;
       }
       state.create.focusId = focusId;
+      state.create.openSection = "";
+      render();
+    }
+
+    function toggleCreateSection(sectionKey) {
+      state.create.openSection = state.create.openSection === sectionKey ? "" : sectionKey;
       render();
     }
 
@@ -7584,7 +7591,7 @@ var APP_VERSION = "2026.03.19.13";
       }
       html.push("<div class='log-list'>");
       for (i = 0; i < items.length && i < cap; i += 1) {
-        html.push("<div class='log-entry " + (items[i].tone || "warn") + "'><strong>" + items[i].title + "</strong>" + (items[i].text ? (" " + items[i].text) : "") + "</div>");
+        html.push("<div class='log-entry " + (items[i].tone || "warn") + "'><strong>" + items[i].title + "</strong></div>");
       }
       html.push("</div>");
       return html.join("");
@@ -7631,15 +7638,7 @@ var APP_VERSION = "2026.03.19.13";
             "<button class='ghost' onclick='openPanel(\"travel\")'>Путешествие</button>" +
           "<button class='danger' onclick='openPanel(\"retire\")'>Завершить карьеру</button>" +
           "</div>" +
-        "</div>" +
-        renderSectionCard("home_status", "Состояние", "" +
-          meter("Здоровье лагеря", state.fighter.health) +
-          meter("Стресс", state.fighter.stress) +
-          meter("Краткосрочная усталость", state.fighter.fatigue) +
-          meter("Накопленный износ", state.fighter.wear) +
-          meter("Настроение", state.fighter.morale) +
-          meter("Социальная опора", currentSupportScore()), true, "форма") +
-        renderSectionCard("home_media", "Что пишут", renderMediaFeedList(2), false, "медиа");
+        "</div>";
     }
 
     function renderHomePanel() {
@@ -8121,33 +8120,49 @@ var APP_VERSION = "2026.03.19.13";
       var country;
       var styleDef;
       var focusDef;
+      var openSection = state.create.openSection || "";
       var identityText = state.create.identity ? state.create.identity.fullName : "Сначала выбери стартовую страну";
+      var countrySummary = state.create.country ? getCountryInfo(state.create.country).name : "Не выбрано";
+      var styleSummary = getDevelopmentStyle(state.create.styleId) ? getDevelopmentStyle(state.create.styleId).label : "Не выбрано";
+      var focusSummary = getTrainingFocus(state.create.focusId) ? getTrainingFocus(state.create.focusId).label : "Не выбрано";
       html.push("<div class='shell'>");
       html.push("<div class='hero'>");
       html.push("<div class='eyebrow'>Street Boxer Career</div>");
       html.push("<div class='title'>Собери бойца для подпольной карьеры</div>");
       html.push("<div class='subtitle'>Теперь карьера начинается с выбора стартовой точки. Имя, фамилия и кличка зависят от страны, а позже ты сможешь путешествовать и охотиться за более крупными гонорарами на чужой территории.</div>");
-      html.push("<div><h2 class='panel-title'>Стартовая точка</h2><div class='create-grid'>");
-      for (i = 0; i < countries.length; i += 1) {
-        country = countries[i];
-        html.push("<div class='create-card" + (state.create.country === country.id ? " selected" : "") + "'>");
-        html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ".</p>");
-        html.push("<button class='button' onclick='setCreateCountry(\"" + country.id + "\")'>" + (state.create.country === country.id ? "Выбрана" : "Выбрать") + "</button>");
-        html.push("</div>");
+      html.push("<div class='panel'><button class='section-toggle' onclick='toggleCreateSection(\"country\")'><span class='section-kicker'>Страна</span>" + countrySummary + "<span class='section-arrow'>" + (openSection === "country" ? "−" : "+") + "</span></button>");
+      if (openSection === "country") {
+        html.push("<div style='margin-top:14px'><div class='create-grid'>");
+        for (i = 0; i < countries.length; i += 1) {
+          country = countries[i];
+          html.push("<div class='create-card" + (state.create.country === country.id ? " selected" : "") + "'>");
+          html.push("<div class='meta'>Страна старта</div><h3>" + country.name + "</h3><p>Домашняя арена: " + country.city + ".</p>");
+          html.push("<button class='button' onclick='setCreateCountry(\"" + country.id + "\")'>" + (state.create.country === country.id ? "Выбрана" : "Выбрать") + "</button>");
+          html.push("</div>");
+        }
+        html.push("</div></div>");
       }
-      html.push("</div></div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Архетип</h2><div class='choice-grid'>");
-      for (i = 0; i < styles.length; i += 1) {
-        styleDef = styles[i];
-        html.push("<div class='card compact-card'><h3>" + styleDef.label + "</h3><button class='" + (state.create.styleId === styleDef.id ? "ghost" : "button") + "' onclick='setCreateStyle(\"" + styleDef.id + "\")'>" + (state.create.styleId === styleDef.id ? "Выбран" : "Выбрать") + "</button></div>");
+      html.push("</div>");
+      html.push("<div class='panel'><button class='section-toggle' onclick='toggleCreateSection(\"style\")'><span class='section-kicker'>Архетип</span>" + styleSummary + "<span class='section-arrow'>" + (openSection === "style" ? "−" : "+") + "</span></button>");
+      if (openSection === "style") {
+        html.push("<div style='margin-top:14px'><div class='choice-grid'>");
+        for (i = 0; i < styles.length; i += 1) {
+          styleDef = styles[i];
+          html.push("<div class='card compact-card'><h3>" + styleDef.label + "</h3><button class='" + (state.create.styleId === styleDef.id ? "ghost" : "button") + "' onclick='setCreateStyle(\"" + styleDef.id + "\")'>" + (state.create.styleId === styleDef.id ? "Выбран" : "Выбрать") + "</button></div>");
+        }
+        html.push("</div></div>");
       }
-      html.push("</div></div>");
-      html.push("<div class='panel'><h2 class='panel-title'>Направление развития</h2><div class='choice-grid'>");
-      for (i = 0; i < focuses.length; i += 1) {
-        focusDef = focuses[i];
-        html.push("<div class='card compact-card'><h3>" + focusDef.label + "</h3><button class='" + (state.create.focusId === focusDef.id ? "ghost" : "button") + "' onclick='setCreateFocus(\"" + focusDef.id + "\")'>" + (state.create.focusId === focusDef.id ? "Выбрано" : "Выбрать") + "</button></div>");
+      html.push("</div>");
+      html.push("<div class='panel'><button class='section-toggle' onclick='toggleCreateSection(\"focus\")'><span class='section-kicker'>Направление развития</span>" + focusSummary + "<span class='section-arrow'>" + (openSection === "focus" ? "−" : "+") + "</span></button>");
+      if (openSection === "focus") {
+        html.push("<div style='margin-top:14px'><div class='choice-grid'>");
+        for (i = 0; i < focuses.length; i += 1) {
+          focusDef = focuses[i];
+          html.push("<div class='card compact-card'><h3>" + focusDef.label + "</h3><button class='" + (state.create.focusId === focusDef.id ? "ghost" : "button") + "' onclick='setCreateFocus(\"" + focusDef.id + "\")'>" + (state.create.focusId === focusDef.id ? "Выбрано" : "Выбрать") + "</button></div>");
+        }
+        html.push("</div></div>");
       }
-      html.push("</div></div>");
+      html.push("</div>");
       html.push("<div class='nameplate'><div><div class='fighter-class'>Имя на афише</div><div class='fighter-name'>" + identityText + "</div></div><button class='ghost' " + (!state.create.country ? "disabled='disabled'" : "") + " onclick='rerollName()'>Сменить имя</button></div>");
       html.push("<div class='footer-actions'>");
       html.push("<div class='chip'>" + (state.create.country ? getCountryInfo(state.create.country).name : "Страна не выбрана") + "</div>");
@@ -8247,23 +8262,22 @@ var APP_VERSION = "2026.03.19.13";
       var trainerNpc = currentTrainerNpc();
       var trainerType = currentTrainerType();
       var contract = currentContract();
-      var travelBonus = currentTravelBonus(fighter);
       var html = [];
       html.push("<div class='panel fill-panel'>");
       html.push("<h2 class='panel-title'>Карьера</h2>");
       html.push(renderSectionCard("career_gym", "Зал", gym ?
-        ("<div class='muted'>" + gym.name + " - " + gym.city + " - $" + gym.cost + "/нед.</div>" +
+        ("<div class='muted'>" + gym.name + " - " + gym.city + " - $" + gym.cost + "/мес.</div>" +
         "<div class='muted'>" + summarizeBonuses(gym.bonuses) + "</div>" +
         "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Сменить зал</button></div>") :
         ("<div class='muted'>Ты пока без зала.</div>" +
         "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Выбрать зал</button></div>"),
       false, "база"));
       html.push(renderSectionCard("career_trainer", "Тренер", (trainerNpc && trainerType) ?
-        ("<div class='muted'>" + trainerNpc.name + " - $" + trainerType.weeklyFee + "/нед.</div>" +
+        ("<div class='muted'>" + trainerNpc.name + " - $" + (trainerType.monthlyFee || trainerType.weeklyFee) + "/мес.</div>" +
         "<div class='muted'>Отношение " + relationScoreText(trainerNpc.relationToPlayer.score) + " - " + trainerNpc.relationToPlayer.summary + ".</div>" +
         "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTrainer\")'>Сменить тренера</button></div>") :
         ("<div class='muted'>Тренер пока не нанят.</div>" +
-        "<div class='footer-actions'><button class='button' " + (gym ? "" : "disabled='disabled'") + " onclick='openPanel(\"careerTrainer\")'>Выбрать тренера</button></div>"),
+        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTrainer\")'>Выбрать тренера</button></div>"),
       false, "угол"));
       html.push(renderSectionCard("career_contract", "Контракт", contract ?
         ("<div class='muted'>" + contract.label + ". До недели " + contract.endsWeek + ".</div>" +
@@ -8274,8 +8288,7 @@ var APP_VERSION = "2026.03.19.13";
         "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerContract\")'>Посмотреть контракты</button></div>"),
       false, "сделка"));
       html.push(renderSectionCard("career_territory", "Территория",
-        "<div class='muted'>" + getCountryInfo(fighter.currentCountry).name + " · " + getCountryInfo(fighter.currentCountry).city + ".</div>" +
-        "<div class='muted'>Дома деньги x" + travelBonus.money.toFixed(2) + ", в гостях известность x" + travelBonus.fame.toFixed(2) + ".</div>",
+        "<div class='muted'>" + getCountryInfo(fighter.currentCountry).name + " · " + getCountryInfo(fighter.currentCountry).city + ".</div>",
       false, "страна"));
       html.push("</div>");
       return html.join("");
@@ -8290,28 +8303,24 @@ var APP_VERSION = "2026.03.19.13";
       html.push("<div class='panel fill-panel'><h2 class='panel-title'>Выбор зала</h2><div class='choice-grid'>");
       for (i = 0; i < gyms.length; i += 1) {
         gym = gyms[i];
-        html.push("<div class='card compact-card'><h3>" + gym.name + "</h3><p>" + gym.city + ". $" + gym.cost + "/нед.</p><div class='muted'>" + summarizeBonuses(gym.bonuses) + "</div><button class='" + (current && current.id === gym.id ? "ghost" : "button") + "' " + ((!current || current.id !== gym.id) && state.fighter.money < gym.cost ? "disabled='disabled'" : "") + " onclick='joinGym(\"" + gym.id + "\")'>" + (current && current.id === gym.id ? "Выбран" : (current ? "Сменить зал" : "Выбрать")) + "</button></div>");
+        html.push("<div class='card compact-card'><h3>" + gym.name + "</h3><p>" + gym.city + ". $" + gym.cost + "/мес.</p><div class='muted'>" + summarizeBonuses(gym.bonuses) + "</div><button class='" + (current && current.id === gym.id ? "ghost" : "button") + "' " + ((!current || current.id !== gym.id) && state.fighter.money < gym.cost ? "disabled='disabled'" : "") + " onclick='joinGym(\"" + gym.id + "\")'>" + (current && current.id === gym.id ? "Выбран" : (current ? "Сменить зал" : "Выбрать")) + "</button></div>");
       }
       html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
       return html.join("");
     }
 
     function renderCareerTrainerPanel() {
-      var gym = currentGym();
       var trainerType = currentTrainerType();
-      var trainerOptions = listCountryTrainerTypes(gym ? gym.country : "");
+      var trainerOptions = listCountryTrainerTypes(state.fighter ? state.fighter.currentCountry : "");
       var html = [];
       var i;
       var trainerOption;
       var trainerNpcOption;
-      if (!gym) {
-        return "<div class='panel fill-panel'><h2 class='panel-title'>Выбор тренера</h2><div class='empty-state'>Сначала выбери зал.</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>";
-      }
       html.push("<div class='panel fill-panel'><h2 class='panel-title'>Выбор тренера</h2><div class='choice-grid'>");
       for (i = 0; i < trainerOptions.length; i += 1) {
         trainerOption = trainerOptions[i];
-        trainerNpcOption = ensureTrainerNpcForGym(gym, trainerOption.id);
-        html.push("<div class='card compact-card'><h3>" + trainerNpcOption.name + "</h3><p>$" + trainerOption.weeklyFee + "/нед.</p><div class='muted'>" + summarizeBonuses(trainerOption.bonuses) + "</div><button class='" + (trainerType && trainerType.id === trainerOption.id ? "ghost" : "button") + "' " + ((!trainerType || trainerType.id !== trainerOption.id) && state.fighter.money < trainerOption.weeklyFee ? "disabled='disabled'" : "") + " onclick='hireTrainer(\"" + trainerOption.id + "\")'>" + (trainerType && trainerType.id === trainerOption.id ? "Выбран" : "Выбрать") + "</button></div>");
+        trainerNpcOption = ensureTrainerNpcForGym(null, trainerOption.id);
+        html.push("<div class='card compact-card'><h3>" + trainerNpcOption.name + "</h3><p>$" + (trainerOption.monthlyFee || trainerOption.weeklyFee) + "/мес.</p><div class='muted'>" + summarizeBonuses(trainerOption.bonuses) + "</div><button class='" + (trainerType && trainerType.id === trainerOption.id ? "ghost" : "button") + "' " + ((!trainerType || trainerType.id !== trainerOption.id) && state.fighter.money < (trainerOption.monthlyFee || trainerOption.weeklyFee) ? "disabled='disabled'" : "") + " onclick='hireTrainer(\"" + trainerOption.id + "\")'>" + (trainerType && trainerType.id === trainerOption.id ? "Выбран" : "Выбрать") + "</button></div>");
       }
       html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
       return html.join("");

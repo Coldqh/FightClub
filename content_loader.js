@@ -1,39 +1,33 @@
 ﻿var ContentLoader = (function () {
   var cache = null;
-  var GENERATED_GYM_COSTS = [15, 25, 35, 50, 65, 80, 95, 110, 130, 150];
-  var GENERATED_TRAINER_FEES = [15, 25, 35, 50, 65, 80, 95, 110, 130, 150];
+  var GENERATED_GYM_COSTS = [15, 35, 60, 100, 150];
+  var GENERATED_TRAINER_FEES = [15, 35, 60, 100, 150];
 
   function clone(value) {
     return value == null ? value : JSON.parse(JSON.stringify(value));
   }
 
+  function monthlyToWeekly(value) {
+    return Math.max(4, Math.ceil((value || 0) / 4));
+  }
+
   function generatedGymTemplates() {
     return [
-      { slug: "yard", label: "Дворовый зал", bonuses: { trainingPoints: 1, safeBias: 1 }, developmentProfile: { focusBoosts: { power: 1 }, styleWeights: { puncher: 1 } } },
-      { slug: "basement", label: "Подвальная школа", bonuses: { trainingPoints: 1, recoveryHealth: 1 }, developmentProfile: { focusBoosts: { endurance: 1 }, styleWeights: { tempo: 1 } } },
-      { slug: "club", label: "Клуб у арены", bonuses: { trainingPoints: 2, fameBonus: 1 }, developmentProfile: { focusBoosts: { technique: 1 }, styleWeights: { outboxer: 1 } } },
-      { slug: "workshop", label: "Рабочий зал", bonuses: { trainingPoints: 2, purseBonus: 4 }, developmentProfile: { focusBoosts: { power: 1, endurance: 1 }, styleWeights: { puncher: 1, tempo: 1 } } },
-      { slug: "school", label: "Городская школа", bonuses: { trainingPoints: 2, safeBias: 1, recoveryHealth: 1 }, developmentProfile: { focusBoosts: { defense: 1, technique: 1 }, styleWeights: { counterpuncher: 1 } } },
-      { slug: "camp", label: "Профи-лагерь", bonuses: { trainingPoints: 3, purseBonus: 6 }, developmentProfile: { focusBoosts: { power: 1, technique: 1 }, styleWeights: { puncher: 1, outboxer: 1 } } },
-      { slug: "team", label: "Большой клуб", bonuses: { trainingPoints: 3, fameBonus: 2, safeBias: 1 }, developmentProfile: { focusBoosts: { technique: 1, endurance: 1 }, styleWeights: { outboxer: 1, tempo: 1 } } },
-      { slug: "prime", label: "Премиум-лагерь", bonuses: { trainingPoints: 4, recoveryHealth: 2, toxicGuard: 4 }, developmentProfile: { focusBoosts: { defense: 1, recovery: 1 }, styleWeights: { counterpuncher: 1 } } },
-      { slug: "elite", label: "Топ-команда", bonuses: { trainingPoints: 4, purseBonus: 10, fameBonus: 2 }, developmentProfile: { focusBoosts: { power: 1, technique: 1 }, styleWeights: { puncher: 1, outboxer: 1 } } },
-      { slug: "crown", label: "Элитный центр", bonuses: { trainingPoints: 5, purseBonus: 12, fameBonus: 3, koBonus: 15 }, developmentProfile: { focusBoosts: { power: 1, defense: 1 }, styleWeights: { puncher: 1, counterpuncher: 1 } } }
+      { slug: "yard", label: "Районный зал", bonuses: { trainingPoints: 1, safeBias: 1 }, developmentProfile: { focusBoosts: { power: 1 }, styleWeights: { puncher: 1 } } },
+      { slug: "school", label: "Городской зал", bonuses: { trainingPoints: 2, recoveryHealth: 1, safeBias: 1 }, developmentProfile: { focusBoosts: { endurance: 1, defense: 1 }, styleWeights: { tempo: 1, counterpuncher: 1 } } },
+      { slug: "club", label: "Спортивный зал", bonuses: { trainingPoints: 3, fameBonus: 1, purseBonus: 3 }, developmentProfile: { focusBoosts: { technique: 1, endurance: 1 }, styleWeights: { outboxer: 1, tempo: 1 } } },
+      { slug: "camp", label: "Профессиональный зал", bonuses: { trainingPoints: 4, fameBonus: 2, purseBonus: 7, recoveryHealth: 2 }, developmentProfile: { focusBoosts: { power: 1, technique: 1, defense: 1 }, styleWeights: { puncher: 1, outboxer: 1, counterpuncher: 1 } } },
+      { slug: "elite", label: "Большой зал", bonuses: { trainingPoints: 5, fameBonus: 3, purseBonus: 12, koBonus: 15, toxicGuard: 5, safeBias: 1 }, developmentProfile: { focusBoosts: { power: 2, technique: 1, defense: 1, recovery: 1 }, styleWeights: { puncher: 1, outboxer: 1, counterpuncher: 1 } } }
     ];
   }
 
   function generatedTrainerTemplates() {
     return [
-      { slug: "starter", label: "Молодой тренер", bonuses: { trainingPoints: 1, recoveryHealth: 1 }, developmentProfile: { focusBoosts: { technique: 1 }, styleWeights: { outboxer: 1 } } },
-      { slug: "roadwork", label: "Тренер по форме", bonuses: { trainingPoints: 1, recoveryHealth: 2, stressRelief: 1 }, developmentProfile: { focusBoosts: { endurance: 2 }, styleWeights: { tempo: 1 } } },
-      { slug: "corner", label: "Угловой", bonuses: { trainingPoints: 2, safeBias: 1 }, developmentProfile: { focusBoosts: { defense: 1 }, styleWeights: { counterpuncher: 1 } } },
-      { slug: "school", label: "Технарь", bonuses: { trainingPoints: 2, fameBonus: 1 }, developmentProfile: { focusBoosts: { technique: 2 }, styleWeights: { outboxer: 1, counterpuncher: 1 } } },
-      { slug: "pro", label: "Старый профи", bonuses: { trainingPoints: 2, toxicGuard: 4, recoveryHealth: 1 }, developmentProfile: { focusBoosts: { defense: 1, endurance: 1 }, styleWeights: { counterpuncher: 1, tempo: 1 } } },
-      { slug: "spar", label: "Спарринг-мастер", bonuses: { trainingPoints: 3, purseBonus: 4 }, developmentProfile: { focusBoosts: { power: 1, endurance: 1 }, styleWeights: { puncher: 1, tempo: 1 } } },
-      { slug: "tactician", label: "Тактик", bonuses: { trainingPoints: 3, safeBias: 1, fameBonus: 1 }, developmentProfile: { focusBoosts: { technique: 1, defense: 1 }, styleWeights: { outboxer: 1, counterpuncher: 1 } } },
-      { slug: "finisher", label: "Тренер нокаутов", bonuses: { trainingPoints: 3, koBonus: 18, purseBonus: 6 }, developmentProfile: { focusBoosts: { power: 2 }, styleWeights: { puncher: 2 } } },
-      { slug: "manager", label: "Большой штаб", bonuses: { trainingPoints: 4, fameBonus: 2, purseBonus: 8 }, developmentProfile: { focusBoosts: { technique: 1, power: 1 }, styleWeights: { outboxer: 1, puncher: 1 } } },
-      { slug: "elite", label: "Элитный тренер", bonuses: { trainingPoints: 5, fameBonus: 3, purseBonus: 10, toxicGuard: 6 }, developmentProfile: { focusBoosts: { defense: 1, power: 1, technique: 1 }, styleWeights: { puncher: 1, outboxer: 1, counterpuncher: 1 } } }
+      { slug: "trainer_1", label: "Тренер 1", bonuses: { trainingPoints: 1, recoveryHealth: 1 }, developmentProfile: { focusBoosts: { technique: 1 }, styleWeights: { outboxer: 1 } } },
+      { slug: "trainer_2", label: "Тренер 2", bonuses: { trainingPoints: 2, recoveryHealth: 1, stressRelief: 1 }, developmentProfile: { focusBoosts: { endurance: 1, defense: 1 }, styleWeights: { tempo: 1, counterpuncher: 1 } } },
+      { slug: "trainer_3", label: "Тренер 3", bonuses: { trainingPoints: 3, fameBonus: 1, safeBias: 1 }, developmentProfile: { focusBoosts: { technique: 2, defense: 1 }, styleWeights: { outboxer: 1, counterpuncher: 1 } } },
+      { slug: "trainer_4", label: "Тренер 4", bonuses: { trainingPoints: 4, purseBonus: 6, koBonus: 10, toxicGuard: 2 }, developmentProfile: { focusBoosts: { power: 2, endurance: 1 }, styleWeights: { puncher: 2, tempo: 1 } } },
+      { slug: "trainer_5", label: "Тренер 5", bonuses: { trainingPoints: 5, fameBonus: 3, purseBonus: 10, koBonus: 18, toxicGuard: 5, recoveryHealth: 2 }, developmentProfile: { focusBoosts: { power: 2, technique: 1, defense: 1, recovery: 1 }, styleWeights: { puncher: 1, outboxer: 1, counterpuncher: 1 } } }
     ];
   }
 
@@ -62,8 +56,9 @@
           id: definition.id + "_trainer_" + (j + 1),
           country: definition.id,
           city: city,
-          label: city + " - " + template.label,
-          weeklyFee: GENERATED_TRAINER_FEES[j],
+          label: template.label,
+          monthlyFee: GENERATED_TRAINER_FEES[j],
+          weeklyFee: monthlyToWeekly(GENERATED_TRAINER_FEES[j]),
           reputation: 35 + j * 5,
           bonuses: clone(template.bonuses),
           developmentProfile: clone(template.developmentProfile)
@@ -85,7 +80,7 @@
     for (i = 0; i < countryDefinitions.length; i += 1) {
       definition = countryDefinitions[i];
       trainerIds = [];
-      for (j = 0; j < 10; j += 1) {
+      for (j = 0; j < templates.length; j += 1) {
         trainerIds.push(definition.id + "_trainer_" + (j + 1));
       }
       for (j = 0; j < templates.length; j += 1) {
@@ -95,8 +90,9 @@
           id: definition.id + "_gym_" + (j + 1),
           country: definition.id,
           city: city,
-          name: city + " - " + template.label,
+          name: city + " " + template.label,
           cost: GENERATED_GYM_COSTS[j],
+          weeklyCost: monthlyToWeekly(GENERATED_GYM_COSTS[j]),
           reputation: 30 + j * 6,
           bonuses: clone(template.bonuses),
           trainerTypeIds: trainerIds.slice(0),
