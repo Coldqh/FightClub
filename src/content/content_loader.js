@@ -73,6 +73,7 @@ var ContentLoader = (function () {
       developmentPerksById: {},
       trainerDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainerProfiles) || {}),
       gymDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.gymProfiles) || {}),
+      relationshipArcTemplates: clone((typeof RELATIONSHIP_ARC_DATA !== "undefined" && RELATIONSHIP_ARC_DATA.templates) || []),
       contextEventTriggerChance: typeof EVENT_DATA !== "undefined" && typeof EVENT_DATA.triggerChance === "number" ? EVENT_DATA.triggerChance : 0,
       contextEvents: []
     };
@@ -287,6 +288,10 @@ var ContentLoader = (function () {
     return ensureCache().gymDevelopmentProfiles[gymId] || null;
   }
 
+  function listRelationshipArcTemplates() {
+    return ensureCache().relationshipArcTemplates;
+  }
+
   return {
     listCountries: listCountries,
     getCountry: getCountry,
@@ -320,6 +325,7 @@ var ContentLoader = (function () {
     getDevelopmentPerk: getDevelopmentPerk,
     getTrainerDevelopmentProfile: getTrainerDevelopmentProfile,
     getGymDevelopmentProfile: getGymDevelopmentProfile,
+    listRelationshipArcTemplates: listRelationshipArcTemplates,
     getContextEventTriggerChance: getContextEventTriggerChance,
     getContextEvents: getContextEvents
   };

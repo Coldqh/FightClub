@@ -969,16 +969,18 @@
   <script type="text/javascript" src="src/content/event_data.js"></script>
   <script type="text/javascript" src="src/content/life_data.js"></script>
   <script type="text/javascript" src="src/content/life_event_data.js"></script>
+  <script type="text/javascript" src="src/content/relationship_arc_data.js"></script>
   <script type="text/javascript" src="src/content/content_loader.js"></script>
   <script type="text/javascript" src="src/core/rng_manager.js"></script>
   <script type="text/javascript" src="src/core/save_manager.js"></script>
   <script type="text/javascript" src="src/core/event_engine.js"></script>
+  <script type="text/javascript" src="src/core/relationship_arc_engine.js"></script>
   <script type="text/javascript" src="src/core/time_system.js"></script>
   <script type="text/javascript" src="src/core/state_factory.js"></script>
   <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.19.3";
+    var APP_VERSION = "2026.03.19.4";
     var SAVE_KEY = "street_boxer_save_v1";
     var DEBUG_MODE = false;
 
@@ -1418,6 +1420,10 @@
       return ContentLoader.getFightOfferTemplate ? ContentLoader.getFightOfferTemplate(templateId) : null;
     }
 
+    function listRelationshipArcTemplates() {
+      return ContentLoader.listRelationshipArcTemplates ? ContentLoader.listRelationshipArcTemplates() : [];
+    }
+
     function defaultWorldState() {
       return {
         opponents: [],
@@ -1430,6 +1436,8 @@
         },
         npcs: [],
         relationships: [],
+        relationshipArcs: [],
+        rivalries: [],
         contracts: [],
         gymMembership: null,
         trainerAssignment: null,
@@ -1484,6 +1492,12 @@
       }
       if (!(state.world.relationships instanceof Array)) {
         state.world.relationships = [];
+      }
+      if (!(state.world.relationshipArcs instanceof Array)) {
+        state.world.relationshipArcs = [];
+      }
+      if (!(state.world.rivalries instanceof Array)) {
+        state.world.rivalries = [];
       }
       if (!(state.world.contracts instanceof Array)) {
         state.world.contracts = [];
@@ -2600,6 +2614,19 @@
       return out;
     }
 
+    function hasTag(list, value) {
+      var i;
+      if (!(list instanceof Array) || typeof value !== "string" || !value) {
+        return false;
+      }
+      for (i = 0; i < list.length; i += 1) {
+        if (list[i] === value) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     function pickUniqueTraits(pool, count) {
       var source = pool instanceof Array ? pool.slice(0) : [];
       var picked = [];
@@ -2711,6 +2738,311 @@
       for (i = 0; i < state.world.npcs.length; i += 1) {
         syncNpcRelationSnapshot(state.world.npcs[i].id);
       }
+    }
+
+    function findRelationshipArcById(arcId) {
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.relationshipArcs.length; i += 1) {
+        if (state.world.relationshipArcs[i] && state.world.relationshipArcs[i].id === arcId) {
+          return state.world.relationshipArcs[i];
+        }
+      }
+      return null;
+    }
+
+    function activeRelationshipArcs() {
+      var arcs = [];
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.relationshipArcs.length; i += 1) {
+        if (state.world.relationshipArcs[i] && state.world.relationshipArcs[i].status === "active") {
+          arcs.push(state.world.relationshipArcs[i]);
+        }
+      }
+      return arcs;
+    }
+
+    function relationshipArcsForNpc(npcId) {
+      var arcs = activeRelationshipArcs();
+      var out = [];
+      var i;
+      var key;
+      var actor;
+      for (i = 0; i < arcs.length; i += 1) {
+        for (key in arcs[i].actors) {
+          if (arcs[i].actors.hasOwnProperty(key)) {
+            actor = arcs[i].actors[key];
+            if (actor && actor.id === npcId) {
+              out.push(arcs[i]);
+              break;
+            }
+          }
+        }
+      }
+      return out;
+    }
+
+    function activeConflictArcCount() {
+      var arcs = activeRelationshipArcs();
+      var count = 0;
+      var i;
+      for (i = 0; i < arcs.length; i += 1) {
+        if (arcs[i].tags && (hasTag(arcs[i].tags, "conflict") || hasTag(arcs[i].tags, "hostile") || hasTag(arcs[i].tags, "heated"))) {
+          count += 1;
+        }
+      }
+      return count;
+    }
+
+    function findRivalryById(rivalryId) {
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.rivalries.length; i += 1) {
+        if (state.world.rivalries[i] && state.world.rivalries[i].id === rivalryId) {
+          return state.world.rivalries[i];
+        }
+      }
+      return null;
+    }
+
+    function opponentRivalryKey(opponent) {
+      if (!opponent) {
+        return "";
+      }
+      return [
+        opponent.fullName || "",
+        opponent.countryKey || "",
+        opponent.profileId || opponent.profile || ""
+      ].join("|");
+    }
+
+    function findRivalryByOpponent(opponent) {
+      var key = opponentRivalryKey(opponent);
+      var i;
+      if (!key) {
+        return null;
+      }
+      ensureLifeState();
+      for (i = 0; i < state.world.rivalries.length; i += 1) {
+        if (state.world.rivalries[i] && state.world.rivalries[i].opponentKey === key) {
+          return state.world.rivalries[i];
+        }
+      }
+      return null;
+    }
+
+    function activeRematchCount() {
+      var count = 0;
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.rivalries.length; i += 1) {
+        if (state.world.rivalries[i] && state.world.rivalries[i].pendingRematch) {
+          count += 1;
+        }
+      }
+      return count;
+    }
+
+    function rivalrySeriesLabel(rivalry) {
+      if (!rivalry) {
+        return "Серия 0-0";
+      }
+      return "Серия " + rivalry.playerWins + "-" + rivalry.opponentWins + (rivalry.draws > 0 ? (" · ничьи " + rivalry.draws) : "");
+    }
+
+    function rivalrySummary(rivalry) {
+      var parts = [];
+      if (!rivalry) {
+        return "История только начинается.";
+      }
+      if (rivalry.pendingRematch) {
+        parts.push("реванш ждёт");
+      }
+      parts.push("напряжение " + rivalry.tension);
+      if (rivalry.stakes > 0) {
+        parts.push("ставки " + rivalry.stakes);
+      }
+      return rivalrySeriesLabel(rivalry) + " · " + parts.join(", ");
+    }
+
+    function arcToneLabel(arc) {
+      if (!arc) {
+        return "линия";
+      }
+      if (hasTag(arc.tags || [], "conflict") || hasTag(arc.tags || [], "hostile") || hasTag(arc.tags || [], "heated")) {
+        return "конфликт";
+      }
+      return "линия";
+    }
+
+    function arcSummary(arc) {
+      if (!arc) {
+        return "Связь только начинает оформляться.";
+      }
+      return arcToneLabel(arc) + ": " + (arc.label || "без названия");
+    }
+
+    function bestPendingRivalry() {
+      var best = null;
+      var i;
+      ensureLifeState();
+      for (i = 0; i < state.world.rivalries.length; i += 1) {
+        if (!state.world.rivalries[i] || !state.world.rivalries[i].lastOpponentSnapshot) {
+          continue;
+        }
+        if (state.world.rivalries[i].active === false) {
+          continue;
+        }
+        if (typeof state.world.rivalries[i].holdUntilWeek === "number" && state.world.rivalries[i].holdUntilWeek > state.fighter.week) {
+          continue;
+        }
+        if (!state.world.rivalries[i].pendingRematch && ((state.world.rivalries[i].tension || 0) < 55 || (state.world.rivalries[i].fightsCount || 0) < 1)) {
+          continue;
+        }
+        if (!best) {
+          best = state.world.rivalries[i];
+          continue;
+        }
+        if ((state.world.rivalries[i].pendingRematch ? 1 : 0) > (best.pendingRematch ? 1 : 0) ||
+            ((state.world.rivalries[i].pendingRematch ? 1 : 0) === (best.pendingRematch ? 1 : 0) && (state.world.rivalries[i].tension + state.world.rivalries[i].stakes) > (best.tension + best.stakes))) {
+          best = state.world.rivalries[i];
+        }
+      }
+      return best;
+    }
+
+    function createRivalryEntry(opponent) {
+      return {
+        id: "rivalry_" + relationWeekStamp() + "_" + rand(1000, 9999),
+        opponentKey: opponentRivalryKey(opponent),
+        opponentName: fullOpponentName(opponent),
+        countryKey: opponent.countryKey || "",
+        npcId: "",
+        fightsCount: 0,
+        playerWins: 0,
+        opponentWins: 0,
+        draws: 0,
+        knockouts: 0,
+        tension: 18,
+        stakes: 8,
+        active: true,
+        pendingRematch: false,
+        holdUntilWeek: 0,
+        lastWeek: 0,
+        lastResult: "",
+        lastMethod: "",
+        lastOpponentSnapshot: buildOpponentSnapshot(opponent),
+        tags: [],
+        history: []
+      };
+    }
+
+    function ensureRivalryForSnapshot(opponentSnapshot) {
+      var rivalry;
+      if (!opponentSnapshot) {
+        return null;
+      }
+      rivalry = findRivalryByOpponent(opponentSnapshot);
+      if (rivalry) {
+        return rivalry;
+      }
+      rivalry = createRivalryEntry(opponentSnapshot);
+      state.world.rivalries.push(rivalry);
+      return rivalry;
+    }
+
+    function recordFightRivalry(fight) {
+      var opponent = fight ? fight.opponent : null;
+      var rivalry = null;
+      var entryText;
+      if (!opponent) {
+        return null;
+      }
+      if (fight.rematchRivalryId) {
+        rivalry = findRivalryById(fight.rematchRivalryId);
+      }
+      if (!rivalry) {
+        rivalry = findRivalryByOpponent(opponent);
+      }
+      if (!rivalry) {
+        rivalry = createRivalryEntry(opponent);
+        state.world.rivalries.push(rivalry);
+      }
+      rivalry.opponentName = fullOpponentName(opponent);
+      rivalry.countryKey = opponent.countryKey || rivalry.countryKey;
+      rivalry.lastOpponentSnapshot = buildOpponentSnapshot(opponent);
+      rivalry.lastWeek = state.fighter.week;
+      rivalry.lastResult = fight.result || "";
+      rivalry.lastMethod = fight.method || "";
+      rivalry.fightsCount += 1;
+      rivalry.pendingRematch = false;
+      rivalry.holdUntilWeek = 0;
+      rivalry.active = true;
+      if (fight.result === "win") {
+        rivalry.playerWins += 1;
+      } else if (fight.result === "loss") {
+        rivalry.opponentWins += 1;
+      } else {
+        rivalry.draws += 1;
+      }
+      if (fight.method && fight.method.indexOf("KO") !== -1) {
+        rivalry.knockouts += 1;
+      }
+      rivalry.tension = clampRelationValue((rivalry.tension || 0) + (fight.result === "draw" ? 10 : 6) + (fight.method && fight.method.indexOf("Решение") !== -1 ? 5 : 0));
+      rivalry.stakes = clamp(Math.round((rivalry.stakes || 0) + (fight.result === "draw" ? 8 : 5) + (fight.method && fight.method.indexOf("KO") !== -1 ? 4 : 0)), 0, 100);
+      entryText = (fight.result === "win" ? "Ты побеждаешь" : (fight.result === "loss" ? "Соперник берёт верх" : "Ничья")) + " против " + fullOpponentName(opponent) + " (" + (fight.method || "решение") + ").";
+      rivalry.history = appendHistoryEntry(rivalry.history, {
+        week: state.fighter.week,
+        text: entryText,
+        result: fight.result || "",
+        method: fight.method || ""
+      }, 10);
+      if (fight.result === "draw" || (fight.result !== "draw" && rivalry.fightsCount <= 2)) {
+        rivalry.pendingRematch = true;
+      }
+      return rivalry;
+    }
+
+    function setNpcFlags(npcId, addList, removeList) {
+      var npc = findNpcById(npcId);
+      var filtered = [];
+      var flags;
+      var i;
+      if (!npc) {
+        return;
+      }
+      flags = uniqueList((npc.flags || []).concat(addList instanceof Array ? addList : []));
+      if (removeList instanceof Array && removeList.length) {
+        for (i = 0; i < flags.length; i += 1) {
+          if (!hasTag(removeList, flags[i])) {
+            filtered.push(flags[i]);
+          }
+        }
+        flags = filtered;
+      }
+      npc.flags = uniqueList(flags);
+    }
+
+    function setRelationTags(npcId, addList, removeList) {
+      var relation = findRelationship(npcId);
+      var filtered = [];
+      var tags;
+      var i;
+      if (!relation) {
+        return;
+      }
+      tags = uniqueList((relation.relationTags || []).concat(addList instanceof Array ? addList : []));
+      if (removeList instanceof Array && removeList.length) {
+        for (i = 0; i < tags.length; i += 1) {
+          if (!hasTag(removeList, tags[i])) {
+            filtered.push(tags[i]);
+          }
+        }
+        tags = filtered;
+      }
+      relation.relationTags = uniqueList(tags);
+      syncNpcRelationSnapshot(npcId);
     }
 
     function createRelationshipForRole(npcId, roleId) {
@@ -3471,7 +3803,7 @@
       };
     }
 
-    function buildFightOffer(templateId, rematchSnapshot) {
+    function buildFightOffer(templateId, rematchSnapshot, rivalry) {
       var template = getFightOfferTemplate(templateId);
       var promoter = promoterInfluence();
       var contract = currentContract();
@@ -3526,6 +3858,9 @@
         promoterId: promoter.npc ? promoter.npc.id : "",
         promoterName: promoter.npc ? promoter.npc.name : "Свободный матчмейкер",
         gymName: gym ? gym.name : "Уличная база",
+        rematchRivalryId: rivalry ? rivalry.id : "",
+        seriesLabel: rivalry ? rivalrySeriesLabel(rivalry) : "",
+        stakesText: rivalry ? rivalrySummary(rivalry) : "",
         opponent: opponent
       };
       return offer;
@@ -3539,6 +3874,7 @@
       var safeBias = gymBonusValue("safeBias") + trainerBonusValue("safeBias");
       var dangerBias = gymBonusValue("dangerBias") + trainerBonusValue("dangerBias");
       var lastFight = latestFightActionMeta();
+      var rematchRivalry = bestPendingRivalry();
       var offers = [];
       var i;
       var builtOffer;
@@ -3556,13 +3892,18 @@
       }
       ids = uniqueList(ids);
       for (i = 0; i < ids.length; i += 1) {
-        builtOffer = buildFightOffer(ids[i], null);
+        builtOffer = buildFightOffer(ids[i], null, null);
         if (builtOffer) {
           offers.push(builtOffer);
         }
       }
-      if (lastFight && lastFight.opponentSnapshot && lastFight.result !== "draw") {
-        builtOffer = buildFightOffer("rematch_offer", lastFight.opponentSnapshot);
+      if (rematchRivalry && rematchRivalry.lastOpponentSnapshot) {
+        builtOffer = buildFightOffer("rematch_offer", rematchRivalry.lastOpponentSnapshot, rematchRivalry);
+        if (builtOffer) {
+          offers.unshift(builtOffer);
+        }
+      } else if (lastFight && lastFight.opponentSnapshot && lastFight.result !== "draw") {
+        builtOffer = buildFightOffer("rematch_offer", lastFight.opponentSnapshot, null);
         if (builtOffer) {
           offers.unshift(builtOffer);
         }
@@ -3612,6 +3953,15 @@
         return offer;
       }
       offer.opponent = generateOpponent(offer.tier || "even", offer.countryKey || state.fighter.currentCountry, offer.opponent);
+      if (typeof offer.rematchRivalryId !== "string") {
+        offer.rematchRivalryId = "";
+      }
+      if (typeof offer.seriesLabel !== "string") {
+        offer.seriesLabel = "";
+      }
+      if (typeof offer.stakesText !== "string") {
+        offer.stakesText = "";
+      }
       if (!offer.venue && offer.opponent.venue) {
         offer.venue = offer.opponent.venue;
       }
@@ -3683,6 +4033,7 @@
       var npc;
       var relation;
       var weeksSince;
+      var rivalry;
       ensureNpcWorld();
       for (i = 0; i < state.world.npcs.length; i += 1) {
         npc = state.world.npcs[i];
@@ -3724,6 +4075,21 @@
           relation.tension = clampRelationValue(relation.tension + 1);
         }
         syncNpcRelationSnapshot(npc.id);
+      }
+      for (i = 0; i < state.world.rivalries.length; i += 1) {
+        rivalry = state.world.rivalries[i];
+        if (!rivalry) {
+          continue;
+        }
+        if (rivalry.pendingRematch && action.type !== "fight") {
+          rivalry.tension = clampRelationValue((rivalry.tension || 0) + 1);
+          rivalry.stakes = clamp(Math.round((rivalry.stakes || 0) + 1), 0, 100);
+        } else if (!rivalry.pendingRematch && rivalry.tension > 0) {
+          rivalry.tension = clampRelationValue(rivalry.tension - 1);
+        }
+        if (typeof rivalry.holdUntilWeek !== "number") {
+          rivalry.holdUntilWeek = 0;
+        }
       }
     }
 
@@ -3880,6 +4246,92 @@
       syncNpcRelationSnapshot(actor.id);
     }
 
+    function applyRivalryEffect(effect) {
+      var actor;
+      var rivalry;
+      var lastFight;
+      if (!effect) {
+        return;
+      }
+      actor = effect.slot ? resolveEventActor(effect.slot) : null;
+      rivalry = actor && actor.rivalryId ? findRivalryById(actor.rivalryId) : null;
+      if (!rivalry && state.activeEvent && state.activeEvent.arcId) {
+        var arc = findRelationshipArcById(state.activeEvent.arcId);
+        if (arc && arc.rivalryId) {
+          rivalry = findRivalryById(arc.rivalryId);
+        }
+      }
+      if (!rivalry) {
+        lastFight = latestFightActionMeta();
+        if (lastFight && lastFight.opponentSnapshot) {
+          rivalry = ensureRivalryForSnapshot(lastFight.opponentSnapshot);
+        }
+      }
+      if (!rivalry) {
+        return;
+      }
+      if (state.activeEvent && state.activeEvent.arcId) {
+        var activeArc = findRelationshipArcById(state.activeEvent.arcId);
+        if (activeArc && !activeArc.rivalryId) {
+          activeArc.rivalryId = rivalry.id;
+        }
+      }
+      if (effect.mode === "promote") {
+        rivalry.pendingRematch = effect.pendingRematch !== false;
+        rivalry.tension = clampRelationValue((rivalry.tension || 0) + (effect.deltaTension || 0));
+        rivalry.stakes = clamp(Math.round((rivalry.stakes || 0) + (effect.stakes || 0)), 0, 100);
+      } else if (effect.mode === "sceneBuzz") {
+        state.world.scene.buzz = clamp(Math.round((state.world.scene.buzz || 0) + (effect.deltaBuzz || 0)), 0, 100);
+      } else {
+        rivalry.tension = clampRelationValue((rivalry.tension || 0) + (effect.deltaTension || 0));
+      }
+      if (typeof effect.delayWeeks === "number") {
+        rivalry.holdUntilWeek = Math.max(state.fighter.week, state.fighter.week + effect.delayWeeks);
+      }
+      rivalry.active = true;
+    }
+
+    function applyTagChanges(tagChanges) {
+      var i;
+      var actor;
+      var arc;
+      if (!tagChanges) {
+        return;
+      }
+      addBiographyFlags(tagChanges.add || [], tagChanges.remove || []);
+      if (tagChanges.npcFlags instanceof Array) {
+        for (i = 0; i < tagChanges.npcFlags.length; i += 1) {
+          actor = resolveEventActor(tagChanges.npcFlags[i].slot);
+          if (actor && actor.id) {
+            setNpcFlags(actor.id, tagChanges.npcFlags[i].add || [], tagChanges.npcFlags[i].remove || []);
+          }
+        }
+      }
+      if (tagChanges.relationTags instanceof Array) {
+        for (i = 0; i < tagChanges.relationTags.length; i += 1) {
+          actor = resolveEventActor(tagChanges.relationTags[i].slot);
+          if (actor && actor.id) {
+            setRelationTags(actor.id, tagChanges.relationTags[i].add || [], tagChanges.relationTags[i].remove || []);
+          }
+        }
+      }
+      if (tagChanges.arcTags && state.activeEvent && state.activeEvent.arcId) {
+        arc = findRelationshipArcById(state.activeEvent.arcId);
+        if (arc) {
+          arc.tags = uniqueList((arc.tags || []).concat(tagChanges.arcTags.add instanceof Array ? tagChanges.arcTags.add : []));
+          if (tagChanges.arcTags.remove instanceof Array && tagChanges.arcTags.remove.length) {
+            var filtered = [];
+            for (i = 0; i < arc.tags.length; i += 1) {
+              if (!hasTag(tagChanges.arcTags.remove, arc.tags[i])) {
+                filtered.push(arc.tags[i]);
+              }
+            }
+            arc.tags = uniqueList(filtered);
+          }
+        }
+      }
+    }
+
     function applyEventEffect(effect) {
       var fighter = state.fighter;
       if (!effect || !fighter) {
@@ -3888,6 +4340,8 @@
       if (effect.type === "resource") {
         if (effect.key === "money" || effect.key === "health" || effect.key === "stress" || effect.key === "fame" || effect.key === "skillPoints") {
           fighter[effect.key] += effect.delta || 0;
+        } else if (effect.key === "morale") {
+          fighter.morale += effect.delta || 0;
         }
       } else if (effect.type === "condition") {
         if (effect.key === "fatigue" || effect.key === "wear" || effect.key === "morale") {
@@ -3901,6 +4355,8 @@
         }
       } else if (effect.type === "relation") {
         applyRelationEffect(effect);
+      } else if (effect.type === "rivalry") {
+        applyRivalryEffect(effect);
       }
     }
 
@@ -3914,12 +4370,14 @@
       }
       safeTitle = safeUiText(activeEvent.title, "Событие недели");
       safeChoice = safeUiText(choice.label, "Выбор");
-      eventState.cooldowns[activeEvent.id] = state.fighter.week;
-      if (activeEvent.once || activeEvent.repeatable === false) {
-        eventState.onceResolved = uniqueList(eventState.onceResolved.concat([activeEvent.id]));
+      if (activeEvent.sourceType !== "relationshipArc") {
+        eventState.cooldowns[activeEvent.id] = state.fighter.week;
+        if (activeEvent.once || activeEvent.repeatable === false) {
+          eventState.onceResolved = uniqueList(eventState.onceResolved.concat([activeEvent.id]));
+        }
       }
       eventEntry = {
-        id: activeEvent.id,
+        id: activeEvent.sourceType === "relationshipArc" ? (activeEvent.arcTemplateId || activeEvent.id) : activeEvent.id,
         title: safeTitle,
         choiceId: choice.id,
         week: state.fighter.week
@@ -3934,6 +4392,7 @@
     function resolveActiveEventChoice(choiceId) {
       var activeEvent = state.activeEvent;
       var choice = findChoiceInActiveEvent(choiceId);
+      var arcResult = null;
       var i;
       var safeTitle;
       var safeResult;
@@ -3946,7 +4405,23 @@
         applyEventEffect(choice.effects[i]);
       }
       if (choice.tagChanges) {
-        addBiographyFlags(choice.tagChanges.add || [], choice.tagChanges.remove || []);
+        applyTagChanges(choice.tagChanges);
+      }
+      if (activeEvent.sourceType === "relationshipArc") {
+        arcResult = RelationshipArcEngine.applyChoice(state.world, activeEvent, choice, listRelationshipArcTemplates(), state.fighter.week);
+        if (arcResult && arcResult.arcState && arcResult.arcState.outcome === "lost_trainer") {
+          var trainerActor = resolveEventActor("trainer");
+          if (trainerActor && state.world.trainerAssignment && state.world.trainerAssignment.npcId === trainerActor.id) {
+            releaseTrainer("тренер ушёл в другой лагерь", false);
+          }
+        }
+        if (arcResult && arcResult.arcState && arcResult.arcState.label) {
+          if (arcResult.resolved) {
+            pushLog("Линия '" + arcResult.arcState.label + "' получает исход: " + (arcResult.arcState.outcome || "развязка") + ".", hasTag(arcResult.arcState.tags || [], "conflict") ? "warn" : "good");
+          } else {
+            pushLog("Линия '" + arcResult.arcState.label + "' продолжает развиваться.", "warn");
+          }
+        }
       }
       recordResolvedEvent(activeEvent, choice);
       applyBounds(state.fighter);
@@ -3964,15 +4439,26 @@
 
     function weeklyEvent() {
       var gameState;
+      var arcEvent;
       var eventDef;
       ensureLifeState();
       if (state.activeEvent || !state.fighter) {
         return;
       }
+      gameState = syncGameStateFromRuntime();
+      arcEvent = RelationshipArcEngine.pickEvent(gameState, listRelationshipArcTemplates(), state.rng);
+      if (arcEvent && arcEvent.event) {
+        if (arcEvent.started) {
+          state.world.relationshipArcs.push(arcEvent.arcState);
+          pushLog("Новая личная линия: " + arcEvent.arcState.label + ".", hasTag(arcEvent.arcState.tags || [], "conflict") ? "warn" : "good");
+        }
+        state.activeEvent = arcEvent.event;
+        state.panel = "worldEvent";
+        return;
+      }
       if (!chance(ContentLoader.getContextEventTriggerChance())) {
         return;
       }
-      gameState = syncGameStateFromRuntime();
       eventDef = EventEngine.pickEvent(gameState, ContentLoader.getContextEvents(), state.rng);
       if (!eventDef) {
         return;
@@ -4804,6 +5290,7 @@
       var discipline = disciplineScore(state.fighter);
       var styleSnapshot = currentStyleSnapshot(state.fighter);
       var focus = currentFocus(state.fighter);
+      var activeArcs = activeRelationshipArcs();
       return "" +
         "<div class='panel fill-panel'>" +
           "<div class='eyebrow'>Основное</div>" +
@@ -4832,6 +5319,7 @@
             "<div class='card'><h3>Тренер</h3><p>" + (trainerNpc ? (trainerNpc.name + " · " + (trainerType ? trainerType.label : "Тренер") + ". $" + (trainerType ? trainerType.weeklyFee : 0) + "/нед.") : "Тренер пока не нанят.") + "</p><div class='muted'>" + (trainerNpc ? trainerNpc.relationToPlayer.summary : "Без штаба бонусы тренера не работают.") + "</div></div>" +
             "<div class='card'><h3>Активный контракт</h3><p>" + (contract ? (contract.label + ". До недели " + contract.endsWeek + ".") : "Пока без контракта.") + "</p><div class='muted'>" + (contract ? ("Гарантия $" + contract.guaranteedPurse + ", победа $" + contract.winBonus + ", KO $" + contract.koBonus + ".") : "Новые условия ищи во вкладке персонажа.") + "</div></div>" +
             "<div class='card'><h3>Предложения боёв</h3><p>На этой неделе доступно " + fightOfferCount + " оффер(ов).</p><div class='muted'>" + offerHeadline + "</div></div>" +
+            "<div class='card'><h3>Личные линии</h3><p>Активно: " + activeArcs.length + ".</p><div class='muted'>Конфликтов: " + activeConflictArcCount() + " · реваншей на горизонте: " + activeRematchCount() + ".</div><div class='muted'>" + (activeArcs.length ? arcSummary(activeArcs[0]) : "Пока всё тихо.") + "</div></div>" +
             "<div class='card'><h3>Быт</h3><p>" + (housing ? housing.label : "Нормальные условия") + ".</p><div class='muted'>" + housingEffectSummary(housing) + "</div><div class='muted'>Опора: " + supportLabel(currentSupportScore()) + ".</div></div>" +
             "<div class='card'><h3>Школа бойца</h3><p>" + (styleSnapshot ? (styleSnapshot.style.label + (styleSnapshot.tier ? (" · " + styleSnapshot.tier.label) : "")) : "Стиль только формируется") + ".</p><div class='muted'>Фокус лагеря: " + (focus ? focus.label : "Техника") + ".</div><div class='muted'>Перки: " + currentDevelopment(state.fighter).activePerks.length + " · очки перков " + currentDevelopment(state.fighter).perkPoints + ".</div></div>" +
           "</div>" +
@@ -4865,14 +5353,14 @@
       eventTitle = safeUiText(activeEvent.title, "Событие недели");
       eventText = safeUiText(activeEvent.text, "На этой неделе что-то меняется вокруг тебя. Выбери, как ответить.");
       html.push("<div class='panel fill-panel'>");
-      html.push("<div class='eyebrow'>Событие недели</div>");
+      html.push("<div class='eyebrow'>" + (activeEvent.sourceType === "relationshipArc" ? "Личная линия" : "Событие недели") + "</div>");
       html.push("<h2 class='panel-title'>" + eventTitle + "</h2>");
       html.push("<div class='subtitle'>" + eventText + "</div>");
       if (activeEvent.actors) {
         html.push("<div class='record-row' style='margin-top:14px'>");
         for (i in activeEvent.actors) {
           if (activeEvent.actors.hasOwnProperty(i)) {
-            html.push("<div class='chip'>" + activeEvent.actors[i].name + " · " + npcRoleInfo(activeEvent.actors[i].role).label + "</div>");
+            html.push("<div class='chip'>" + activeEvent.actors[i].name + " · " + (activeEvent.actors[i].role === "rivalry" ? "Противостояние" : npcRoleInfo(activeEvent.actors[i].role).label) + "</div>");
           }
         }
         html.push("</div>");
@@ -4915,10 +5403,12 @@
       var role;
       var country;
       var lastEntry;
+      var arcs;
       ensureNpcWorld();
       html.push("<div class='panel fill-panel'>");
       html.push("<h2 class='panel-title'>Люди</h2>");
       html.push("<div class='muted'>Это твой круг карьеры. Любое взаимодействие занимает неделю, запоминается в отношениях и влияет на будущую атмосферу вокруг бойца.</div>");
+      html.push("<div class='record-row' style='margin-top:14px'><div class='chip gold'>Активные линии " + activeRelationshipArcs().length + "</div><div class='chip red'>Конфликты " + activeConflictArcCount() + "</div><div class='chip'>Реванши " + activeRematchCount() + "</div></div>");
       if (!state.world.npcs.length) {
         html.push("<div class='empty-state' style='margin-top:14px'>Пока вокруг тебя ещё никого нет.</div></div>");
         return html.join("");
@@ -4930,6 +5420,7 @@
         role = npcRoleInfo(npc.role);
         country = getCountryInfo(npc.country);
         lastEntry = relation && relation.historyEntries && relation.historyEntries.length ? relation.historyEntries[0] : null;
+        arcs = relationshipArcsForNpc(npc.id);
         html.push("<div class='card npc-card'>");
         html.push("<div class='meta'>" + role.label + " · " + (country ? country.name : npc.country) + " · " + npc.age + " лет</div>");
         html.push("<h3>" + npc.name + "</h3>");
@@ -4944,6 +5435,9 @@
         html.push("<div class='muted'>Сейчас: " + npc.status + ".</div>");
         html.push("<div class='muted'>Черты: " + (npc.traits && npc.traits.length ? npc.traits.join(", ") : "без ярких черт") + ".</div>");
         html.push("<div class='muted'>Связь: " + (lastEntry ? lastEntry.text : "история только начинается") + "</div>");
+        if (arcs.length) {
+          html.push("<div class='muted'>Активная линия: " + arcSummary(arcs[0]) + ".</div>");
+        }
         html.push("<div class='npc-action-grid'>");
         html.push("<button class='button' onclick='interactWithNpc(\"" + npc.id + "\", \"meet\")'>Встретиться</button>");
         html.push("<button class='ghost' onclick='interactWithNpc(\"" + npc.id + "\", \"talk\")'>Поговорить</button>");
@@ -5177,6 +5671,9 @@
         html.push("<div class='record-row'><div class='chip'>Стиль: " + (opponent.styleLabel || "Базовый") + "</div><div class='chip'>Зал: " + (opponent.gymName || "Уличная база") + "</div><div class='chip'>Тренер: " + (opponent.trainerLabel || "Сам себе угол") + "</div></div>");
         html.push("<div class='record-row'><div class='chip gold'>Гарантия $" + offer.guaranteedPurse + "</div><div class='chip'>Победа $" + offer.winBonus + "</div><div class='chip'>KO $" + offer.koBonus + "</div></div>");
         html.push("<div class='record-row'><div class='chip'>Известность +" + offer.fameReward + "</div><div class='chip'>Токсичность " + offer.toxicRisk + "%</div><div class='chip'>Контракт: " + offer.contractLabel + "</div></div>");
+        if (offer.seriesLabel || offer.stakesText) {
+          html.push("<div class='record-row'><div class='chip red'>" + (offer.seriesLabel || "Реванш") + "</div><div class='chip'>" + (offer.stakesText || "Старый конфликт снова жив.") + "</div></div>");
+        }
         html.push("<div class='record-row'><div class='chip'>Форма " + opponent.condition + "/100</div><div class='chip'>Раундов " + opponent.rounds + "</div><div class='chip'>" + opponent.danger + "</div></div>");
         html.push("<div class='split-row'><div class='chip'>Сила " + opponent.stats.str + "</div><div class='chip'>Техника " + opponent.stats.tec + "</div><div class='chip'>Скорость " + opponent.stats.spd + "</div><div class='chip'>Выносливость " + opponent.stats.end + "</div><div class='chip'>Здоровье " + opponent.stats.vit + "</div></div>");
         html.push("<button class='button' onclick='startFight(" + i + ")'>Принять оффер</button>");
@@ -6097,11 +6594,16 @@
       if (styleSummary.length) {
         pushLog("Бой закрепляет школу: " + styleSummary.join(", ") + ".", "warn");
       }
+      var updatedRivalry = recordFightRivalry(fight);
+      if (updatedRivalry && updatedRivalry.pendingRematch) {
+        pushLog("Противостояние с " + updatedRivalry.opponentName + " не закрыто. " + rivalrySummary(updatedRivalry) + ".", "warn");
+      }
       registerWeeklyAction("fight", fight.method || "Бой", fightDelta, {
         result: fight.result,
         method: fight.method,
         rounds: fight.roundsCompleted,
         opponentSnapshot: buildOpponentSnapshot(opponent),
+        rematchRivalryId: fight.rematchRivalryId || "",
         offerTemplateId: offer ? offer.templateId : "",
         offerLabel: offer ? offer.label : "",
         travel: offer ? offer.travel : "",
@@ -6234,7 +6736,8 @@
         skipTurnRecovery: false,
         pendingTimeout: null,
         animation: null,
-        animationTimeout: null
+        animationTimeout: null,
+        rematchRivalryId: offer ? (offer.rematchRivalryId || "") : ""
       };
       readiness = applyFightReadiness(state.fight.playerState, state.fighter);
       if (readiness !== 0) {

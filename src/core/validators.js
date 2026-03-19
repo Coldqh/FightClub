@@ -132,6 +132,14 @@ function validateState(gameState) {
     errors.push("world.relationships должен быть массивом.");
   }
 
+  if (gameState.world && !(gameState.world.relationshipArcs instanceof Array)) {
+    errors.push("world.relationshipArcs должен быть массивом.");
+  }
+
+  if (gameState.world && !(gameState.world.rivalries instanceof Array)) {
+    errors.push("world.rivalries должен быть массивом.");
+  }
+
   if (gameState.world && !(gameState.world.contracts instanceof Array)) {
     errors.push("world.contracts должен быть массивом.");
   }
@@ -181,6 +189,24 @@ function validateState(gameState) {
     for (i = 0; i < gameState.world.relationships.length; i += 1) {
       if (!gameState.world.relationships[i] || typeof gameState.world.relationships[i].npcId !== "string") {
         errors.push("world.relationships[" + i + "] должен содержать npcId.");
+        break;
+      }
+    }
+  }
+
+  if (gameState.world && gameState.world.relationshipArcs instanceof Array) {
+    for (i = 0; i < gameState.world.relationshipArcs.length; i += 1) {
+      if (!gameState.world.relationshipArcs[i] || typeof gameState.world.relationshipArcs[i].id !== "string" || typeof gameState.world.relationshipArcs[i].templateId !== "string") {
+        errors.push("world.relationshipArcs[" + i + "] должен содержать id и templateId.");
+        break;
+      }
+    }
+  }
+
+  if (gameState.world && gameState.world.rivalries instanceof Array) {
+    for (i = 0; i < gameState.world.rivalries.length; i += 1) {
+      if (!gameState.world.rivalries[i] || typeof gameState.world.rivalries[i].id !== "string" || typeof gameState.world.rivalries[i].opponentKey !== "string") {
+        errors.push("world.rivalries[" + i + "] должен содержать id и opponentKey.");
         break;
       }
     }

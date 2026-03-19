@@ -1,4 +1,4 @@
-var SAVE_VERSION = 10;
+var SAVE_VERSION = 11;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -104,6 +104,50 @@ function baseContractSchema() {
   };
 }
 
+function baseRelationshipArcSchema() {
+  return {
+    id: "",
+    templateId: "",
+    label: "",
+    status: "active",
+    startedWeek: 0,
+    lastStageWeek: 0,
+    currentStageId: "",
+    lastChoiceId: "",
+    outcome: "",
+    tags: [],
+    actors: {},
+    history: [],
+    rivalryId: ""
+  };
+}
+
+function baseRivalrySchema() {
+  return {
+    id: "",
+    opponentKey: "",
+    opponentName: "",
+    countryKey: "",
+    npcId: "",
+    fightsCount: 0,
+    playerWins: 0,
+    opponentWins: 0,
+    draws: 0,
+    knockouts: 0,
+    tension: 0,
+    stakes: 0,
+    active: true,
+    pendingRematch: false,
+    holdUntilWeek: 0,
+    lastWeek: 0,
+    lastResult: "",
+    lastMethod: "",
+    lastOpponentSnapshot: null,
+    tags: [],
+    history: []
+  };
+}
+
 function baseWorldSchema() {
   return {
     opponents: [],
@@ -116,6 +160,8 @@ function baseWorldSchema() {
     },
     npcs: [],
     relationships: [],
+    relationshipArcs: [],
+    rivalries: [],
     contracts: [],
     gymMembership: null,
     trainerAssignment: null,
@@ -213,6 +259,56 @@ function normalizeRelationshipEntry(sourceRelationship) {
   return normalized;
 }
 
+function normalizeRelationshipArcEntry(sourceArc) {
+  var normalized = baseRelationshipArcSchema();
+  if (!sourceArc || typeof sourceArc !== "object") {
+    return normalized;
+  }
+  normalized.id = sourceArc.id || "";
+  normalized.templateId = sourceArc.templateId || "";
+  normalized.label = sourceArc.label || "";
+  normalized.status = sourceArc.status || "active";
+  if (typeof sourceArc.startedWeek === "number") { normalized.startedWeek = sourceArc.startedWeek; }
+  if (typeof sourceArc.lastStageWeek === "number") { normalized.lastStageWeek = sourceArc.lastStageWeek; }
+  normalized.currentStageId = sourceArc.currentStageId || "";
+  normalized.lastChoiceId = sourceArc.lastChoiceId || "";
+  normalized.outcome = sourceArc.outcome || "";
+  normalized.tags = sourceArc.tags instanceof Array ? clonePlainData(sourceArc.tags) : [];
+  normalized.actors = sourceArc.actors && typeof sourceArc.actors === "object" ? clonePlainData(sourceArc.actors) : {};
+  normalized.history = sourceArc.history instanceof Array ? clonePlainData(sourceArc.history) : [];
+  normalized.rivalryId = sourceArc.rivalryId || "";
+  return normalized;
+}
+
+function normalizeRivalryEntry(sourceRivalry) {
+  var normalized = baseRivalrySchema();
+  if (!sourceRivalry || typeof sourceRivalry !== "object") {
+    return normalized;
+  }
+  normalized.id = sourceRivalry.id || "";
+  normalized.opponentKey = sourceRivalry.opponentKey || "";
+  normalized.opponentName = sourceRivalry.opponentName || "";
+  normalized.countryKey = sourceRivalry.countryKey || "";
+  normalized.npcId = sourceRivalry.npcId || "";
+  if (typeof sourceRivalry.fightsCount === "number") { normalized.fightsCount = sourceRivalry.fightsCount; }
+  if (typeof sourceRivalry.playerWins === "number") { normalized.playerWins = sourceRivalry.playerWins; }
+  if (typeof sourceRivalry.opponentWins === "number") { normalized.opponentWins = sourceRivalry.opponentWins; }
+  if (typeof sourceRivalry.draws === "number") { normalized.draws = sourceRivalry.draws; }
+  if (typeof sourceRivalry.knockouts === "number") { normalized.knockouts = sourceRivalry.knockouts; }
+  if (typeof sourceRivalry.tension === "number") { normalized.tension = sourceRivalry.tension; }
+  if (typeof sourceRivalry.stakes === "number") { normalized.stakes = sourceRivalry.stakes; }
+  if (typeof sourceRivalry.active === "boolean") { normalized.active = sourceRivalry.active; }
+  if (typeof sourceRivalry.pendingRematch === "boolean") { normalized.pendingRematch = sourceRivalry.pendingRematch; }
+  if (typeof sourceRivalry.holdUntilWeek === "number") { normalized.holdUntilWeek = sourceRivalry.holdUntilWeek; }
+  if (typeof sourceRivalry.lastWeek === "number") { normalized.lastWeek = sourceRivalry.lastWeek; }
+  normalized.lastResult = sourceRivalry.lastResult || "";
+  normalized.lastMethod = sourceRivalry.lastMethod || "";
+  normalized.lastOpponentSnapshot = sourceRivalry.lastOpponentSnapshot ? clonePlainData(sourceRivalry.lastOpponentSnapshot) : null;
+  normalized.tags = sourceRivalry.tags instanceof Array ? clonePlainData(sourceRivalry.tags) : [];
+  normalized.history = sourceRivalry.history instanceof Array ? clonePlainData(sourceRivalry.history) : [];
+  return normalized;
+}
+
 function createGameState(options) {
   var opts = options || {};
   var debugEnabled = !!opts.debugMode;
@@ -300,6 +396,18 @@ function normalizeWorldState(sourceWorld) {
     normalized.relationships = [];
     for (i = 0; i < sourceWorld.relationships.length; i += 1) {
       normalized.relationships.push(normalizeRelationshipEntry(sourceWorld.relationships[i]));
+    }
+  }
+  if (sourceWorld.relationshipArcs instanceof Array) {
+    normalized.relationshipArcs = [];
+    for (i = 0; i < sourceWorld.relationshipArcs.length; i += 1) {
+      normalized.relationshipArcs.push(normalizeRelationshipArcEntry(sourceWorld.relationshipArcs[i]));
+    }
+  }
+  if (sourceWorld.rivalries instanceof Array) {
+    normalized.rivalries = [];
+    for (i = 0; i < sourceWorld.rivalries.length; i += 1) {
+      normalized.rivalries.push(normalizeRivalryEntry(sourceWorld.rivalries[i]));
     }
   }
   normalized.contracts = sourceWorld.contracts instanceof Array ? clonePlainData(sourceWorld.contracts) : [];
