@@ -81,6 +81,9 @@
       opponentArchetypesById: {},
       campFightProfiles: clone((typeof COMBAT_STATE_DATA !== "undefined" && COMBAT_STATE_DATA.campFightProfiles) || {}),
       relationshipArcTemplates: clone((typeof RELATIONSHIP_ARC_DATA !== "undefined" && RELATIONSHIP_ARC_DATA.templates) || []),
+      reputationTags: clone((typeof REPUTATION_LEGEND_DATA !== "undefined" && REPUTATION_LEGEND_DATA.reputationTags) || []),
+      mediaTemplates: clone((typeof REPUTATION_LEGEND_DATA !== "undefined" && REPUTATION_LEGEND_DATA.mediaTemplates) || []),
+      endingArchetypes: clone((typeof REPUTATION_LEGEND_DATA !== "undefined" && REPUTATION_LEGEND_DATA.endingArchetypes) || []),
       contextEventTriggerChance: typeof EVENT_DATA !== "undefined" && typeof EVENT_DATA.triggerChance === "number" ? EVENT_DATA.triggerChance : 0,
       contextEvents: []
     };
@@ -327,6 +330,18 @@
     return ensureCache().relationshipArcTemplates;
   }
 
+  function listReputationTags() {
+    return ensureCache().reputationTags;
+  }
+
+  function listMediaTemplates() {
+    return ensureCache().mediaTemplates;
+  }
+
+  function listEndingArchetypes() {
+    return ensureCache().endingArchetypes;
+  }
+
   return {
     listCountries: listCountries,
     getCountry: getCountry,
@@ -364,10 +379,13 @@
     getInjuryType: getInjuryType,
     listOpponentArchetypes: listOpponentArchetypes,
     getOpponentArchetype: getOpponentArchetype,
-    getCampFightProfile: getCampFightProfile,
-    listRelationshipArcTemplates: listRelationshipArcTemplates,
-    getContextEventTriggerChance: getContextEventTriggerChance,
-    getContextEvents: getContextEvents
-  };
+     getCampFightProfile: getCampFightProfile,
+     listRelationshipArcTemplates: listRelationshipArcTemplates,
+     listReputationTags: listReputationTags,
+     listMediaTemplates: listMediaTemplates,
+     listEndingArchetypes: listEndingArchetypes,
+     getContextEventTriggerChance: getContextEventTriggerChance,
+     getContextEvents: getContextEvents
+   };
 }());
 

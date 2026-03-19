@@ -1,4 +1,4 @@
-var SAVE_VERSION = 12;
+var SAVE_VERSION = 13;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -69,7 +69,31 @@ function basePlayerDevelopmentSchema() {
 function basePlayerBiographySchema() {
   return {
     flags: [],
-    history: []
+    history: [],
+    reputationTags: [],
+    mediaFeed: [],
+    chronicle: null,
+    facts: {
+      countriesVisited: [],
+      travelHistory: [],
+      keyFights: [],
+      scandals: 0,
+      interviews: 0,
+      homeWins: 0,
+      awayWins: 0,
+      upsetWins: 0,
+      rematches: 0,
+      rivalFights: 0,
+      rivalWins: 0,
+      rivalLosses: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      comebackWins: 0,
+      lastFightResult: "",
+      trainerChanges: 0,
+      contractBreaks: 0,
+      chronicInjuries: 0
+    }
   };
 }
 
@@ -208,6 +232,26 @@ function normalizeInjuryEntry(source) {
   normalized.chronic = !!source.chronic;
   normalized.source = source.source || "";
   normalized.appliedWeek = typeof source.appliedWeek === "number" ? source.appliedWeek : normalized.appliedWeek;
+  return normalized;
+}
+
+function normalizeBiographyFactsEntry(sourceFacts) {
+  var normalized = clonePlainData(basePlayerBiographySchema().facts);
+  var key;
+  if (!sourceFacts || typeof sourceFacts !== "object") {
+    return normalized;
+  }
+  for (key in normalized) {
+    if (normalized.hasOwnProperty(key)) {
+      if (normalized[key] instanceof Array) {
+        normalized[key] = sourceFacts[key] instanceof Array ? clonePlainData(sourceFacts[key]) : [];
+      } else if (typeof normalized[key] === "number") {
+        normalized[key] = typeof sourceFacts[key] === "number" ? sourceFacts[key] : normalized[key];
+      } else if (typeof normalized[key] === "string") {
+        normalized[key] = typeof sourceFacts[key] === "string" ? sourceFacts[key] : normalized[key];
+      }
+    }
+  }
   return normalized;
 }
 
@@ -386,7 +430,9 @@ function createGameState(options) {
       week: 1,
       calendar: TimeSystem.createCalendar(),
       create: null,
-      endingReason: ""
+      endingReason: "",
+      runId: "",
+      archivedLegendId: ""
     },
     world: baseWorldSchema(),
     battle: {
@@ -573,6 +619,10 @@ function normalizeGameState(gameState, options) {
     if (source.player.biography) {
       normalized.player.biography.flags = source.player.biography.flags instanceof Array ? clonePlainData(source.player.biography.flags) : [];
       normalized.player.biography.history = source.player.biography.history instanceof Array ? clonePlainData(source.player.biography.history) : [];
+      normalized.player.biography.reputationTags = source.player.biography.reputationTags instanceof Array ? clonePlainData(source.player.biography.reputationTags) : [];
+      normalized.player.biography.mediaFeed = source.player.biography.mediaFeed instanceof Array ? clonePlainData(source.player.biography.mediaFeed) : [];
+      normalized.player.biography.chronicle = source.player.biography.chronicle && typeof source.player.biography.chronicle === "object" ? clonePlainData(source.player.biography.chronicle) : null;
+      normalized.player.biography.facts = normalizeBiographyFactsEntry(source.player.biography.facts);
     }
     if (source.player.record) {
       if (typeof source.player.record.wins === "number") { normalized.player.record.wins = source.player.record.wins; }
@@ -593,6 +643,8 @@ function normalizeGameState(gameState, options) {
     }
     normalized.career.create = source.career.create ? clonePlainData(source.career.create) : null;
     normalized.career.endingReason = source.career.endingReason || "";
+    normalized.career.runId = source.career.runId || "";
+    normalized.career.archivedLegendId = source.career.archivedLegendId || "";
   }
 
   normalized.world = normalizeWorldState(source.world);
@@ -641,6 +693,12 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
   gameState.battle.current = snapshot && snapshot.fight ? clonePlainData(snapshot.fight) : null;
   gameState.feed.log = snapshot && snapshot.log ? clonePlainData(snapshot.log) : [];
   gameState.career.endingReason = snapshot && snapshot.endingReason ? snapshot.endingReason : "";
+  if (snapshot && snapshot.runId) {
+    gameState.career.runId = snapshot.runId;
+  }
+  if (snapshot && snapshot.archivedLegendId) {
+    gameState.career.archivedLegendId = snapshot.archivedLegendId;
+  }
   if (snapshot && snapshot.world) {
     gameState.world = normalizeWorldState(snapshot.world);
   } else if (snapshot && snapshot.opponents) {
@@ -678,6 +736,10 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     }
     gameState.player.biography.flags = fighter.bioFlags instanceof Array ? clonePlainData(fighter.bioFlags) : [];
     gameState.player.biography.history = fighter.bioHistory instanceof Array ? clonePlainData(fighter.bioHistory) : [];
+    gameState.player.biography.reputationTags = fighter.reputationTags instanceof Array ? clonePlainData(fighter.reputationTags) : [];
+    gameState.player.biography.mediaFeed = fighter.mediaFeed instanceof Array ? clonePlainData(fighter.mediaFeed) : [];
+    gameState.player.biography.chronicle = fighter.chronicle && typeof fighter.chronicle === "object" ? clonePlainData(fighter.chronicle) : null;
+    gameState.player.biography.facts = normalizeBiographyFactsEntry(fighter.bioFacts);
     gameState.player.record.wins = fighter.wins || 0;
     gameState.player.record.losses = fighter.losses || 0;
     gameState.player.record.kos = fighter.kos || 0;
@@ -687,6 +749,14 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
   }
   if (!calendarSource && snapshot && snapshot.career && snapshot.career.calendar) {
     calendarSource = snapshot.career.calendar;
+  }
+  if (snapshot && snapshot.career) {
+    if (snapshot.career.runId) {
+      gameState.career.runId = snapshot.career.runId;
+    }
+    if (snapshot.career.archivedLegendId) {
+      gameState.career.archivedLegendId = snapshot.career.archivedLegendId;
+    }
   }
   if (calendarSource) {
     gameState.career.calendar = TimeSystem.normalizeCalendar(clonePlainData(calendarSource));
@@ -710,6 +780,8 @@ function buildGameStateFromRuntime(runtimeState, options) {
     activeEvent: runtimeState ? runtimeState.activeEvent : null,
     log: runtimeState ? runtimeState.log : [],
     endingReason: runtimeState ? runtimeState.endingReason : "",
+    runId: runtimeState ? runtimeState.runId : "",
+    archivedLegendId: runtimeState ? runtimeState.archivedLegendId : "",
     savedPreview: runtimeState ? runtimeState.savedPreview : null,
     updateAvailable: runtimeState ? runtimeState.updateAvailable : false,
     remoteVersion: runtimeState ? runtimeState.remoteVersion : "",
@@ -733,6 +805,8 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
   target.fight = normalized.battle.current ? clonePlainData(normalized.battle.current) : null;
   target.log = clonePlainData(normalized.feed.log);
   target.endingReason = normalized.career.endingReason;
+  target.runId = normalized.career.runId || "";
+  target.archivedLegendId = normalized.career.archivedLegendId || "";
   target.savedPreview = normalized.ui.savedPreview;
   target.updateAvailable = !!normalized.meta.updateAvailable;
   target.remoteVersion = normalized.meta.remoteVersion || "";
@@ -759,6 +833,10 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     startingAge: normalized.player.conditions.startingAge,
     bioFlags: clonePlainData(normalized.player.biography.flags),
     bioHistory: clonePlainData(normalized.player.biography.history),
+    reputationTags: clonePlainData(normalized.player.biography.reputationTags),
+    mediaFeed: clonePlainData(normalized.player.biography.mediaFeed),
+    chronicle: normalized.player.biography.chronicle ? clonePlainData(normalized.player.biography.chronicle) : null,
+    bioFacts: clonePlainData(normalized.player.biography.facts),
     calendar: clonePlainData(normalized.career.calendar),
     wins: normalized.player.record.wins,
     losses: normalized.player.record.losses,

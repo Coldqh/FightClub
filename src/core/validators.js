@@ -3,6 +3,7 @@ function validateState(gameState) {
   var stats;
   var conditions;
   var development;
+  var biography;
   var eventState;
   var i;
   var requiredSections = ["meta", "player", "career", "world", "battle", "ui", "feed"];
@@ -60,13 +61,6 @@ function validateState(gameState) {
     }
     if (!(conditions.injuries instanceof Array)) {
       pushError("player.conditions.injuries должен быть массивом.");
-    } else {
-      for (i = 0; i < conditions.injuries.length; i += 1) {
-        if (!conditions.injuries[i] || typeof conditions.injuries[i].id !== "string") {
-          pushError("player.conditions.injuries[" + i + "] должен содержать id.");
-          break;
-        }
-      }
     }
   }
 
@@ -111,16 +105,35 @@ function validateState(gameState) {
   if (!gameState.player || !gameState.player.biography) {
     pushError("player.biography отсутствует.");
   } else {
-    if (!(gameState.player.biography.flags instanceof Array)) {
+    biography = gameState.player.biography;
+    if (!(biography.flags instanceof Array)) {
       pushError("player.biography.flags должен быть массивом.");
     }
-    if (!(gameState.player.biography.history instanceof Array)) {
+    if (!(biography.history instanceof Array)) {
       pushError("player.biography.history должен быть массивом.");
+    }
+    if (!(biography.reputationTags instanceof Array)) {
+      pushError("player.biography.reputationTags должен быть массивом.");
+    }
+    if (!(biography.mediaFeed instanceof Array)) {
+      pushError("player.biography.mediaFeed должен быть массивом.");
+    }
+    if (biography.chronicle != null && typeof biography.chronicle !== "object") {
+      pushError("player.biography.chronicle должен быть null или объектом.");
+    }
+    if (!biography.facts || typeof biography.facts !== "object") {
+      pushError("player.biography.facts должен быть объектом.");
     }
   }
 
   if (!gameState.career || !gameState.career.calendar || typeof gameState.career.calendar.totalWeeks !== "number") {
     pushError("career.calendar должен содержать totalWeeks.");
+  }
+  if (gameState.career && typeof gameState.career.runId !== "string") {
+    pushError("career.runId должен быть строкой.");
+  }
+  if (gameState.career && typeof gameState.career.archivedLegendId !== "string") {
+    pushError("career.archivedLegendId должен быть строкой.");
   }
 
   if (!gameState.world || !(gameState.world.opponents instanceof Array)) {
@@ -140,15 +153,6 @@ function validateState(gameState) {
   }
   if (gameState.world && !(gameState.world.contracts instanceof Array)) {
     pushError("world.contracts должен быть массивом.");
-  }
-  if (gameState.world && gameState.world.gymMembership != null && typeof gameState.world.gymMembership !== "object") {
-    pushError("world.gymMembership должен быть null или объектом.");
-  }
-  if (gameState.world && gameState.world.trainerAssignment != null && typeof gameState.world.trainerAssignment !== "object") {
-    pushError("world.trainerAssignment должен быть null или объектом.");
-  }
-  if (gameState.world && gameState.world.activeContract != null && typeof gameState.world.activeContract !== "object") {
-    pushError("world.activeContract должен быть null или объектом.");
   }
 
   if (gameState.world && gameState.world.offers) {
