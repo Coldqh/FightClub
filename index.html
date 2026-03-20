@@ -1056,28 +1056,28 @@
     }
   </style>
 
-  <script type="text/javascript" src="country_data.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/content/content_data.js?v=2026.03.20.1"></script>
-<script type="text/javascript" src="src/content/career_ecosystem_data.js?v=2026.03.20.1"></script>
-<script type="text/javascript" src="src/content/development_data.js?v=2026.03.20.1"></script>
-<script type="text/javascript" src="src/content/combat_state_data.js?v=2026.03.20.1"></script>
-<script type="text/javascript" src="src/content/event_data.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/content/life_data.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/content/life_event_data.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/content/relationship_arc_data.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/content/reputation_legend_data.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/content/content_loader.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/rng_manager.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/save_manager.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/event_engine.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/relationship_arc_engine.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/reputation_engine.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/time_system.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/state_factory.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="src/core/validators.js?v=2026.03.20.1"></script>
-  <script type="text/javascript" src="game_data.js?v=2026.03.20.1"></script>
+  <script type="text/javascript" src="country_data.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/content/content_data.js?v=2026.03.20.2"></script>
+<script type="text/javascript" src="src/content/career_ecosystem_data.js?v=2026.03.20.2"></script>
+<script type="text/javascript" src="src/content/development_data.js?v=2026.03.20.2"></script>
+<script type="text/javascript" src="src/content/combat_state_data.js?v=2026.03.20.2"></script>
+<script type="text/javascript" src="src/content/event_data.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/content/life_data.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/content/life_event_data.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/content/relationship_arc_data.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/content/reputation_legend_data.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/content/content_loader.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/rng_manager.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/save_manager.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/event_engine.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/relationship_arc_engine.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/reputation_engine.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/time_system.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/state_factory.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="src/core/validators.js?v=2026.03.20.2"></script>
+  <script type="text/javascript" src="game_data.js?v=2026.03.20.2"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.20.1";
+    var APP_VERSION = "2026.03.20.2";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -5012,6 +5012,11 @@
       };
     }
 
+    function fighterSkillMoneyBonus() {
+      var total = fighterStatTotal(state.fighter ? state.fighter.stats : null);
+      return Math.max(0, Math.round((total - 5) * 2.5));
+    }
+
     function ensureTrainerNpcForGym(gym, trainerTypeId) {
       var i;
       var trainerType = getTrainerType(trainerTypeId);
@@ -5175,6 +5180,7 @@
       var template = getContractTemplate(templateId);
       var promoterInfo = promoterInfluence();
       var promoter = promoterInfo.npc;
+      var skillMoneyBonus = fighterSkillMoneyBonus();
       var offer;
       if (!template || !promoter) {
         return null;
@@ -5185,8 +5191,8 @@
         promoterId: promoter.id,
         label: template.label,
         durationWeeks: template.durationWeeks,
-        guaranteedPurse: Math.max(50, template.guaranteedPurse + promoterInfo.purseBonus + developmentScalarBonus(state.fighter, "offerPurse")),
-        winBonus: Math.max(10, template.winBonus + Math.round(promoterInfo.purseBonus * 0.5)),
+        guaranteedPurse: Math.max(50, template.guaranteedPurse + promoterInfo.purseBonus + developmentScalarBonus(state.fighter, "offerPurse") + skillMoneyBonus),
+        winBonus: Math.max(10, template.winBonus + Math.round(promoterInfo.purseBonus * 0.5) + Math.round(skillMoneyBonus * 0.2)),
         koBonus: Math.max(10, template.koBonus + trainerBonusValue("koBonus")),
         fameMultiplier: Math.max(0.85, template.fameMultiplier + (promoterInfo.repGuard * 0.01) + developmentScalarBonus(state.fighter, "offerFame") * 0.01),
         fightFrequency: Math.max(1, template.fightFrequency + promoterInfo.offerBonus),
@@ -5485,6 +5491,36 @@
       }
     }
 
+    function resolveOpponentCamp(opponentCountryKey, preferredGymId, preferredTrainerTypeId) {
+      var countryGyms = guaranteedCountryGyms(opponentCountryKey);
+      var countryTrainerTypes = guaranteedCountryTrainerTypes(opponentCountryKey);
+      var gym = preferredGymId ? getGym(preferredGymId) : null;
+      var trainerType = preferredTrainerTypeId ? getTrainerType(preferredTrainerTypeId) : null;
+      var candidateTrainer;
+      if (gym && gym.country !== opponentCountryKey) {
+        gym = null;
+      }
+      if (!gym && countryGyms.length) {
+        gym = choice(countryGyms);
+      }
+      if (trainerType && trainerType.country !== opponentCountryKey) {
+        trainerType = null;
+      }
+      if (!trainerType && gym && gym.trainerTypeIds && gym.trainerTypeIds.length) {
+        candidateTrainer = getTrainerType(choice(gym.trainerTypeIds));
+        if (candidateTrainer && candidateTrainer.country === opponentCountryKey) {
+          trainerType = candidateTrainer;
+        }
+      }
+      if (!trainerType && countryTrainerTypes.length) {
+        trainerType = choice(countryTrainerTypes);
+      }
+      return {
+        gym: gym,
+        trainerType: trainerType
+      };
+    }
+
     function generateConfiguredOpponent(tier, countryKeyOverride, snapshotOverride) {
       var fighter = state.fighter;
       var opponentCountryKey;
@@ -5506,10 +5542,11 @@
       var archetype;
       var opponentClone;
       var types;
+      var camp;
       var i;
       if (snapshotOverride) {
         opponentClone = clonePlainData(snapshotOverride);
-        if (opponentClone && !opponentClone.development) {
+        if (opponentClone) {
           opponentCountryKey = opponentClone.countryKey || countryKeyOverride || fighter.currentCountry;
           types = listOpponentTypes();
           opponentType = null;
@@ -5520,41 +5557,23 @@
             }
           }
           opponentType = opponentType || (types.length ? choice(types) : { id: "pressure", label: "Прессингует и душит темпом" });
-          countryGyms = guaranteedCountryGyms(opponentCountryKey);
-          countryTrainerTypes = guaranteedCountryTrainerTypes(opponentCountryKey);
-          gym = opponentClone.gymId ? getGym(opponentClone.gymId) : null;
-          if (gym && gym.country !== opponentCountryKey) {
-            gym = null;
-          }
-          if (!gym) {
-            gym = countryGyms.length ? choice(countryGyms) : null;
-          }
-          trainerType = opponentClone.trainerTypeId ? getTrainerType(opponentClone.trainerTypeId) : null;
-          if (trainerType && trainerType.country !== opponentCountryKey) {
-            trainerType = null;
-          }
-          if (!trainerType) {
-            if (gym && gym.trainerTypeIds && gym.trainerTypeIds.length) {
-              trainerType = getTrainerType(choice(gym.trainerTypeIds));
-            } else if (countryTrainerTypes.length) {
-              trainerType = choice(countryTrainerTypes);
-            }
-          }
+          camp = resolveOpponentCamp(opponentCountryKey, opponentClone.gymId, opponentClone.trainerTypeId);
+          gym = camp.gym;
+          trainerType = camp.trainerType;
+          if (!opponentClone.development) {
           development = buildOpponentDevelopment(opponentType, tier, gym, trainerType, opponentClone.stats || baseStats());
+            opponentClone.development = development;
+          }
           styleSnapshot = currentStyleSnapshot({
             stats: opponentClone.stats || baseStats(),
-            development: development
+            development: opponentClone.development
           });
           opponentClone.profileId = opponentType.id;
           opponentClone.profile = opponentClone.profile || opponentType.label;
           opponentClone.gymId = gym ? gym.id : "";
           opponentClone.gymName = gym ? gym.name : "";
           opponentClone.trainerTypeId = trainerType ? trainerType.id : "";
-          opponentClone.trainerLabel = trainerType ? buildNpcName(opponentCountryKey) : "";
-          opponentClone.development = development;
-          opponentClone.styleLabel = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "";
-        } else if (opponentClone && opponentClone.development && !opponentClone.styleLabel) {
-          styleSnapshot = currentStyleSnapshot(opponentClone);
+          opponentClone.trainerLabel = trainerType ? (shouldKeepOpponentTrainerName(opponentClone.trainerLabel || "", trainerType) ? opponentClone.trainerLabel : buildNpcName(opponentCountryKey)) : "";
           opponentClone.styleLabel = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.label : "";
         }
         applyOpponentMetadata(opponentClone, opponentType, gym, trainerType, tier);
@@ -5576,16 +5595,9 @@
         end: clamp(base + rand(-1, 2), 1, 45),
         vit: clamp(base + rand(-1, 2), 1, 45)
       };
-      countryGyms = guaranteedCountryGyms(opponentCountryKey);
-      countryTrainerTypes = guaranteedCountryTrainerTypes(opponentCountryKey);
-      gym = countryGyms.length ? choice(countryGyms) : null;
-      if (gym && gym.trainerTypeIds && gym.trainerTypeIds.length) {
-        trainerType = getTrainerType(choice(gym.trainerTypeIds));
-      } else if (countryTrainerTypes.length) {
-        trainerType = choice(countryTrainerTypes);
-      } else {
-        trainerType = null;
-      }
+      camp = resolveOpponentCamp(opponentCountryKey, "", "");
+      gym = camp.gym;
+      trainerType = camp.trainerType;
       development = buildOpponentDevelopment(opponentType, tier, gym, trainerType, stats);
       styleSnapshot = currentStyleSnapshot({
         stats: stats,
@@ -5634,6 +5646,7 @@
       var contractWin = contract ? contract.winBonus : 0;
       var contractKo = contract ? contract.koBonus : 0;
       var contractFame = contract ? contract.fameMultiplier : 1;
+      var skillMoneyBonus = fighterSkillMoneyBonus();
       var gym;
       var offer;
       var reputationSwing;
@@ -5665,8 +5678,8 @@
         countryName: country ? country.name : countryKey,
         city: arena ? arena.city : (country ? country.city : ""),
         venue: arena ? arena.name : (country ? country.venueName : ""),
-        guaranteedPurse: Math.max(40, template.purseBase + contractPurse + promoter.purseBonus + gymBonusValue("purseBonus") + trainerBonusValue("purseBonus") + developmentScalarBonus(state.fighter, "offerPurse")),
-        winBonus: Math.max(10, template.winBonus + contractWin + Math.round(promoter.purseBonus * 0.5)),
+        guaranteedPurse: Math.max(40, template.purseBase + contractPurse + promoter.purseBonus + gymBonusValue("purseBonus") + trainerBonusValue("purseBonus") + developmentScalarBonus(state.fighter, "offerPurse") + skillMoneyBonus),
+        winBonus: Math.max(10, template.winBonus + contractWin + Math.round(promoter.purseBonus * 0.5) + Math.round(skillMoneyBonus * 0.2)),
         koBonus: Math.max(10, template.koBonus + contractKo + trainerBonusValue("koBonus")),
         fameReward: Math.max(2, Math.round((template.fameBase + gymBonusValue("fameBonus") + trainerBonusValue("fameBonus") + developmentScalarBonus(state.fighter, "offerFame")) * contractFame)),
         toxicRisk: clamp(template.toxicBase + (contract ? contract.toxicRisk : 0) + promoter.toxicShift - gymBonusValue("toxicGuard") - trainerBonusValue("toxicGuard") - developmentScalarBonus(state.fighter, "toxicRiskGuard"), 0, 95),
@@ -7892,36 +7905,6 @@
       return html.join("");
     }
 
-    function reputationUnlockText(tagId) {
-      if (tagId === "fan_favorite") { return "Слава 35+, опора 60+, 4 победы, мало скандалов."; }
-      if (tagId === "dirty_fighter") { return "Нужно хотя бы 2 скандала."; }
-      if (tagId === "giant_killer") { return "Нужно 2 победы над фаворитами."; }
-      if (tagId === "home_hero") { return "Нужно 4 домашние победы и 20 славы."; }
-      if (tagId === "wanderer") { return "Нужно побывать в 4 странах."; }
-      if (tagId === "fragile_talent") { return "Нужно 20 славы и 2 хронические травмы."; }
-      if (tagId === "ko_machine") { return "Нужно 5 KO и 6 побед."; }
-      if (tagId === "eternal_contender") { return "Нужно 10 боёв, 25 славы и без большого отрыва по победам."; }
-      return "Открывается по ходу карьеры.";
-    }
-
-    function renderReputationGuidePanel() {
-      var tags = ContentLoader.listReputationTags ? ContentLoader.listReputationTags() : [];
-      var html = [];
-      var i;
-      if (!(tags instanceof Array) || !tags.length) {
-        return "";
-      }
-      html.push("<div class='panel' style='margin-top:14px'>");
-      html.push("<h2 class='panel-title'>Ранги</h2>");
-      html.push("<div class='muted'>Это не боевые бафы. Ранги влияют на медиа, хронику, события и на то, какой легендой запомнят бойца.</div>");
-      html.push("<div class='choice-grid' style='margin-top:12px'>");
-      for (i = 0; i < tags.length; i += 1) {
-        html.push("<div class='card compact-card'><h3>" + tags[i].label + "</h3><div class='muted'>" + reputationUnlockText(tags[i].id) + "</div></div>");
-      }
-      html.push("</div></div>");
-      return html.join("");
-    }
-
     function renderHomeSummaryPanel() {
       var current = getCountryInfo(state.fighter.currentCountry);
       var home = getCountryInfo(state.fighter.homeCountry);
@@ -7942,7 +7925,6 @@
             "<div class='chip'>Сейчас " + current.name + "</div>" +
           "</div>" +
           "<div class='record-row' style='margin-top:10px'>" + renderReputationChips(3) + "</div>" +
-          renderReputationGuidePanel() +
           "<div class='footer-actions' style='margin-top:18px'>" +
             "<button class='button' onclick='openPanel(\"train\")'>Тренировка</button>" +
             "<button class='button' onclick='openFightSelect()'>Офферы боёв</button>" +
