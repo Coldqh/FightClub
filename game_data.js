@@ -6,13 +6,6 @@
     "end": "Выносливость",
     "vit": "Здоровье"
   },
-  "statDescriptions": {
-    "str": "Делает удары сильнее.",
-    "tec": "Даёт точность и шанс на крит.",
-    "spd": "Даёт уклон и помогает в контре.",
-    "end": "Поднимает максимум стамины.",
-    "vit": "Поднимает максимум здоровья."
-  },
   "perkCategoryLabels": {
     "combat": "Боевой перк",
     "career": "Карьерный перк",
@@ -127,23 +120,26 @@ var RECOVERY_OPTIONS = {
     "label": "Отлежаться дома",
     "cost": 0,
     "health": 18,
-    "stress": -10
+    "stress": -10,
+    "wear": -1
   },
   "doctor": {
     "label": "Спортивный врач",
     "cost": 60,
     "health": 30,
-    "stress": -6
+    "stress": -6,
+    "wear": -3
   },
   "therapy": {
     "label": "Терапия и массаж",
     "cost": 35,
     "health": 20,
-    "stress": -16
+    "stress": -16,
+    "wear": -4
   }
 };
 
-var WEEKLY_EXPENSE = 15;
+var WEEKLY_EXPENSE = 0;
 
 var LEGAL_JOB = {
   "label": "Работа в зале",
@@ -170,10 +166,6 @@ var NAV_TABS = [
     "label": "Карьера"
   },
   {
-    "key": "life",
-    "label": "Соц. жизнь"
-  },
-  {
     "key": "people",
     "label": "Люди"
   },
@@ -186,3 +178,4 @@ var NAV_TABS = [
     "label": "Лента"
   }
 ];
+
