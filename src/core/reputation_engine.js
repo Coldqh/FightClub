@@ -22,15 +22,24 @@ var ReputationEngine = (function () {
     var resources = player.resources || {};
     var conditions = player.conditions || {};
     var life = player.life || {};
+    var street = player.street || {};
     var development = player.development || {};
     var profile = player.profile || {};
     var biography = player.biography || {};
     var facts = biography.facts || {};
     var countriesVisited = facts.countriesVisited instanceof Array ? facts.countriesVisited : [];
     var styleProgress = development.styleProgress || {};
+    var streetHistory = street.history instanceof Array ? street.history : [];
+    var streetWins = 0;
     var topStyleId = "outboxer";
     var topStyleValue = -1;
     var styleKey;
+    var i;
+    for (i = 0; i < streetHistory.length; i += 1) {
+      if (streetHistory[i] && streetHistory[i].result === "win") {
+        streetWins += 1;
+      }
+    }
     for (styleKey in styleProgress) {
       if (styleProgress.hasOwnProperty(styleKey) && typeof styleProgress[styleKey] === "number" && styleProgress[styleKey] > topStyleValue) {
         topStyleValue = styleProgress[styleKey];
@@ -53,6 +62,11 @@ var ReputationEngine = (function () {
       wear: typeof conditions.wear === "number" ? conditions.wear : 0,
       morale: typeof conditions.morale === "number" ? conditions.morale : 50,
       support: typeof life.support === "number" ? life.support : 50,
+      currentTrack: gameState && gameState.playerState ? gameState.playerState.currentTrackId || "street" : "street",
+      streetRating: typeof street.streetRating === "number" ? street.streetRating : 0,
+      undergroundTitlesCount: street.undergroundTitles instanceof Array ? street.undergroundTitles.length : 0,
+      streetFights: streetHistory.length,
+      streetWins: streetWins,
       debtWeeks: typeof life.debtWeeks === "number" ? life.debtWeeks : 0,
       weeks: gameState && gameState.career ? (gameState.career.week || 1) : 1,
       countriesVisited: countriesVisited,
@@ -128,6 +142,7 @@ var ReputationEngine = (function () {
     if (typeof conditions.minFame === "number" && summary.fame < conditions.minFame) { return false; }
     if (typeof conditions.maxFame === "number" && summary.fame > conditions.maxFame) { return false; }
     if (typeof conditions.minSupport === "number" && summary.support < conditions.minSupport) { return false; }
+    if (typeof conditions.minMoney === "number" && summary.money < conditions.minMoney) { return false; }
     if (typeof conditions.minWins === "number" && summary.wins < conditions.minWins) { return false; }
     if (typeof conditions.maxLosses === "number" && summary.losses > conditions.maxLosses) { return false; }
     if (typeof conditions.minKos === "number" && summary.kos < conditions.minKos) { return false; }
@@ -137,9 +152,14 @@ var ReputationEngine = (function () {
     if (typeof conditions.minHomeWins === "number" && summary.homeWins < conditions.minHomeWins) { return false; }
     if (typeof conditions.minCountriesVisited === "number" && summary.countriesVisitedCount < conditions.minCountriesVisited) { return false; }
     if (typeof conditions.minChronicInjuries === "number" && summary.chronicInjuries < conditions.minChronicInjuries) { return false; }
+    if (typeof conditions.minStreetRating === "number" && summary.streetRating < conditions.minStreetRating) { return false; }
+    if (typeof conditions.minStreetFights === "number" && summary.streetFights < conditions.minStreetFights) { return false; }
+    if (typeof conditions.minStreetWins === "number" && summary.streetWins < conditions.minStreetWins) { return false; }
+    if (typeof conditions.minUndergroundTitles === "number" && summary.undergroundTitlesCount < conditions.minUndergroundTitles) { return false; }
     if (typeof conditions.minFights === "number" && summary.fights < conditions.minFights) { return false; }
     if (typeof conditions.maxWinsOverLosses === "number" && winsOverLosses > conditions.maxWinsOverLosses) { return false; }
     if (typeof conditions.minComebackWins === "number" && summary.comebackWins < conditions.minComebackWins) { return false; }
+    if (conditions.requireCurrentTrack && summary.currentTrack !== conditions.requireCurrentTrack) { return false; }
     if (conditions.endingReasonIn && !matchList(extra && extra.endingReason, conditions.endingReasonIn)) { return false; }
     if (conditions.requiresFlag && !hasValue(flags, conditions.requiresFlag)) { return false; }
     return true;
@@ -215,7 +235,7 @@ var ReputationEngine = (function () {
       tone: template.tone || "warn",
       week: gameState && gameState.career ? gameState.career.week : 1,
       title: replaceTokens(pickText(rngState, template.titles), tokens),
-      text: replaceTokens(pickText(rngState, template.texts), tokens),
+      text: "",
       tags: payload && payload.tags ? clone(payload.tags) : []
     };
   }

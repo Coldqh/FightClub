@@ -1,4 +1,4 @@
-var SAVE_VERSION = 13;
+var SAVE_VERSION = 20;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -19,7 +19,7 @@ function basePlayerConditionsSchema() {
     fatigue: 0,
     wear: 0,
     morale: 55,
-    startingAge: 22,
+    startingAge: 16,
     injuries: []
   };
 }
@@ -38,8 +38,48 @@ function baseInjurySchema() {
 function basePlayerLifeSchema() {
   return {
     housingId: "rough",
+    livingMode: "family",
     support: 50,
     debtWeeks: 0
+  };
+}
+
+function basePlayerAmateurSchema(startingAge) {
+  if (typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.createAmateurState) {
+    return JuniorAmateurSystem.createAmateurState(typeof startingAge === "number" ? startingAge : 16);
+  }
+  return {
+    rankId: typeof startingAge === "number" && startingAge >= 18 ? "adult_class_3" : "junior_novice",
+    score: typeof startingAge === "number" && startingAge >= 18 ? 120 : 0,
+    tournamentPoints: 0,
+    opponentQuality: 0,
+    record: {
+      wins: 0,
+      losses: 0,
+      draws: 0
+    },
+    lastRankWeek: 0,
+    adultTransitionDone: typeof startingAge === "number" && startingAge >= 18,
+    history: []
+  };
+}
+
+function basePlayerStreetSchema(countryId, city) {
+  if (typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.createStreetState) {
+    return StreetCareerEngine.createStreetState(countryId || "", city || "");
+  }
+  return {
+    id: "player_street_main",
+    streetRating: 0,
+    districtId: "",
+    cityStreetStanding: 0,
+    nationalStreetStanding: 0,
+    undergroundTitles: [],
+    localPromoterIds: [],
+    undergroundPressureTags: [],
+    currentSceneId: "",
+    currentStatusId: "neighborhood_unknown",
+    history: []
   };
 }
 
@@ -162,6 +202,7 @@ function baseRivalrySchema() {
   return {
     id: "",
     opponentKey: "",
+    opponentFighterId: "",
     opponentName: "",
     countryKey: "",
     npcId: "",
@@ -219,6 +260,54 @@ function baseWorldSchema() {
       temperature: 50
     }
   };
+}
+
+function ensureWorldSimSections(gameState, sourceState) {
+  if (typeof WorldSimState !== "undefined" && WorldSimState.attachSections) {
+    return WorldSimState.attachSections(gameState, sourceState || null);
+  }
+  if (!gameState.playerState) { gameState.playerState = {}; }
+  if (!gameState.worldState) { gameState.worldState = {}; }
+  if (!gameState.rosterState) { gameState.rosterState = {}; }
+  if (!gameState.organizationState) { gameState.organizationState = {}; }
+  if (!gameState.competitionState) { gameState.competitionState = {}; }
+  if (!gameState.narrativeState) { gameState.narrativeState = {}; }
+  return gameState;
+}
+
+function ensurePersistentRosterSections(gameState) {
+  if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.enrichGameState) {
+    return PersistentFighterRegistry.enrichGameState(gameState);
+  }
+  return gameState;
+}
+
+function ensureAmateurEcosystemSections(gameState) {
+  if (typeof AmateurEcosystem !== "undefined" && AmateurEcosystem.ensureOrganizations) {
+    return AmateurEcosystem.ensureOrganizations(gameState);
+  }
+  return gameState;
+}
+
+function ensureAmateurSeasonSections(gameState) {
+  if (typeof AmateurSeasonEngine !== "undefined" && AmateurSeasonEngine.ensureState) {
+    AmateurSeasonEngine.ensureState(gameState);
+  }
+  return gameState;
+}
+
+function ensureWorldCareerSections(gameState) {
+  if (typeof WorldCareerSimEngine !== "undefined" && WorldCareerSimEngine.ensureState) {
+    WorldCareerSimEngine.ensureState(gameState);
+  }
+  return gameState;
+}
+
+function ensureStreetCareerSections(gameState) {
+  if (typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.ensureState) {
+    StreetCareerEngine.ensureState(gameState);
+  }
+  return gameState;
 }
 
 function normalizeInjuryEntry(source) {
@@ -384,6 +473,7 @@ function normalizeRivalryEntry(sourceRivalry) {
   normalized.lastResult = sourceRivalry.lastResult || "";
   normalized.lastMethod = sourceRivalry.lastMethod || "";
   normalized.lastOpponentSnapshot = sourceRivalry.lastOpponentSnapshot ? clonePlainData(sourceRivalry.lastOpponentSnapshot) : null;
+  normalized.opponentFighterId = sourceRivalry.opponentFighterId || "";
   normalized.tags = sourceRivalry.tags instanceof Array ? clonePlainData(sourceRivalry.tags) : [];
   normalized.history = sourceRivalry.history instanceof Array ? clonePlainData(sourceRivalry.history) : [];
   return normalized;
@@ -392,7 +482,7 @@ function normalizeRivalryEntry(sourceRivalry) {
 function createGameState(options) {
   var opts = options || {};
   var debugEnabled = !!opts.debugMode;
-  return {
+  var gameState = {
     meta: {
       appVersion: opts.appVersion || "",
       saveVersion: SAVE_VERSION,
@@ -417,6 +507,8 @@ function createGameState(options) {
       },
       conditions: basePlayerConditionsSchema(),
       life: basePlayerLifeSchema(),
+      amateur: basePlayerAmateurSchema(basePlayerConditionsSchema().startingAge),
+      street: basePlayerStreetSchema("", ""),
       development: basePlayerDevelopmentSchema(),
       biography: basePlayerBiographySchema(),
       record: {
@@ -452,6 +544,17 @@ function createGameState(options) {
       log: []
     }
   };
+  return ensureWorldCareerSections(
+    ensureStreetCareerSections(
+      ensureAmateurSeasonSections(
+        ensureAmateurEcosystemSections(
+          ensurePersistentRosterSections(
+            ensureWorldSimSections(gameState, opts.sourceState || null)
+          )
+        )
+      )
+    )
+  );
 }
 
 function normalizeWorldState(sourceWorld) {
@@ -597,8 +700,21 @@ function normalizeGameState(gameState, options) {
     }
     if (source.player.life) {
       normalized.player.life.housingId = source.player.life.housingId || normalized.player.life.housingId;
+      normalized.player.life.livingMode = source.player.life.livingMode || normalized.player.life.livingMode;
       if (typeof source.player.life.support === "number") { normalized.player.life.support = source.player.life.support; }
       if (typeof source.player.life.debtWeeks === "number") { normalized.player.life.debtWeeks = source.player.life.debtWeeks; }
+    }
+    if (source.player.amateur) {
+      normalized.player.amateur = typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.normalizeAmateurState ?
+        JuniorAmateurSystem.normalizeAmateurState(source.player.amateur, normalized.player.conditions.startingAge) :
+        clonePlainData(source.player.amateur);
+    } else if (typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.normalizeAmateurState) {
+      normalized.player.amateur = JuniorAmateurSystem.normalizeAmateurState(null, normalized.player.conditions.startingAge);
+    }
+    if (source.player.street) {
+      normalized.player.street = typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.normalizeStreetState ?
+        StreetCareerEngine.normalizeStreetState(source.player.street, normalized.player.profile.currentCountry || normalized.player.profile.homeCountry || "", "") :
+        clonePlainData(source.player.street);
     }
     if (source.player.development) {
       normalized.player.development.focusId = source.player.development.focusId || normalized.player.development.focusId;
@@ -668,6 +784,15 @@ function normalizeGameState(gameState, options) {
     normalized.feed.log = clonePlainData(source.feed.log);
   }
 
+  normalized = ensureWorldSimSections(normalized, source);
+  normalized = ensurePersistentRosterSections(normalized);
+  normalized = ensureAmateurEcosystemSections(normalized);
+  normalized = ensureAmateurSeasonSections(normalized);
+  normalized = ensureStreetCareerSections(normalized);
+  normalized = ensureWorldCareerSections(normalized);
+  if (!normalized.player.amateur || typeof normalized.player.amateur !== "object") {
+    normalized.player.amateur = basePlayerAmateurSchema(normalized.player.conditions.startingAge);
+  }
   normalized.career.week = TimeSystem.getCalendarView(normalized.career.calendar).weekNumber;
   normalized.meta.saveVersion = SAVE_VERSION;
   return normalized;
@@ -717,7 +842,7 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
     gameState.player.conditions.fatigue = typeof fighter.fatigue === "number" ? fighter.fatigue : gameState.player.conditions.fatigue;
     gameState.player.conditions.wear = typeof fighter.wear === "number" ? fighter.wear : gameState.player.conditions.wear;
     gameState.player.conditions.morale = typeof fighter.morale === "number" ? fighter.morale : gameState.player.conditions.morale;
-    gameState.player.conditions.startingAge = typeof fighter.startingAge === "number" ? fighter.startingAge : gameState.player.conditions.startingAge;
+    gameState.player.conditions.startingAge = typeof fighter.startingAge === "number" ? fighter.startingAge : 21;
     if (fighter.injuries instanceof Array) {
       gameState.player.conditions.injuries = [];
       for (key = 0; key < fighter.injuries.length; key += 1) {
@@ -725,8 +850,19 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
       }
     }
     gameState.player.life.housingId = fighter.housingId || gameState.player.life.housingId;
+    gameState.player.life.livingMode = fighter.livingMode || gameState.player.life.livingMode;
     gameState.player.life.support = typeof fighter.support === "number" ? fighter.support : gameState.player.life.support;
     gameState.player.life.debtWeeks = typeof fighter.debtWeeks === "number" ? fighter.debtWeeks : gameState.player.life.debtWeeks;
+    if (fighter.street && typeof fighter.street === "object") {
+      gameState.player.street = typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.normalizeStreetState ?
+        StreetCareerEngine.normalizeStreetState(fighter.street, gameState.player.profile.currentCountry || gameState.player.profile.homeCountry || "", "") :
+        clonePlainData(fighter.street);
+    }
+    if (fighter.amateur && typeof fighter.amateur === "object") {
+      gameState.player.amateur = typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.normalizeAmateurState ?
+        JuniorAmateurSystem.normalizeAmateurState(fighter.amateur, gameState.player.conditions.startingAge) :
+        clonePlainData(fighter.amateur);
+    }
     if (fighter.development && typeof fighter.development === "object") {
       gameState.player.development = normalizeGameState({
         player: {
@@ -767,7 +903,7 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
 }
 
 function buildGameStateFromRuntime(runtimeState, options) {
-  return buildGameStateFromLegacySnapshot({
+  var gameState = buildGameStateFromLegacySnapshot({
     appVersion: options && options.appVersion ? options.appVersion : "",
     rng: runtimeState ? runtimeState.rng : null,
     screen: runtimeState ? runtimeState.screen : "menu",
@@ -787,6 +923,25 @@ function buildGameStateFromRuntime(runtimeState, options) {
     remoteVersion: runtimeState ? runtimeState.remoteVersion : "",
     debug: runtimeState ? runtimeState.debug : null
   }, options);
+  if (runtimeState && runtimeState.playerState) {
+    gameState.playerState = clonePlainData(runtimeState.playerState);
+  }
+  if (runtimeState && runtimeState.worldState) {
+    gameState.worldState = clonePlainData(runtimeState.worldState);
+  }
+  if (runtimeState && runtimeState.rosterState) {
+    gameState.rosterState = clonePlainData(runtimeState.rosterState);
+  }
+  if (runtimeState && runtimeState.organizationState) {
+    gameState.organizationState = clonePlainData(runtimeState.organizationState);
+  }
+  if (runtimeState && runtimeState.competitionState) {
+    gameState.competitionState = clonePlainData(runtimeState.competitionState);
+  }
+  if (runtimeState && runtimeState.narrativeState) {
+    gameState.narrativeState = clonePlainData(runtimeState.narrativeState);
+  }
+  return normalizeGameState(gameState, options);
 }
 
 function applyGameStateToRuntime(runtimeState, gameState, options) {
@@ -812,6 +967,12 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
   target.remoteVersion = normalized.meta.remoteVersion || "";
   target.rng = RNG.cloneState(normalized.meta.rng);
   target.debug = clonePlainData(normalized.ui.debug);
+  target.playerState = clonePlainData(normalized.playerState);
+  target.worldState = clonePlainData(normalized.worldState);
+  target.rosterState = clonePlainData(normalized.rosterState);
+  target.organizationState = clonePlainData(normalized.organizationState);
+  target.competitionState = clonePlainData(normalized.competitionState);
+  target.narrativeState = clonePlainData(normalized.narrativeState);
 
   target.fighter = hasFighter ? {
     name: normalized.player.profile.name,
@@ -827,8 +988,11 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     morale: normalized.player.conditions.morale,
     injuries: clonePlainData(normalized.player.conditions.injuries),
     housingId: normalized.player.life.housingId,
+    livingMode: normalized.player.life.livingMode,
     support: normalized.player.life.support,
     debtWeeks: normalized.player.life.debtWeeks,
+    street: clonePlainData(normalized.player.street),
+    amateur: clonePlainData(normalized.player.amateur),
     development: clonePlainData(normalized.player.development),
     startingAge: normalized.player.conditions.startingAge,
     bioFlags: clonePlainData(normalized.player.biography.flags),

@@ -81,7 +81,7 @@ var TimeSystem = (function () {
   }
 
   function getAgeView(startingAge, calendar) {
-    var ageYears = Math.max(16, clampInt(startingAge, 22));
+    var ageYears = Math.max(16, clampInt(startingAge, 16));
     var normalized = normalizeCalendar(calendar);
     var totalAgeWeeks = ageYears * WEEKS_PER_YEAR + normalized.totalWeeks;
     var years = Math.floor(totalAgeWeeks / WEEKS_PER_YEAR);

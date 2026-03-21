@@ -67,16 +67,112 @@ var REPUTATION_LEGEND_DATA = {
   ],
   mediaTemplates: [
     {
+      id: "amateur_medal_story",
+      type: "event",
+      requiresPayloadTag: "amateur_medal",
+      tone: "good",
+      titles: [
+        "{name} берёт медаль: {event}.",
+        "{event}: {name} доходит до пьедестала."
+      ]
+    },
+    {
+      id: "amateur_title_story",
+      type: "event",
+      requiresPayloadTag: "amateur_title",
+      tone: "good",
+      titles: [
+        "{name} выигрывает турнир: {event}.",
+        "{event}: {name} забирает золото."
+      ]
+    },
+    {
+      id: "national_team_callup_story",
+      type: "event",
+      requiresPayloadTag: "national_team_callup",
+      tone: "good",
+      titles: [
+        "{name} получает вызов в сборную.",
+        "{event}: {name} теперь в сборной."
+      ]
+    },
+    {
+      id: "national_team_drop_story",
+      type: "event",
+      requiresPayloadTag: "national_team_drop",
+      tone: "bad",
+      titles: [
+        "{name} вылетает из сборной.",
+        "{event}: место в сборной уходит мимо {name}."
+      ]
+    },
+    {
+      id: "national_team_return_story",
+      type: "event",
+      requiresPayloadTag: "national_team_return",
+      tone: "warn",
+      titles: [
+        "{name} возвращается в сборную.",
+        "{event}: {name} снова в списке команды."
+      ]
+    },
+    {
+      id: "continental_title_story",
+      type: "event",
+      requiresPayloadTag: "continental_title",
+      tone: "good",
+      titles: [
+        "{name} берёт континентальный титул.",
+        "{event}: {name} становится чемпионом континента."
+      ]
+    },
+    {
+      id: "world_title_story",
+      type: "event",
+      requiresPayloadTag: "world_title",
+      tone: "good",
+      titles: [
+        "{name} выигрывает чемпионат мира.",
+        "{event}: {name} становится чемпионом мира."
+      ]
+    },
+    {
+      id: "olympic_entry_story",
+      type: "event",
+      requiresPayloadTag: "olympic_entry",
+      tone: "warn",
+      titles: [
+        "{name} едет на Олимпиаду.",
+        "{event}: {name} выходит на олимпийский турнир."
+      ]
+    },
+    {
+      id: "olympic_medal_story",
+      type: "event",
+      requiresPayloadTag: "olympic_medal",
+      tone: "good",
+      titles: [
+        "{name} берёт олимпийскую медаль.",
+        "{event}: {name} забирает олимпийский пьедестал."
+      ]
+    },
+    {
+      id: "olympic_title_story",
+      type: "event",
+      requiresPayloadTag: "olympic_title",
+      tone: "good",
+      titles: [
+        "{name} становится олимпийским чемпионом.",
+        "{event}: {name} забирает олимпийское золото."
+      ]
+    },
+    {
       id: "career_start",
       type: "career_start",
       tone: "warn",
       titles: [
         "{name} начинает путь в {country}.",
         "В {country} появляется новый боец: {name}."
-      ],
-      texts: [
-        "Пока это только старт, но имя уже прозвучало.",
-        "{name} делает первый шаг в новой карьере."
       ]
     },
     {
@@ -85,11 +181,7 @@ var REPUTATION_LEGEND_DATA = {
       tone: "warn",
       titles: [
         "{name} едет в {country}.",
-        "{name} меняет город и летит в {country}."
-      ],
-      texts: [
-        "Новая арена, новые люди и новый риск.",
-        "Переезд может дать новый шанс или новую проблему."
+        "{name} меняет страну и летит в {country}."
       ]
     },
     {
@@ -99,11 +191,7 @@ var REPUTATION_LEGEND_DATA = {
       tone: "good",
       titles: [
         "{name} выигрывает у {opponent}.",
-        "{name} забирает бой против {opponent}."
-      ],
-      texts: [
-        "Победа добавляет шум вокруг имени {name}.",
-        "{name} снова уходит с ринга победителем."
+        "{name} забирает бой у {opponent}."
       ]
     },
     {
@@ -114,10 +202,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} уступает {opponent}.",
         "{opponent} останавливает ход {name}."
-      ],
-      texts: [
-        "Поражение бьёт по ходу карьеры.",
-        "{name} придётся собираться заново."
       ]
     },
     {
@@ -126,12 +210,8 @@ var REPUTATION_LEGEND_DATA = {
       result: "draw",
       tone: "warn",
       titles: [
-        "Бой {name} и {opponent} уходит в ничью.",
+        "Бой {name} и {opponent} уходит вничью.",
         "Судьи не смогли развести {name} и {opponent}."
-      ],
-      texts: [
-        "История явно не закончена.",
-        "После такой ничьей разговоры только начинаются."
       ]
     },
     {
@@ -143,10 +223,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} вырубает {opponent}.",
         "{name} закрывает бой досрочно."
-      ],
-      texts: [
-        "Нокаут быстро разносит имя по залам.",
-        "{opponent} не выдержал силовой развязки."
       ]
     },
     {
@@ -158,10 +234,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} ломает расклад против {opponent}.",
         "{name} снимает ещё одного фаворита."
-      ],
-      texts: [
-        "После такого боя в него начинают верить иначе.",
-        "Сцена любит тех, кто переворачивает прогнозы."
       ]
     },
     {
@@ -170,12 +242,8 @@ var REPUTATION_LEGEND_DATA = {
       requiresPayloadTag: "rematch",
       tone: "warn",
       titles: [
-        "Реванш {name} и {opponent} снова гремит.",
+        "Реванш {name} и {opponent} снова шумит.",
         "{name} и {opponent} снова закрывают старый счёт."
-      ],
-      texts: [
-        "Серия получает новую главу.",
-        "Такие бои помнят дольше обычных."
       ]
     },
     {
@@ -186,10 +254,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} снова пересекается с {opponent}.",
         "Личная война {name} и {opponent} только крепнет."
-      ],
-      texts: [
-        "Когда дело уже не только в победе, публика это чувствует.",
-        "Такое противостояние кормит ленту само по себе."
       ]
     },
     {
@@ -197,12 +261,8 @@ var REPUTATION_LEGEND_DATA = {
       type: "injury",
       tone: "bad",
       titles: [
-        "{name} уносит из боя проблему: {injury}.",
+        "{name} уносит из боя травму: {injury}.",
         "{name} снова расплачивается телом: {injury}."
-      ],
-      texts: [
-        "Теперь лагерь придётся строить осторожнее.",
-        "Тело напоминает цену карьеры."
       ]
     },
     {
@@ -212,10 +272,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} входит в зал {gym}.",
         "{name} меняет базу и переходит в {gym}."
-      ],
-      texts: [
-        "Новый зал часто меняет и ритм карьеры.",
-        "Иногда один адрес значит больше, чем кажется."
       ]
     },
     {
@@ -226,10 +282,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{trainer} начинает работать с {name}.",
         "{name} собирает новый угол с {trainer}."
-      ],
-      texts: [
-        "Теперь многое будет зависеть от того, как они сработаются.",
-        "Свежий голос в углу может многое поменять."
       ]
     },
     {
@@ -240,10 +292,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} остаётся без тренера.",
         "{trainer} уходит из лагеря {name}."
-      ],
-      texts: [
-        "Потеря угла редко проходит без следа.",
-        "Теперь придётся заново собирать лагерь."
       ]
     },
     {
@@ -254,10 +302,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} подписывает контракт: {contract}.",
         "У {name} появляется новая сделка: {contract}."
-      ],
-      texts: [
-        "Теперь вокруг карьеры будет больше движения.",
-        "Контракт даёт шанс, но почти всегда просит что-то взамен."
       ]
     },
     {
@@ -268,10 +312,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "{name} рвёт контракт {contract}.",
         "Сделка {name} сгорает со скандалом."
-      ],
-      texts: [
-        "Такие шаги всегда бьют по репутации.",
-        "После разрыва контракта мир долго помнит осадок."
       ]
     },
     {
@@ -282,10 +322,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "Вокруг {name} снова шум: {event}.",
         "{name} влетает в новый скандал."
-      ],
-      texts: [
-        "Одни любят такой шум, другие запоминают его надолго.",
-        "Скандал быстро липнет к имени бойца."
       ]
     },
     {
@@ -295,11 +331,7 @@ var REPUTATION_LEGEND_DATA = {
       tone: "warn",
       titles: [
         "{name} попадает в разговоры прессы.",
-        "Имя {name} снова мелькает в интервью и пересказах."
-      ],
-      texts: [
-        "Медиа любят тех, кто даёт материал.",
-        "Пара слов иногда меняет неделю сильнее боя."
+        "Имя {name} снова мелькает в интервью."
       ]
     },
     {
@@ -309,11 +341,7 @@ var REPUTATION_LEGEND_DATA = {
       tone: "good",
       titles: [
         "{name} сам ставит точку в карьере.",
-        "{name} уходит из игры по своей воле."
-      ],
-      texts: [
-        "Такой выход редко бывает лёгким, но в нём есть сила.",
-        "Иногда вовремя уйти так же важно, как вовремя выйти на бой."
+        "{name} уходит по своей воле."
       ]
     },
     {
@@ -324,10 +352,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "Тело останавливает путь {name}.",
         "Карьера {name} ломается об износ."
-      ],
-      texts: [
-        "Накопленная цена карьеры всё-таки пришла за своим.",
-        "Иногда ринг забирает больше, чем отдаёт."
       ]
     },
     {
@@ -338,10 +362,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "Голова не выдерживает путь {name}.",
         "Психика ставит точку в истории {name}."
-      ],
-      texts: [
-        "Не каждый бой остаётся на ринге.",
-        "Давление добирается до бойца даже после побед."
       ]
     },
     {
@@ -352,10 +372,6 @@ var REPUTATION_LEGEND_DATA = {
       titles: [
         "Долги глушат карьеру {name}.",
         "{name} вылетает из игры из-за денег."
-      ],
-      texts: [
-        "Иногда не кулак, а счёт за неделю решает судьбу.",
-        "Без денег ринг быстро перестаёт быть главным врагом."
       ]
     }
   ],
@@ -429,7 +445,7 @@ var REPUTATION_LEGEND_DATA = {
       id: "street_fighter",
       label: "Боец улиц",
       conditions: {},
-      summary: "Он прошёл свой путь, как мог, и оставил после себя живую историю."
+      summary: "Он прошёл свой путь как мог и оставил после себя живую историю."
     }
   ]
 };
