@@ -1109,7 +1109,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.22.8";
+var APP_VERSION = "2026.03.22.9";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1143,21 +1143,164 @@
     }
 
     function syncGameStateFromRuntime() {
+      var runtimeCache = ensureRuntimePerfState();
       state.game = buildGameStateFromRuntime(state, {
         appVersion: APP_VERSION,
         debugMode: !!(state.debug && state.debug.enabled)
       });
+      runtimeCache.gameVersion += 1;
+      runtimeCache.worldSectionSyncVersion = -1;
+      runtimeCache.renderGameVersion = runtimeCache.gameVersion;
       return state.game;
     }
 
     function syncRuntimeStateFromGame(gameState) {
-      return applyGameStateToRuntime(state, normalizeGameState(gameState, {
+      var runtimeCache = ensureRuntimePerfState();
+      var result = applyGameStateToRuntime(state, normalizeGameState(gameState, {
         appVersion: APP_VERSION,
         debugMode: DEBUG_MODE
       }), {
         appVersion: APP_VERSION,
         debugMode: DEBUG_MODE
       });
+      runtimeCache.gameVersion += 1;
+      runtimeCache.worldSectionSyncVersion = -1;
+      runtimeCache.renderGameVersion = runtimeCache.gameVersion;
+      return result;
+    }
+
+    function ensureRuntimePerfState() {
+      if (!state.runtimePerf || typeof state.runtimePerf !== "object") {
+        state.runtimePerf = {
+          gameVersion: 0,
+          worldSectionSyncVersion: -1,
+          renderId: 0,
+          renderGameVersion: -1,
+          renderMemo: {},
+          gameMemo: {},
+          saveTimeout: null,
+          saveScheduled: false,
+          saveDelayMs: 180,
+          panelOpenStartedAt: 0,
+          panelOpenKey: ""
+        };
+      }
+      if (!state.runtimePerf.renderMemo || typeof state.runtimePerf.renderMemo !== "object") {
+        state.runtimePerf.renderMemo = {};
+      }
+      if (!state.runtimePerf.gameMemo || typeof state.runtimePerf.gameMemo !== "object") {
+        state.runtimePerf.gameMemo = {};
+      }
+      return state.runtimePerf;
+    }
+
+    function beginRenderCycle() {
+      var runtimeCache = ensureRuntimePerfState();
+      runtimeCache.renderId += 1;
+      runtimeCache.renderMemo = {};
+      runtimeCache.renderGameVersion = -1;
+      return runtimeCache;
+    }
+
+    function renderMemoize(cacheKey, factory) {
+      var runtimeCache = ensureRuntimePerfState();
+      if (runtimeCache.renderMemo.hasOwnProperty(cacheKey)) {
+        return runtimeCache.renderMemo[cacheKey];
+      }
+      runtimeCache.renderMemo[cacheKey] = factory();
+      return runtimeCache.renderMemo[cacheKey];
+    }
+
+    function gameProjectionToken(extraKey) {
+      var runtimeCache = ensureRuntimePerfState();
+      ensurePersistentGameState(false);
+      return runtimeCache.gameVersion + "|" + (extraKey || "");
+    }
+
+    function memoizeGameProjection(cacheKey, extraKey, factory) {
+      var runtimeCache = ensureRuntimePerfState();
+      var token = gameProjectionToken(extraKey);
+      var entry = runtimeCache.gameMemo[cacheKey];
+      var value;
+      if (entry && entry.token === token) {
+        return entry.value;
+      }
+      value = factory(state.game);
+      entry = {
+        token: runtimeCache.gameVersion + "|" + (extraKey || ""),
+        value: value
+      };
+      runtimeCache.gameMemo[cacheKey] = entry;
+      return entry.value;
+    }
+
+    function touchGameProjectionState() {
+      var runtimeCache = ensureRuntimePerfState();
+      runtimeCache.gameVersion += 1;
+      runtimeCache.worldSectionSyncVersion = -1;
+      runtimeCache.gameMemo = {};
+      return runtimeCache.gameVersion;
+    }
+
+    function nowMs() {
+      return new Date().getTime();
+    }
+
+    function startPerfTimer(metricKey) {
+      return {
+        key: metricKey || "",
+        startedAt: nowMs()
+      };
+    }
+
+    function finishPerfTimer(timer, explicitValue) {
+      var elapsed;
+      if (!timer) {
+        return 0;
+      }
+      elapsed = typeof explicitValue === "number" ? explicitValue : (nowMs() - timer.startedAt);
+      ensureDebugRuntimeState().performance[timer.key] = elapsed;
+      return elapsed;
+    }
+
+    function measurePerf(metricKey, factory) {
+      var timer = startPerfTimer(metricKey);
+      var value = factory();
+      finishPerfTimer(timer);
+      return value;
+    }
+
+    function scheduleSaveGameState(delayMs) {
+      var runtimeCache = ensureRuntimePerfState();
+      if (state.isSimulationMode || !state.fighter) {
+        return;
+      }
+      runtimeCache.saveScheduled = true;
+      if (runtimeCache.saveTimeout) {
+        window.clearTimeout(runtimeCache.saveTimeout);
+      }
+      runtimeCache.saveTimeout = window.setTimeout(function () {
+        runtimeCache.saveTimeout = null;
+        runtimeCache.saveScheduled = false;
+        saveGameState();
+      }, typeof delayMs === "number" ? delayMs : runtimeCache.saveDelayMs);
+    }
+
+    function clearScheduledSaveGameState() {
+      var runtimeCache = ensureRuntimePerfState();
+      if (runtimeCache.saveTimeout) {
+        window.clearTimeout(runtimeCache.saveTimeout);
+        runtimeCache.saveTimeout = null;
+      }
+      runtimeCache.saveScheduled = false;
+    }
+
+    function trackPanelOpenMetric(panelKey, elapsedMs) {
+      if (panelKey === "careerGym" || panelKey === "careerTrainer") {
+        ensureDebugRuntimeState().performance.gymPanelOpenMs = elapsedMs;
+      } else if (panelKey === "careerSeason" || panelKey === "careerBracket" || panelKey === "careerProOrgs") {
+        ensureDebugRuntimeState().performance.rankingsOpenMs = elapsedMs;
+      }
     }
 
     function loadLegendArchive() {
@@ -1701,7 +1844,7 @@
       var calendar = state.fighter ? currentCalendarView(state.fighter) : null;
       var age = state.fighter ? currentAgeView(state.fighter) : null;
       var debugState = ensureDebugRuntimeState();
-      syncGameStateFromRuntime();
+      ensurePersistentGameState(false);
       return {
         week: state.fighter ? state.fighter.week : "-",
         month: calendar ? calendar.monthName + " " + calendar.year : "-",
@@ -1737,7 +1880,19 @@
           pendingFightStep: false,
           pendingFightAnimation: false,
           activeLogEntries: 0,
-          mediaEntries: 0
+          mediaEntries: 0,
+          weekAdvanceMs: 0,
+          weekTickMs: 0,
+          gymPanelOpenMs: 0,
+          gymPanelBuildMs: 0,
+          trainerPanelBuildMs: 0,
+          rankingsOpenMs: 0,
+          seasonPanelBuildMs: 0,
+          teamPanelBuildMs: 0,
+          proOrgsPanelBuildMs: 0,
+          careerPanelBuildMs: 0,
+          renderGameMs: 0,
+          renderDebugMs: 0
         };
       }
       if (!state.debug.liveBalance || typeof state.debug.liveBalance !== "object") {
@@ -1944,6 +2099,15 @@
         "</div>";
     }
 
+    function renderLazySectionCard(sectionKey, title, bodyBuilder, defaultOpen, kicker) {
+      var open = uiSectionOpen(sectionKey, defaultOpen);
+      var bodyHtml = "";
+      if (open && typeof bodyBuilder === "function") {
+        bodyHtml = bodyBuilder();
+      }
+      return renderSectionCard(sectionKey, title, bodyHtml, defaultOpen, kicker);
+    }
+
     function toggleDebugPanel() {
       if (!state.debug || !state.debug.enabled) {
         return;
@@ -1999,6 +2163,9 @@
         html.push("<div class='debug-row'>Экран: " + info.screen + " / " + info.panel + "</div>");
         html.push("<div class='debug-row'>Сейв: " + info.saveBytes + " bytes</div>");
         html.push("<div class='debug-row'>Рендеры: " + info.renderCount + " · save " + debugState.metrics.saveCount + "</div>");
+        html.push("<div class='debug-row'>Render: " + Math.round(perf.renderGameMs || 0) + " мс · Debug: " + Math.round(perf.renderDebugMs || 0) + " мс</div>");
+        html.push("<div class='debug-row'>Week: " + Math.round(perf.weekAdvanceMs || 0) + " мс · Tick: " + Math.round(perf.weekTickMs || 0) + " мс</div>");
+        html.push("<div class='debug-row'>Gym UI: " + Math.round(perf.gymPanelOpenMs || 0) + " мс · Rankings: " + Math.round(perf.rankingsOpenMs || 0) + " мс</div>");
 
         if (state.fighter) {
           html.push("<div class='debug-section'><strong>Ресурсы</strong><div class='debug-grid'>");
@@ -2304,6 +2471,7 @@
     function saveGameState() {
       var snapshot;
       var payload;
+      clearScheduledSaveGameState();
       ensureDebugRuntimeState();
       if (state.isSimulationMode) {
         return true;
@@ -2605,50 +2773,60 @@
     }
 
     function listCountryGyms(countryKey) {
-      var gameState;
-      var roster;
-      var gyms;
-      if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) {
-        gameState = state && state.game ? ensurePersistentGameState(false) : null;
-        roster = gameState && gameState.rosterState ? gameState.rosterState : null;
-        gyms = gameState && roster ? WorldFacilityEngine.listGymsByCountry(gameState, countryKey, {}) : [];
-        if (gyms instanceof Array && gyms.length) {
-          return clonePlainData(gyms);
+      return memoizeGameProjection("countryGyms", countryKey, function (gameState) {
+        var roster;
+        var gyms;
+        if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) {
+          roster = gameState && gameState.rosterState ? gameState.rosterState : null;
+          gyms = gameState && roster ? WorldFacilityEngine.listGymsByCountry(gameState, countryKey, {}) : [];
+          if (gyms instanceof Array && gyms.length) {
+            return clonePlainData(gyms);
+          }
         }
-      }
-      var gyms = ContentLoader.listGymsByCountry ? ContentLoader.listGymsByCountry(countryKey) : [];
-      if (!(gyms instanceof Array) || gyms.length < 5) {
-        return runtimeFallbackGymsByCountry(countryKey);
-      }
-      return gyms;
+        gyms = ContentLoader.listGymsByCountry ? ContentLoader.listGymsByCountry(countryKey) : [];
+        if (!(gyms instanceof Array) || gyms.length < 5) {
+          return runtimeFallbackGymsByCountry(countryKey);
+        }
+        return gyms;
+      });
     }
 
     function getGym(gymId) {
-      var gameState;
-      var gym;
-      if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.getGymById) {
-        gameState = state && state.game ? ensurePersistentGameState(false) : null;
-        gym = gameState ? WorldFacilityEngine.getGymById(gameState, gymId) : null;
-        if (gym) {
-          return clonePlainData(gym);
-        }
+      if (!gymId) {
+        return null;
       }
-      var gym = ContentLoader.getGym ? ContentLoader.getGym(gymId) : null;
-      return gym || runtimeFallbackGymById(gymId);
+      return renderMemoize("gym:" + gymId, function () {
+        var gameState;
+        var gym;
+        if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.getGymById) {
+          gameState = state && state.game ? ensurePersistentGameState(false) : null;
+          gym = gameState ? WorldFacilityEngine.getGymById(gameState, gymId) : null;
+          if (gym) {
+            return clonePlainData(gym);
+          }
+        }
+        gym = ContentLoader.getGym ? ContentLoader.getGym(gymId) : null;
+        return gym || runtimeFallbackGymById(gymId);
+      });
     }
 
     function getTrainerType(typeId) {
-      var gameState;
-      var trainerType;
-      if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.getTrainerById) {
-        gameState = state && state.game ? ensurePersistentGameState(false) : null;
-        trainerType = gameState ? WorldFacilityEngine.getTrainerById(gameState, typeId) : null;
-        if (trainerType) {
-          return clonePlainData(trainerType);
-        }
+      if (!typeId) {
+        return null;
       }
-      var trainerType = ContentLoader.getTrainerType ? ContentLoader.getTrainerType(typeId) : null;
-      return trainerType || runtimeFallbackTrainerById(typeId);
+      return renderMemoize("trainerType:" + typeId, function () {
+        var gameState;
+        var trainerType;
+        if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.getTrainerById) {
+          gameState = state && state.game ? ensurePersistentGameState(false) : null;
+          trainerType = gameState ? WorldFacilityEngine.getTrainerById(gameState, typeId) : null;
+          if (trainerType) {
+            return clonePlainData(trainerType);
+          }
+        }
+        trainerType = ContentLoader.getTrainerType ? ContentLoader.getTrainerType(typeId) : null;
+        return trainerType || runtimeFallbackTrainerById(typeId);
+      });
     }
 
     function listTrainerTypes() {
@@ -2684,22 +2862,22 @@
     }
 
     function listCountryTrainerTypes(countryKey) {
-      var gameState;
-      var roster;
-      var trainerTypes;
-      if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) {
-        gameState = state && state.game ? ensurePersistentGameState(false) : null;
-        roster = gameState && gameState.rosterState ? gameState.rosterState : null;
-        trainerTypes = gameState && roster ? WorldFacilityEngine.listTrainersByCountry(gameState, countryKey, {}) : [];
-        if (trainerTypes instanceof Array && trainerTypes.length) {
-          return clonePlainData(trainerTypes);
+      return memoizeGameProjection("countryTrainerTypes", countryKey, function (gameState) {
+        var roster;
+        var trainerTypes;
+        if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) {
+          roster = gameState && gameState.rosterState ? gameState.rosterState : null;
+          trainerTypes = gameState && roster ? WorldFacilityEngine.listTrainersByCountry(gameState, countryKey, {}) : [];
+          if (trainerTypes instanceof Array && trainerTypes.length) {
+            return clonePlainData(trainerTypes);
+          }
         }
-      }
-      var trainerTypes = ContentLoader.listTrainerTypesByCountry ? ContentLoader.listTrainerTypesByCountry(countryKey) : [];
-      if (!(trainerTypes instanceof Array) || trainerTypes.length < 5) {
-        return runtimeFallbackTrainersByCountry(countryKey);
-      }
-      return trainerTypes;
+        trainerTypes = ContentLoader.listTrainerTypesByCountry ? ContentLoader.listTrainerTypesByCountry(countryKey) : [];
+        if (!(trainerTypes instanceof Array) || trainerTypes.length < 5) {
+          return runtimeFallbackTrainersByCountry(countryKey);
+        }
+        return trainerTypes;
+      });
     }
 
     function guaranteedCountryGyms(countryKey) {
@@ -3189,54 +3367,53 @@
     }
 
     function currentCareerTransitionCards() {
-      var gameState = ensurePersistentGameState(false);
-      var narrative;
-      var ids;
-      var cards;
-      var i;
-      var card;
-      if (!gameState || typeof CareerTransitionEngine === "undefined") {
+      if (typeof CareerTransitionEngine === "undefined") {
         return [];
       }
-      narrative = CareerTransitionEngine.ensureState ? CareerTransitionEngine.ensureState(gameState) : (gameState.narrativeState || {});
-      if (!(narrative.availableTransitionIds instanceof Array) || !narrative.availableTransitionIds.length) {
-        if (CareerTransitionEngine.syncPlayerTransitionState) {
-          CareerTransitionEngine.syncPlayerTransitionState(gameState, state.fighter ? state.fighter.week : 1);
-          syncRuntimeStateFromGame(gameState);
-          narrative = gameState.narrativeState || narrative;
+      return memoizeGameProjection("careerTransitionCards", String(state.fighter ? state.fighter.week : 1), function (gameState) {
+        var narrative = CareerTransitionEngine.ensureState ? CareerTransitionEngine.ensureState(gameState) : (gameState.narrativeState || {});
+        var ids;
+        var cards = [];
+        var i;
+        var card;
+        if (!(narrative.availableTransitionIds instanceof Array) || !narrative.availableTransitionIds.length) {
+          if (CareerTransitionEngine.syncPlayerTransitionState) {
+            CareerTransitionEngine.syncPlayerTransitionState(gameState, state.fighter ? state.fighter.week : 1);
+            state.game = gameState;
+            touchGameProjectionState();
+            syncWorldSimSectionsFromGameState(gameState);
+            narrative = gameState.narrativeState || narrative;
+          }
         }
-      }
-      ids = narrative.availableTransitionIds instanceof Array ? narrative.availableTransitionIds : [];
-      cards = [];
-      for (i = 0; i < ids.length; i += 1) {
-        card = narrative.availableTransitionsById ? narrative.availableTransitionsById[ids[i]] : null;
-        if (card) {
-          cards.push(card);
+        ids = narrative.availableTransitionIds instanceof Array ? narrative.availableTransitionIds : [];
+        for (i = 0; i < ids.length; i += 1) {
+          card = narrative.availableTransitionsById ? narrative.availableTransitionsById[ids[i]] : null;
+          if (card) {
+            cards.push(card);
+          }
         }
-      }
-      return cards;
+        return cards;
+      });
     }
 
     function currentCareerTransitionEvents() {
-      var gameState = ensurePersistentGameState(false);
-      var narrative;
-      var ids;
-      var list;
-      var i;
-      var item;
-      if (!gameState || typeof CareerTransitionEngine === "undefined") {
+      if (typeof CareerTransitionEngine === "undefined") {
         return [];
       }
-      narrative = gameState.narrativeState || {};
-      ids = narrative.transitionEventIds instanceof Array ? narrative.transitionEventIds : [];
-      list = [];
-      for (i = 0; i < ids.length; i += 1) {
-        item = narrative.transitionEventsById ? narrative.transitionEventsById[ids[i]] : null;
-        if (item) {
-          list.push(item);
+      return memoizeGameProjection("careerTransitionEvents", String(state.fighter ? state.fighter.week : 1), function (gameState) {
+        var narrative = gameState.narrativeState || {};
+        var ids = narrative.transitionEventIds instanceof Array ? narrative.transitionEventIds : [];
+        var list = [];
+        var i;
+        var item;
+        for (i = 0; i < ids.length; i += 1) {
+          item = narrative.transitionEventsById ? narrative.transitionEventsById[ids[i]] : null;
+          if (item) {
+            list.push(item);
+          }
         }
-      }
-      return list;
+        return list;
+      });
     }
 
     function careerTransitionCard(transitionId) {
@@ -3274,7 +3451,6 @@
     }
 
     function currentStreetCareerSummary() {
-      var gameState = ensurePersistentGameState(false);
       if (typeof StreetCareerEngine === "undefined" || !StreetCareerEngine.currentSummary) {
         return {
           streetRating: 0,
@@ -3288,11 +3464,12 @@
           nextStatusNeed: 0
         };
       }
-      return StreetCareerEngine.currentSummary(gameState);
+      return memoizeGameProjection("streetCareerSummary", currentCareerTrackId(), function (gameState) {
+        return StreetCareerEngine.currentSummary(gameState);
+      });
     }
 
     function currentProSummary() {
-      var gameState = ensurePersistentGameState(false);
       if (typeof ProCareerEngine === "undefined" || !ProCareerEngine.summary) {
         return {
           pro: {
@@ -3310,12 +3487,14 @@
           organizations: []
         };
       }
-      if (ProCareerEngine.ensureState) {
-        ProCareerEngine.ensureState(gameState);
-        state.game = gameState;
-        syncWorldSimSectionsFromGameState(gameState);
-      }
-      return ProCareerEngine.summary(gameState);
+      return memoizeGameProjection("proSummary", currentCareerTrackId(), function (gameState) {
+        if (ProCareerEngine.ensureState) {
+          ProCareerEngine.ensureState(gameState);
+          state.game = gameState;
+          syncWorldSimSectionsFromGameState(gameState);
+        }
+        return ProCareerEngine.summary(gameState);
+      });
     }
 
     function currentProPromoter() {
@@ -3556,21 +3735,23 @@
     }
 
     function currentAmateurOrganization() {
-      var gameState = ensurePersistentGameState(false);
       var amateur = currentAmateurState(state.fighter);
       if (!amateur || !amateur.currentOrganizationId || typeof AmateurEcosystem === "undefined" || !AmateurEcosystem.getOrganizationById) {
         return null;
       }
-      return AmateurEcosystem.getOrganizationById(gameState, amateur.currentOrganizationId);
+      return memoizeGameProjection("currentAmateurOrganization", amateur.currentOrganizationId, function (gameState) {
+        return AmateurEcosystem.getOrganizationById(gameState, amateur.currentOrganizationId);
+      });
     }
 
     function currentNationalTeam() {
-      var gameState = ensurePersistentGameState(false);
       var countryId = state.fighter ? (state.fighter.homeCountry || state.fighter.currentCountry) : "";
       if (!countryId || typeof AmateurEcosystem === "undefined" || !AmateurEcosystem.getNationalTeam) {
         return null;
       }
-      return AmateurEcosystem.getNationalTeam(gameState, countryId);
+      return memoizeGameProjection("currentNationalTeam", countryId, function (gameState) {
+        return AmateurEcosystem.getNationalTeam(gameState, countryId);
+      });
     }
 
     function amateurOrganizationForGym(gymId) {
@@ -6352,12 +6533,13 @@
     }
 
     function currentPreparationSummary() {
-      var gameState = ensurePersistentGameState(false);
       if (typeof SparringCampEngine === "undefined" || !SparringCampEngine.buildPlayerSummary) {
         return null;
       }
-      SparringCampEngine.ensureState(gameState);
-      return SparringCampEngine.buildPlayerSummary(gameState);
+      return memoizeGameProjection("preparationSummary", String(state.fighter ? state.fighter.week : 1), function (gameState) {
+        SparringCampEngine.ensureState(gameState);
+        return SparringCampEngine.buildPlayerSummary(gameState);
+      });
     }
 
     function preparationFocusLabel(focusId) {
@@ -7172,16 +7354,24 @@
     }
 
     function ensurePersistentGameState(forceSync) {
+      var runtimeCache = ensureRuntimePerfState();
       if (!state.game ||
           forceSync ||
           !state.game.rosterState ||
           !(state.game.rosterState.fighterIds instanceof Array) ||
           !state.game.rosterState.fighterIds.length ||
           (state.fighter && state.game.career && state.game.career.week !== state.fighter.week) ||
-          (state.fighter && state.game.player && state.game.player.profile && state.game.player.profile.name !== state.fighter.name)) {
+          (state.fighter && state.game.player && state.game.player.profile && state.game.player.profile.name !== state.fighter.name) ||
+          (runtimeCache.renderId > 0 && runtimeCache.renderGameVersion !== runtimeCache.gameVersion)) {
         syncGameStateFromRuntime();
       }
-      syncWorldSimSectionsFromGameState(state.game);
+      if (runtimeCache.worldSectionSyncVersion !== runtimeCache.gameVersion) {
+        syncWorldSimSectionsFromGameState(state.game);
+        runtimeCache.worldSectionSyncVersion = runtimeCache.gameVersion;
+      }
+      if (runtimeCache.renderId > 0) {
+        runtimeCache.renderGameVersion = runtimeCache.gameVersion;
+      }
       return state.game;
     }
 
@@ -7194,12 +7384,12 @@
     }
 
     function getPersistentFighterEntity(fighterId) {
-      var gameState;
       if (!fighterId || typeof PersistentFighterRegistry === "undefined" || !PersistentFighterRegistry.getFighterById) {
         return null;
       }
-      gameState = ensurePersistentGameState(false);
-      return PersistentFighterRegistry.getFighterById(gameState, fighterId);
+      return memoizeGameProjection("fighterById", fighterId, function (gameState) {
+        return PersistentFighterRegistry.getFighterById(gameState, fighterId);
+      });
     }
 
     function ensurePersistentOpponentEntity(snapshot, preferredTrack) {
@@ -7299,27 +7489,52 @@
     }
 
     function getFightersByTrack(trackId) {
-      var gameState = ensurePersistentGameState(false);
       if (typeof PersistentFighterRegistry === "undefined" || !PersistentFighterRegistry.getFightersByTrack) {
         return [];
       }
-      return PersistentFighterRegistry.getFightersByTrack(gameState, trackId || currentOpponentTrackId());
+      return memoizeGameProjection("fightersByTrack", trackId || currentOpponentTrackId(), function (gameState) {
+        return PersistentFighterRegistry.getFightersByTrack(gameState, trackId || currentOpponentTrackId());
+      });
     }
 
     function getFightersByCountry(countryId) {
-      var gameState = ensurePersistentGameState(false);
       if (typeof PersistentFighterRegistry === "undefined" || !PersistentFighterRegistry.getFightersByCountry) {
         return [];
       }
-      return PersistentFighterRegistry.getFightersByCountry(gameState, countryId);
+      return memoizeGameProjection("fightersByCountry", countryId, function (gameState) {
+        return PersistentFighterRegistry.getFightersByCountry(gameState, countryId);
+      });
     }
 
     function getFightersByGym(gymId) {
-      var gameState = ensurePersistentGameState(false);
       if (typeof PersistentFighterRegistry === "undefined" || !PersistentFighterRegistry.getFightersByGym) {
         return [];
       }
-      return PersistentFighterRegistry.getFightersByGym(gameState, gymId);
+      return memoizeGameProjection("fightersByGym", gymId, function (gameState) {
+        return PersistentFighterRegistry.getFightersByGym(gameState, gymId);
+      });
+    }
+
+    function getTrainersByGym(gymId) {
+      if (!gymId) {
+        return [];
+      }
+      return memoizeGameProjection("trainersByGym", gymId, function (gameState) {
+        var roster = gameState && gameState.rosterState ? gameState.rosterState : null;
+        var gym = roster && roster.gymsById ? roster.gymsById[gymId] : null;
+        var ids = gym && gym.coachIds instanceof Array ? gym.coachIds : [];
+        var list = [];
+        var i;
+        if (!roster || !roster.trainersById) {
+          return [];
+        }
+        for (i = 0; i < ids.length; i += 1) {
+          if (roster.trainersById[ids[i]]) {
+            list.push(roster.trainersById[ids[i]]);
+          }
+        }
+        return list;
+      });
     }
 
     function updatePersistentOpponentAfterFight(fight) {
@@ -8288,6 +8503,8 @@
 
     function refreshWorldState() {
       var fighter = state.fighter;
+      var refreshedGameState;
+      var noticeCount = 0;
       ensurePersistentGameState(true);
       ensureLifeState();
       ensureBiographyState();
@@ -8309,26 +8526,26 @@
       rememberCountryVisit(fighter.currentCountry);
       syncAllNpcRelationSnapshots();
       refreshReputationState();
-      var refreshedGameState = syncGameStateFromRuntime();
+      refreshedGameState = syncGameStateFromRuntime();
       ensureEncounterHistoryState(refreshedGameState);
-      syncRuntimeStateFromGame(refreshedGameState);
       if (typeof SparringCampEngine !== "undefined" && SparringCampEngine.refreshWeeklyOffers) {
         SparringCampEngine.ensureState(refreshedGameState);
         SparringCampEngine.refreshWeeklyOffers(refreshedGameState);
-        syncRuntimeStateFromGame(refreshedGameState);
       }
       if (typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.syncPlayerTransitionState) {
         CareerTransitionEngine.syncPlayerTransitionState(refreshedGameState, fighter && typeof fighter.week === "number" ? fighter.week : 1);
-        syncRuntimeStateFromGame(refreshedGameState);
       }
       if (typeof WorldStoryEngine !== "undefined" && WorldStoryEngine.syncWorldStory) {
         WorldStoryEngine.ensureState(refreshedGameState);
         WorldStoryEngine.syncWorldStory(refreshedGameState);
-        syncRuntimeStateFromGame(refreshedGameState);
       }
-      drainAmateurSeasonNotices();
-      drainWorldCareerNotices();
-      drainCareerTransitionNotices();
+      syncRuntimeStateFromGame(refreshedGameState);
+      noticeCount += drainAmateurSeasonNotices(refreshedGameState, true);
+      noticeCount += drainWorldCareerNotices(refreshedGameState, true);
+      noticeCount += drainCareerTransitionNotices(refreshedGameState, true);
+      if (noticeCount > 0) {
+        syncGameStateFromRuntime();
+      }
     }
 
     function resolveEventActor(slot) {
@@ -9226,7 +9443,7 @@
     function currentWorldQaCountryId() {
       var debugWorld = debugWorldQaState();
       if (!debugWorld.selectedCountryId && typeof WorldDevTools !== "undefined" && WorldDevTools.defaultCountryForDebug) {
-        debugWorld.selectedCountryId = WorldDevTools.defaultCountryForDebug(syncGameStateFromRuntime());
+        debugWorld.selectedCountryId = WorldDevTools.defaultCountryForDebug(ensurePersistentGameState(false));
       }
       return debugWorld.selectedCountryId || "";
     }
@@ -9235,14 +9452,18 @@
       if (typeof WorldDevTools === "undefined" || !WorldDevTools.buildTeamProfile) {
         return null;
       }
-      return WorldDevTools.buildTeamProfile(syncGameStateFromRuntime(), currentWorldQaCountryId());
+      return memoizeGameProjection("worldQaTeamProfile", currentWorldQaCountryId(), function (gameState) {
+        return WorldDevTools.buildTeamProfile(gameState, currentWorldQaCountryId());
+      });
     }
 
     function currentWorldQaCountryFighters() {
       if (typeof WorldDevTools === "undefined" || !WorldDevTools.listCountryFighters) {
         return [];
       }
-      return WorldDevTools.listCountryFighters(syncGameStateFromRuntime(), currentWorldQaCountryId(), 12);
+      return memoizeGameProjection("worldQaCountryFighters", currentWorldQaCountryId(), function (gameState) {
+        return WorldDevTools.listCountryFighters(gameState, currentWorldQaCountryId(), 12);
+      });
     }
 
     function currentWorldQaFighterProfile() {
@@ -9250,7 +9471,9 @@
       if (!debugWorld.selectedFighterId || typeof WorldDevTools === "undefined" || !WorldDevTools.getFighterProfile) {
         return null;
       }
-      return WorldDevTools.getFighterProfile(syncGameStateFromRuntime(), debugWorld.selectedFighterId);
+      return memoizeGameProjection("worldQaFighterProfile", debugWorld.selectedFighterId, function (gameState) {
+        return WorldDevTools.getFighterProfile(gameState, debugWorld.selectedFighterId);
+      });
     }
 
     function debugSelectWorldCountry(countryId) {
@@ -9868,16 +10091,20 @@
     }
 
     function openPanel(panel) {
+      var started = nowMs();
       if (state.activeEvent && panel !== "worldEvent") {
         state.panel = "worldEvent";
         render();
+        trackPanelOpenMetric("worldEvent", nowMs() - started);
         return;
       }
       state.panel = panel;
       render();
+      trackPanelOpenMetric(panel, nowMs() - started);
     }
 
     function spendWeek() {
+      var started = nowMs();
       if (evaluateEndState()) {
         return;
       }
@@ -9887,10 +10114,13 @@
       }
       state.panel = state.activeEvent ? "worldEvent" : "home";
       render();
+      ensureDebugRuntimeState().performance.weekAdvanceMs = nowMs() - started;
     }
 
     function advanceWeek() {
+      var started = nowMs();
       runWorldTick();
+      ensureDebugRuntimeState().performance.weekTickMs = nowMs() - started;
     }
 
     function evaluateEndState() {
@@ -11161,9 +11391,11 @@
 
     function listCareerGymChoices() {
       var countryKey = state.fighter ? (state.fighter.currentCountry || state.fighter.homeCountry) : "";
-      var gameState = ensurePersistentGameState(false);
+      var trackId = currentTrackId();
       if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) {
-        return WorldFacilityEngine.listGymsByCountry(gameState, countryKey, { trackId: currentTrackId() });
+        return memoizeGameProjection("careerGymChoices", countryKey + "|" + trackId, function (gameState) {
+          return WorldFacilityEngine.listGymsByCountry(gameState, countryKey, { trackId: trackId });
+        });
       }
       return guaranteedCountryGyms(countryKey);
     }
@@ -11206,15 +11438,17 @@
     }
 
     function currentCountryOrganizations(typeIds) {
-      var gameState = ensurePersistentGameState(false);
       var countryId = state.fighter ? (state.fighter.currentCountry || state.fighter.homeCountry) : "";
+      var typeKey = typeIds && typeIds.length ? typeIds.join("|") : "all";
       if (!countryId || typeof AmateurEcosystem === "undefined") {
         return [];
       }
-      if (typeIds) {
-        return AmateurEcosystem.listOrganizationsByType ? AmateurEcosystem.listOrganizationsByType(gameState, countryId, typeIds) : [];
-      }
-      return AmateurEcosystem.listOrganizationsByCountry ? AmateurEcosystem.listOrganizationsByCountry(gameState, countryId) : [];
+      return memoizeGameProjection("countryOrganizations", countryId + "|" + typeKey, function (gameState) {
+        if (typeIds) {
+          return AmateurEcosystem.listOrganizationsByType ? AmateurEcosystem.listOrganizationsByType(gameState, countryId, typeIds) : [];
+        }
+        return AmateurEcosystem.listOrganizationsByCountry ? AmateurEcosystem.listOrganizationsByCountry(gameState, countryId) : [];
+      });
     }
 
     function currentCountryFederation() {
@@ -11315,15 +11549,15 @@
     }
 
     function currentAmateurSeasonSummary() {
-      var gameState = ensurePersistentGameState(false);
       if (typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.buildPlayerSummary) {
         return null;
       }
-      return AmateurSeasonEngine.buildPlayerSummary(gameState, state.playerState ? state.playerState.fighterEntityId : "fighter_player_main");
+      return memoizeGameProjection("amateurSeasonSummary", state.playerState ? state.playerState.fighterEntityId : "fighter_player_main", function (gameState) {
+        return AmateurSeasonEngine.buildPlayerSummary(gameState, state.playerState ? state.playerState.fighterEntityId : "fighter_player_main");
+      });
     }
 
     function currentAmateurSeasonOptions() {
-      var gameState = ensurePersistentGameState(false);
       if (typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.listPlayerTournamentOptions) {
         return {
           season: null,
@@ -11332,37 +11566,34 @@
           invitations: []
         };
       }
-      return AmateurSeasonEngine.listPlayerTournamentOptions(gameState, state.playerState ? state.playerState.fighterEntityId : "fighter_player_main");
+      return memoizeGameProjection("amateurSeasonOptions", state.playerState ? state.playerState.fighterEntityId : "fighter_player_main", function (gameState) {
+        return AmateurSeasonEngine.listPlayerTournamentOptions(gameState, state.playerState ? state.playerState.fighterEntityId : "fighter_player_main");
+      });
     }
 
     function currentSeasonTournamentById(tournamentId) {
-      var gameState = ensurePersistentGameState(false);
       if (!tournamentId || typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.getTournamentById) {
         return null;
       }
-      return AmateurSeasonEngine.getTournamentById(gameState, tournamentId);
+      return memoizeGameProjection("seasonTournamentById", tournamentId, function (gameState) {
+        return AmateurSeasonEngine.getTournamentById(gameState, tournamentId);
+      });
     }
 
     function currentSeasonBracketForTournament(tournamentId) {
-      var gameState = ensurePersistentGameState(false);
       if (!tournamentId || typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.getBracketByTournamentId) {
         return null;
       }
-      return AmateurSeasonEngine.getBracketByTournamentId(gameState, tournamentId);
+      return memoizeGameProjection("seasonBracketByTournament", tournamentId, function (gameState) {
+        return AmateurSeasonEngine.getBracketByTournamentId(gameState, tournamentId);
+      });
     }
 
-    function drainAmateurSeasonNotices() {
-      var gameState = state.game || ensurePersistentGameState(false);
-      var notices;
+    function applyCareerNoticeBatch(notices, biographyKind) {
       var i;
-      if (typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.drainNotices || !gameState) {
-        return;
-      }
-      notices = AmateurSeasonEngine.drainNotices(gameState);
       if (!(notices instanceof Array) || !notices.length) {
-        return;
+        return 0;
       }
-      syncRuntimeStateFromGame(gameState);
       for (i = 0; i < notices.length; i += 1) {
         if (!notices[i]) {
           continue;
@@ -11371,71 +11602,73 @@
           pushLog(notices[i].text, notices[i].tone || "warn");
         }
         if (notices[i].biography) {
-          addBiographyHistory(notices[i].biography, "amateurSeason");
+          addBiographyHistory(notices[i].biography, biographyKind);
         }
         if (notices[i].media && notices[i].media.type) {
           recordCareerMedia(notices[i].media.type, notices[i].media.payload || {});
         }
       }
-      syncGameStateFromRuntime();
+      return notices.length;
     }
 
-    function drainWorldCareerNotices() {
-      var gameState = state.game || ensurePersistentGameState(false);
+    function drainAmateurSeasonNotices(gameState, skipRoundTrip) {
+      var activeGameState = gameState || state.game || ensurePersistentGameState(false);
       var notices;
-      var i;
-      if (typeof WorldCareerSimEngine === "undefined" || !WorldCareerSimEngine.drainNotices || !gameState) {
-        return;
+      if (typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.drainNotices || !activeGameState) {
+        return 0;
       }
-      notices = WorldCareerSimEngine.drainNotices(gameState);
+      notices = AmateurSeasonEngine.drainNotices(activeGameState);
       if (!(notices instanceof Array) || !notices.length) {
-        return;
+        return 0;
       }
-      syncRuntimeStateFromGame(gameState);
-      for (i = 0; i < notices.length; i += 1) {
-        if (!notices[i]) {
-          continue;
-        }
-        if (notices[i].text) {
-          pushLog(notices[i].text, notices[i].tone || "warn");
-        }
-        if (notices[i].biography) {
-          addBiographyHistory(notices[i].biography, "worldCareer");
-        }
-        if (notices[i].media && notices[i].media.type) {
-          recordCareerMedia(notices[i].media.type, notices[i].media.payload || {});
-        }
+      if (!skipRoundTrip) {
+        syncRuntimeStateFromGame(activeGameState);
       }
-      syncGameStateFromRuntime();
+      applyCareerNoticeBatch(notices, "amateurSeason");
+      if (!skipRoundTrip) {
+        syncGameStateFromRuntime();
+      }
+      return notices.length;
     }
 
-    function drainCareerTransitionNotices() {
-      var gameState = state.game || ensurePersistentGameState(false);
+    function drainWorldCareerNotices(gameState, skipRoundTrip) {
+      var activeGameState = gameState || state.game || ensurePersistentGameState(false);
       var notices;
-      var i;
-      if (typeof CareerTransitionEngine === "undefined" || !CareerTransitionEngine.drainNotices || !gameState) {
-        return;
+      if (typeof WorldCareerSimEngine === "undefined" || !WorldCareerSimEngine.drainNotices || !activeGameState) {
+        return 0;
       }
-      notices = CareerTransitionEngine.drainNotices(gameState);
+      notices = WorldCareerSimEngine.drainNotices(activeGameState);
       if (!(notices instanceof Array) || !notices.length) {
-        return;
+        return 0;
       }
-      syncRuntimeStateFromGame(gameState);
-      for (i = 0; i < notices.length; i += 1) {
-        if (!notices[i]) {
-          continue;
-        }
-        if (notices[i].text) {
-          pushLog(notices[i].text, notices[i].tone || "warn");
-        }
-        if (notices[i].biography) {
-          addBiographyHistory(notices[i].biography, "transition");
-        }
-        if (notices[i].media && notices[i].media.type) {
-          recordCareerMedia(notices[i].media.type, notices[i].media.payload || {});
-        }
+      if (!skipRoundTrip) {
+        syncRuntimeStateFromGame(activeGameState);
       }
-      syncGameStateFromRuntime();
+      applyCareerNoticeBatch(notices, "worldCareer");
+      if (!skipRoundTrip) {
+        syncGameStateFromRuntime();
+      }
+      return notices.length;
+    }
+
+    function drainCareerTransitionNotices(gameState, skipRoundTrip) {
+      var activeGameState = gameState || state.game || ensurePersistentGameState(false);
+      var notices;
+      if (typeof CareerTransitionEngine === "undefined" || !CareerTransitionEngine.drainNotices || !activeGameState) {
+        return 0;
+      }
+      notices = CareerTransitionEngine.drainNotices(activeGameState);
+      if (!(notices instanceof Array) || !notices.length) {
+        return 0;
+      }
+      if (!skipRoundTrip) {
+        syncRuntimeStateFromGame(activeGameState);
+      }
+      applyCareerNoticeBatch(notices, "transition");
+      if (!skipRoundTrip) {
+        syncGameStateFromRuntime();
+      }
+      return notices.length;
     }
 
     function registerForTournament(tournamentId) {
@@ -11515,61 +11748,61 @@
     }
 
     function renderCareerSeasonPanel() {
-      var summary = currentAmateurSeasonSummary();
-      var options = currentAmateurSeasonOptions();
-      var season = summary ? summary.seasonState : null;
-      var teamStatus = currentNationalTeamStatusInfo();
-      var ranking = summary ? summary.ranking || [] : [];
-      var activeTournament = options && options.active ? options.active : (summary ? summary.currentTournament : null);
-      var html = [];
-      var i;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Сезон и турниры</h2>");
-      html.push(renderSectionCard("season_overview", "Текущий сезон",
-        "<div class='muted'>Год: " + (season ? season.currentSeasonYear : currentCalendarView(state.fighter).year) + ".</div>" +
-        "<div class='muted'>Неделя сезона: " + (season ? season.currentSeasonWeek : 1) + ".</div>" +
-        "<div class='muted'>Разряд: " + amateurRankLabel(state.fighter) + ".</div>" +
-        "<div class='muted'>Позиция в рейтинге: " + (summary && summary.rankingPosition ? summary.rankingPosition : "пока вне списка") + ".</div>" +
-        "<div class='muted'>Статус в сборной: " + (teamStatus ? teamStatus.label : "Вне списка") + ".</div>",
-      true, "сезон"));
-      html.push(renderSectionCard("season_hint", "Следующий допуск",
-        "<div class='muted'>" + (summary && summary.nextEligibilityText ? summary.nextEligibilityText : "Сезон ещё только начинает складываться.") + "</div>",
-      false, "допуск"));
-      if (activeTournament) {
-        html.push(renderSectionCard("season_active", "Текущий турнир",
-          "<div class='muted'>" + activeTournament.label + ".</div>" +
-          "<div class='muted'>Текущий раунд: " + (activeTournament.currentRoundLabel || activeTournament.currentRoundName || "в работе") + ".</div>" +
-          "<div class='muted'>Что на кону: " + (activeTournament.selectionImpactText || "Место в следующем круге сезона.") + "</div>" +
-          "<div class='footer-actions'><button class='button' onclick='openFightSelect()'>Открыть бой</button><button class='ghost' onclick='openSeasonBracket(\"" + activeTournament.id + "\")'>Посмотреть сетку</button></div>",
-        false, "турнир"));
-      }
-      if (options && options.registerable && options.registerable.length) {
-        html.push("<h3 style='margin-top:18px'>Открыта регистрация</h3><div class='card-grid'>");
-        for (i = 0; i < options.registerable.length; i += 1) {
-          html.push(renderTournamentCardBlock(options.registerable[i], false));
+      return measurePerf("seasonPanelBuildMs", function () {
+        var summary = currentAmateurSeasonSummary();
+        var options = currentAmateurSeasonOptions();
+        var season = summary ? summary.seasonState : null;
+        var teamStatus = currentNationalTeamStatusInfo();
+        var ranking = summary ? summary.ranking || [] : [];
+        var activeTournament = options && options.active ? options.active : (summary ? summary.currentTournament : null);
+        var html = [];
+        var i;
+        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Сезон и турниры</h2>");
+        html.push(renderLazySectionCard("season_overview", "Текущий сезон", function () {
+          return "<div class='muted'>Год: " + (season ? season.currentSeasonYear : currentCalendarView(state.fighter).year) + ".</div>" +
+            "<div class='muted'>Неделя сезона: " + (season ? season.currentSeasonWeek : 1) + ".</div>" +
+            "<div class='muted'>Разряд: " + amateurRankLabel(state.fighter) + ".</div>" +
+            "<div class='muted'>Позиция в рейтинге: " + (summary && summary.rankingPosition ? summary.rankingPosition : "пока вне списка") + ".</div>" +
+            "<div class='muted'>Статус в сборной: " + (teamStatus ? teamStatus.label : "Вне списка") + ".</div>";
+        }, true, "сезон"));
+        html.push(renderLazySectionCard("season_hint", "Следующий допуск", function () {
+          return "<div class='muted'>" + (summary && summary.nextEligibilityText ? summary.nextEligibilityText : "Сезон ещё только начинает складываться.") + "</div>";
+        }, false, "допуск"));
+        if (activeTournament) {
+          html.push(renderLazySectionCard("season_active", "Текущий турнир", function () {
+            return "<div class='muted'>" + activeTournament.label + ".</div>" +
+              "<div class='muted'>Текущий раунд: " + (activeTournament.currentRoundLabel || activeTournament.currentRoundName || "в работе") + ".</div>" +
+              "<div class='muted'>Что на кону: " + (activeTournament.selectionImpactText || "Место в следующем круге сезона.") + "</div>" +
+              "<div class='footer-actions'><button class='button' onclick='openFightSelect()'>Открыть бой</button><button class='ghost' onclick='openSeasonBracket(\"" + activeTournament.id + "\")'>Посмотреть сетку</button></div>";
+          }, false, "турнир"));
         }
-        html.push("</div>");
-      }
-      if (options && options.invitations && options.invitations.length) {
-        html.push("<h3 style='margin-top:18px'>Есть вызовы</h3><div class='card-grid'>");
-        for (i = 0; i < options.invitations.length; i += 1) {
-          html.push(renderTournamentCardBlock(options.invitations[i], true));
+        if (options && options.registerable && options.registerable.length) {
+          html.push("<h3 style='margin-top:18px'>Открыта регистрация</h3><div class='card-grid'>");
+          for (i = 0; i < options.registerable.length; i += 1) {
+            html.push(renderTournamentCardBlock(options.registerable[i], false));
+          }
+          html.push("</div>");
         }
-        html.push("</div>");
-      }
-      if (ranking.length) {
-        html.push(renderSectionCard("season_ranking", "Национальный рейтинг",
-          renderTeamRosterPreview({ }, (function () {
+        if (options && options.invitations && options.invitations.length) {
+          html.push("<h3 style='margin-top:18px'>Есть вызовы</h3><div class='card-grid'>");
+          for (i = 0; i < options.invitations.length; i += 1) {
+            html.push(renderTournamentCardBlock(options.invitations[i], true));
+          }
+          html.push("</div>");
+        }
+        if (ranking.length) {
+          html.push(renderLazySectionCard("season_ranking", "Национальный рейтинг", function () {
             var ids = [];
             var j;
             for (j = 0; j < ranking.length && j < 8; j += 1) {
               ids.push(ranking[j].fighterId);
             }
-            return ids;
-          }()), "Топ страны"),
-        false, "рейтинг"));
-      }
-      html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerTeam\")'>Назад</button></div></div>");
-      return html.join("");
+            return renderTeamRosterPreview({}, ids, "Топ страны");
+          }, false, "рейтинг"));
+        }
+        html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerTeam\")'>Назад</button></div></div>");
+        return html.join("");
+      });
     }
 
     function renderCareerBracketPanel() {
@@ -11609,42 +11842,44 @@
     }
 
     function renderCareerTeamPanel() {
-      var amateur = currentAmateurState(state.fighter);
-      var currentTeam = currentNationalTeam();
-      var currentOrg = currentAmateurOrganization();
-      var federation = currentCountryFederation();
-      var status = currentNationalTeamStatusInfo();
-      var seasonSummary = currentAmateurSeasonSummary();
-      var html = [];
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Любительская система</h2>");
-      html.push("<div class='card compact-card'><h3>Текущий уровень</h3>");
-      html.push("<div class='muted'>Фаза: " + currentPhaseSummary(state.fighter) + ".</div>");
-      html.push("<div class='muted'>Разряд: " + amateurRankLabel(state.fighter) + ".</div>");
-      html.push("<div class='muted'>Сейчас открыт путь: " + eligibleLevelsSummary(amateur ? amateur.eligibleLevels : []) + ".</div>");
-      if (currentOrg) {
-        html.push("<div class='muted'>Текущая школа: " + currentOrg.label + ".</div>");
-      }
-      html.push("</div>");
-      html.push("<div class='card compact-card'><h3>Сборная</h3>");
-      html.push("<div class='muted'>Статус: " + (status ? status.label : "Вне списка") + ".</div>");
-      html.push("<div class='muted'>Очки отбора: " + (amateur ? amateur.selectionScore || 0 : 0) + ".</div>");
-      if (currentTeam) {
-        html.push("<div class='muted'>Окно отбора: каждые " + currentTeam.selectionWindow.lengthWeeks + " недель.</div>");
-        html.push(renderTeamRosterPreview(currentTeam, currentTeam.activeRosterIds, "Состав"));
-        html.push(renderTeamRosterPreview(currentTeam, currentTeam.reserveRosterIds, "Резерв"));
-      }
-      html.push("<div class='footer-actions'><button class='button' onclick='askFederationAboutTeamChance()'>Спросить о шансах</button></div>");
-      html.push("</div>");
-      html.push("<div class='card compact-card'><h3>Движение вверх</h3>");
-      html.push("<div class='muted'>Следующий разряд: " + amateurNextUnlockText(state.fighter) + "</div>");
-      html.push("<div class='muted'>Федерация: " + (federation ? federation.label : "не найдена") + ".</div>");
-      if (seasonSummary && seasonSummary.rankingPosition) {
-        html.push("<div class='muted'>Позиция в рейтинге: " + seasonSummary.rankingPosition + ".</div>");
-      }
-      html.push("<div class='footer-actions'><button class='ghost' onclick='talkToTrainerAboutPromotion()'>Поговорить с тренером</button><button class='button' onclick='tryStrongerGroup()'>Проба в сильную группу</button><button class='button' onclick='openPanel(\"careerSeason\")'>Сезон и турниры</button><button class='ghost' onclick='openPanel(\"careerTransitions\")'>Переходы</button></div>");
-      html.push("</div>");
-      html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
-      return html.join("");
+      return measurePerf("teamPanelBuildMs", function () {
+        var amateur = currentAmateurState(state.fighter);
+        var currentTeam = currentNationalTeam();
+        var currentOrg = currentAmateurOrganization();
+        var federation = currentCountryFederation();
+        var status = currentNationalTeamStatusInfo();
+        var seasonSummary = currentAmateurSeasonSummary();
+        var html = [];
+        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Любительская система</h2>");
+        html.push("<div class='card compact-card'><h3>Текущий уровень</h3>");
+        html.push("<div class='muted'>Фаза: " + currentPhaseSummary(state.fighter) + ".</div>");
+        html.push("<div class='muted'>Разряд: " + amateurRankLabel(state.fighter) + ".</div>");
+        html.push("<div class='muted'>Сейчас открыт путь: " + eligibleLevelsSummary(amateur ? amateur.eligibleLevels : []) + ".</div>");
+        if (currentOrg) {
+          html.push("<div class='muted'>Текущая школа: " + currentOrg.label + ".</div>");
+        }
+        html.push("</div>");
+        html.push("<div class='card compact-card'><h3>Сборная</h3>");
+        html.push("<div class='muted'>Статус: " + (status ? status.label : "Вне списка") + ".</div>");
+        html.push("<div class='muted'>Очки отбора: " + (amateur ? amateur.selectionScore || 0 : 0) + ".</div>");
+        if (currentTeam) {
+          html.push("<div class='muted'>Окно отбора: каждые " + currentTeam.selectionWindow.lengthWeeks + " недель.</div>");
+          html.push(renderTeamRosterPreview(currentTeam, currentTeam.activeRosterIds, "Состав"));
+          html.push(renderTeamRosterPreview(currentTeam, currentTeam.reserveRosterIds, "Резерв"));
+        }
+        html.push("<div class='footer-actions'><button class='button' onclick='askFederationAboutTeamChance()'>Спросить о шансах</button></div>");
+        html.push("</div>");
+        html.push("<div class='card compact-card'><h3>Движение вверх</h3>");
+        html.push("<div class='muted'>Следующий разряд: " + amateurNextUnlockText(state.fighter) + "</div>");
+        html.push("<div class='muted'>Федерация: " + (federation ? federation.label : "не найдена") + ".</div>");
+        if (seasonSummary && seasonSummary.rankingPosition) {
+          html.push("<div class='muted'>Позиция в рейтинге: " + seasonSummary.rankingPosition + ".</div>");
+        }
+        html.push("<div class='footer-actions'><button class='ghost' onclick='talkToTrainerAboutPromotion()'>Поговорить с тренером</button><button class='button' onclick='tryStrongerGroup()'>Проба в сильную группу</button><button class='button' onclick='openPanel(\"careerSeason\")'>Сезон и турниры</button><button class='ghost' onclick='openPanel(\"careerTransitions\")'>Переходы</button></div>");
+        html.push("</div>");
+        html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
+        return html.join("");
+      });
     }
 
     function renderCareerTransitionsPanel() {
@@ -11884,34 +12119,36 @@
     }
 
     function renderCareerProOrganizationsPanel() {
-      var summary = currentProSummary();
-      var organizations = summary.organizations || [];
-      var html = [];
-      var i;
-      var j;
-      var org;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Рейтинги и пояса</h2>");
-      if (!organizations.length) {
-        html.push("<div class='empty-state'>Пока организации не готовы.</div>");
-      } else {
-        for (i = 0; i < organizations.length; i += 1) {
-          org = organizations[i];
-          html.push("<div class='card compact-card'><h3>" + org.name + "</h3>");
-          html.push("<div class='muted'>Чемпион: " + org.championLabel + ".</div>");
-          html.push("<div class='muted'>Твоя позиция: " + (org.playerRank ? ("#" + org.playerRank) : "вне рейтинга") + ".</div>");
-          html.push("<div class='muted'>" + org.titleShotExplanation + "</div>");
-          if (org.topContenders && org.topContenders.length) {
-            html.push("<div class='record-row' style='margin-top:10px'>");
-            for (j = 0; j < org.topContenders.length && j < 4; j += 1) {
-              html.push("<div class='chip" + (org.topContenders[j].isChampion ? " gold" : "") + "'>#" + org.topContenders[j].position + " " + org.topContenders[j].label + "</div>");
+      return measurePerf("proOrgsPanelBuildMs", function () {
+        var summary = currentProSummary();
+        var organizations = summary.organizations || [];
+        var html = [];
+        var i;
+        var j;
+        var org;
+        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Рейтинги и пояса</h2>");
+        if (!organizations.length) {
+          html.push("<div class='empty-state'>Пока организации не готовы.</div>");
+        } else {
+          for (i = 0; i < organizations.length; i += 1) {
+            org = organizations[i];
+            html.push("<div class='card compact-card'><h3>" + org.name + "</h3>");
+            html.push("<div class='muted'>Чемпион: " + org.championLabel + ".</div>");
+            html.push("<div class='muted'>Твоя позиция: " + (org.playerRank ? ("#" + org.playerRank) : "вне рейтинга") + ".</div>");
+            html.push("<div class='muted'>" + org.titleShotExplanation + "</div>");
+            if (org.topContenders && org.topContenders.length) {
+              html.push("<div class='record-row' style='margin-top:10px'>");
+              for (j = 0; j < org.topContenders.length && j < 4; j += 1) {
+                html.push("<div class='chip" + (org.topContenders[j].isChampion ? " gold" : "") + "'>#" + org.topContenders[j].position + " " + org.topContenders[j].label + "</div>");
+              }
+              html.push("</div>");
             }
             html.push("</div>");
           }
-          html.push("</div>");
         }
-      }
-      html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerPro\")'>Назад</button></div></div>");
-      return html.join("");
+        html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerPro\")'>Назад</button></div></div>");
+        return html.join("");
+      });
     }
 
     function renderCareerStreetPanel() {
@@ -11964,141 +12201,164 @@
     }
 
     function renderCareerPanel() {
-      var fighter = state.fighter;
-      var gym = currentGym();
-      var trainerNpc = currentTrainerNpc();
-      var trainerType = currentTrainerType();
-      var contract = currentContract();
-      var amateur = currentAmateurState(fighter);
-      var status = currentNationalTeamStatusInfo();
-      var proSummary = currentProSummary();
-      var prepSummary = currentPreparationSummary();
-      var transitionCards = currentCareerTransitionCards();
-      var availableTransitions = 0;
-      var nextTransition = null;
-      var i;
-      var html = [];
-      for (i = 0; i < transitionCards.length; i += 1) {
-        if (transitionCards[i] && transitionCards[i].available) {
-          availableTransitions += 1;
-          if (!nextTransition) {
-            nextTransition = transitionCards[i];
+      return measurePerf("careerPanelBuildMs", function () {
+        var fighter = state.fighter;
+        var contract = currentContract();
+        var amateur = currentAmateurState(fighter);
+        var status = currentNationalTeamStatusInfo();
+        var transitionCards = currentCareerTransitionCards();
+        var availableTransitions = 0;
+        var nextTransition = null;
+        var i;
+        var html = [];
+        for (i = 0; i < transitionCards.length; i += 1) {
+          if (transitionCards[i] && transitionCards[i].available) {
+            availableTransitions += 1;
+            if (!nextTransition) {
+              nextTransition = transitionCards[i];
+            }
           }
         }
-      }
-      html.push("<div class='panel fill-panel'>");
-      html.push("<h2 class='panel-title'>Карьера</h2>");
-      html.push(renderSectionCard("career_gym", "Зал", gym ?
-        ("<div class='muted'>" + gym.name + " - " + gym.city + " - $" + gym.cost + "/мес.</div>" +
-        "<div class='muted'>Тип: " + gymTypeLabel(gym) + (gym.country && gym.country !== fighter.currentCountry ? (" · " + getCountryInfo(gym.country).name) : "") + ".</div>" +
-        "<div class='muted'>" + summarizeBonuses(gym.bonuses) + "</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Сменить зал</button><button class='ghost' onclick='leaveGym()'>Выйти</button></div>") :
-        ("<div class='muted'>Ты пока без зала.</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Выбрать зал</button></div>"),
-      false, "база"));
-      html.push(renderSectionCard("career_trainer", "Тренер", (trainerNpc && trainerType) ?
-        ("<div class='muted'>" + trainerNpc.name + " - $" + (trainerType.monthlyFee || trainerType.weeklyFee) + "/мес.</div>" +
-        "<div class='muted'>Тип: " + trainerTypeLabel(trainerType) + (trainerType.country && trainerType.country !== fighter.currentCountry ? (" · " + getCountryInfo(trainerType.country).name) : "") + ".</div>" +
-        "<div class='muted'>" + (trainerType.currentGymId && getGym(trainerType.currentGymId) ? ("База: " + getGym(trainerType.currentGymId).name + ".") : ((amateurTrainerRoleInfo(trainerType) ? amateurTrainerRoleInfo(trainerType).label : "Тренер") + ".")) + "</div>" +
-        "<div class='muted'>Отношение " + relationScoreText(trainerNpc.relationToPlayer.score) + " - " + trainerNpc.relationToPlayer.summary + ".</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTrainer\")'>Сменить тренера</button></div>") :
-        ("<div class='muted'>Тренер пока не нанят.</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTrainer\")'>Выбрать тренера</button></div>"),
-      false, "угол"));
-      html.push(renderSectionCard("career_preparation", "Подготовка", prepSummary ?
-        ("<div class='muted'>Цель: " + preparationFighterLabel(prepSummary.targetFighter) + ".</div>" +
-        "<div class='muted'>Спаррингов на неделю: " + prepSummary.offers.length + ".</div>" +
-        "<div class='muted'>" + (prepSummary.activeCamp ? (prepSummary.activeCamp.label + " · " + prepSummary.activeCamp.weeksCompleted + "/" + prepSummary.activeCamp.durationWeeks + " нед.") : "Активного лагеря нет.") + "</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerSparring\")'>Спарринги</button><button class='ghost' onclick='openPanel(\"careerCamp\")'>Лагерь</button></div>") :
-        ("<div class='muted'>Подготовка пока недоступна.</div>"),
-      false, "лагерь"));
-      html.push(renderSectionCard("career_team", "Любительская система",
-        ("<div class='muted'>Разряд: " + amateurRankLabel(fighter) + ".</div>" +
-        "<div class='muted'>Статус в сборной: " + (status ? status.label : "Вне списка") + ".</div>" +
-        "<div class='muted'>Открытый уровень: " + eligibleLevelsSummary(amateur ? amateur.eligibleLevels : []) + ".</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTeam\")'>Открыть панель</button></div>"),
-      false, "сборная"));
-      html.push(renderSectionCard("career_street", "Уличный путь",
-        ("<div class='muted'>Текущий трек: " + currentCareerTrackLabel() + ".</div>" +
-        "<div class='muted'>Статус: " + currentStreetCareerSummary().currentStatusLabel + ".</div>" +
-        "<div class='muted'>Рейтинг: " + currentStreetCareerSummary().streetRating + ".</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerStreet\")'>Открыть панель</button></div>"),
-      false, "улица"));
-      html.push(renderSectionCard("career_pro", "Профи",
-        (isProTrack() ?
-          ("<div class='muted'>Статус: " + (proSummary.status ? proSummary.status.label : "Без статуса") + ".</div>" +
-          "<div class='muted'>Рекорд: " + (proSummary.pro && proSummary.pro.proRecord ? (proSummary.pro.proRecord.wins + "-" + proSummary.pro.proRecord.losses + "-" + proSummary.pro.proRecord.draws + " (KO " + proSummary.pro.proRecord.kos + ")") : "0-0-0") + ".</div>" +
-          "<div class='muted'>Промоутер: " + (proSummary.promoter ? proSummary.promoter.name : "пока нет") + ".</div>" +
-          "<div class='muted'>Менеджер: " + (proSummary.manager ? proSummary.manager.name : "пока нет") + ".</div>" +
-          "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerPro\")'>Открыть панель</button></div>") :
-          ("<div class='muted'>Профи остаются отдельным карьерным треком.</div>" +
-          "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerPro\")'>Посмотреть путь</button></div>")),
-      false, "профи"));
-      html.push(renderSectionCard("career_transitions", "Переходы",
-        ("<div class='muted'>Открыто переходов: " + availableTransitions + ".</div>" +
-        "<div class='muted'>" + (nextTransition ? ("Ближайший шаг: " + nextTransition.title + ".") : "Сейчас новых развилок нет.") + "</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть панель</button></div>"),
-      false, "развилки"));
-      html.push(renderSectionCard("career_contract", "Контракт", contract ?
-        ("<div class='muted'>" + contract.label + ". До недели " + contract.endsWeek + ".</div>" +
-        "<div class='muted'>Гарантия $" + contract.guaranteedPurse + ", победа $" + contract.winBonus + ", KO $" + contract.koBonus + ".</div>" +
-        "<div class='muted'>Штраф за разрыв: -$80, -8 славы, +10 стресса.</div>" +
-        "<div class='footer-actions'><button class='danger' " + (state.fighter.money < 80 ? "disabled='disabled'" : "") + " onclick='breakActiveContract()'>Разорвать контракт</button></div>") :
-        (adultSandboxUnlocked(state.fighter) ? ("<div class='muted'>Активного контракта пока нет.</div>" +
-        "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerContract\")'>Посмотреть контракты</button></div>") :
-        ("<div class='muted'>Контракты откроются после 18 лет.</div>")),
-      false, "сделка"));
-      html.push(renderSectionCard("career_territory", "Территория",
-        "<div class='muted'>" + getCountryInfo(fighter.currentCountry).name + " · " + getCountryInfo(fighter.currentCountry).city + ".</div>",
-      false, "страна"));
-      html.push("</div>");
-      return html.join("");
+        html.push("<div class='panel fill-panel'>");
+        html.push("<h2 class='panel-title'>Карьера</h2>");
+        html.push(renderLazySectionCard("career_gym", "Зал", function () {
+          var gym = currentGym();
+          return gym ?
+            ("<div class='muted'>" + gym.name + " - " + gym.city + " - $" + gym.cost + "/мес.</div>" +
+            "<div class='muted'>Тип: " + gymTypeLabel(gym) + (gym.country && gym.country !== fighter.currentCountry ? (" · " + getCountryInfo(gym.country).name) : "") + ".</div>" +
+            "<div class='muted'>" + summarizeBonuses(gym.bonuses) + "</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Сменить зал</button><button class='ghost' onclick='leaveGym()'>Выйти</button></div>") :
+            ("<div class='muted'>Ты пока без зала.</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Выбрать зал</button></div>");
+        }, false, "база"));
+        html.push(renderLazySectionCard("career_trainer", "Тренер", function () {
+          var trainerNpc = currentTrainerNpc();
+          var trainerType = currentTrainerType();
+          var trainerBaseGym = trainerType && trainerType.currentGymId ? getGym(trainerType.currentGymId) : null;
+          return (trainerNpc && trainerType) ?
+            ("<div class='muted'>" + trainerNpc.name + " - $" + (trainerType.monthlyFee || trainerType.weeklyFee) + "/мес.</div>" +
+            "<div class='muted'>Тип: " + trainerTypeLabel(trainerType) + (trainerType.country && trainerType.country !== fighter.currentCountry ? (" · " + getCountryInfo(trainerType.country).name) : "") + ".</div>" +
+            "<div class='muted'>" + (trainerBaseGym ? ("База: " + trainerBaseGym.name + ".") : ((amateurTrainerRoleInfo(trainerType) ? amateurTrainerRoleInfo(trainerType).label : "Тренер") + ".")) + "</div>" +
+            "<div class='muted'>Отношение " + relationScoreText(trainerNpc.relationToPlayer.score) + " - " + trainerNpc.relationToPlayer.summary + ".</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTrainer\")'>Сменить тренера</button></div>") :
+            ("<div class='muted'>Тренер пока не нанят.</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTrainer\")'>Выбрать тренера</button></div>");
+        }, false, "угол"));
+        html.push(renderLazySectionCard("career_preparation", "Подготовка", function () {
+          var prepSummary = currentPreparationSummary();
+          return prepSummary ?
+            ("<div class='muted'>Цель: " + preparationFighterLabel(prepSummary.targetFighter) + ".</div>" +
+            "<div class='muted'>Спаррингов на неделю: " + prepSummary.offers.length + ".</div>" +
+            "<div class='muted'>" + (prepSummary.activeCamp ? (prepSummary.activeCamp.label + " · " + prepSummary.activeCamp.weeksCompleted + "/" + prepSummary.activeCamp.durationWeeks + " нед.") : "Активного лагеря нет.") + "</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerSparring\")'>Спарринги</button><button class='ghost' onclick='openPanel(\"careerCamp\")'>Лагерь</button></div>") :
+            ("<div class='muted'>Подготовка пока недоступна.</div>");
+        }, false, "лагерь"));
+        html.push(renderLazySectionCard("career_team", "Любительская система", function () {
+          return "<div class='muted'>Разряд: " + amateurRankLabel(fighter) + ".</div>" +
+            "<div class='muted'>Статус в сборной: " + (status ? status.label : "Вне списка") + ".</div>" +
+            "<div class='muted'>Открытый уровень: " + eligibleLevelsSummary(amateur ? amateur.eligibleLevels : []) + ".</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTeam\")'>Открыть панель</button></div>";
+        }, false, "сборная"));
+        html.push(renderLazySectionCard("career_street", "Уличный путь", function () {
+          var streetSummary = currentStreetCareerSummary();
+          return "<div class='muted'>Текущий трек: " + currentCareerTrackLabel() + ".</div>" +
+            "<div class='muted'>Статус: " + streetSummary.currentStatusLabel + ".</div>" +
+            "<div class='muted'>Рейтинг: " + streetSummary.streetRating + ".</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerStreet\")'>Открыть панель</button></div>";
+        }, false, "улица"));
+        html.push(renderLazySectionCard("career_pro", "Профи", function () {
+          var proSummary = currentProSummary();
+          return isProTrack() ?
+            ("<div class='muted'>Статус: " + (proSummary.status ? proSummary.status.label : "Без статуса") + ".</div>" +
+            "<div class='muted'>Рекорд: " + (proSummary.pro && proSummary.pro.proRecord ? (proSummary.pro.proRecord.wins + "-" + proSummary.pro.proRecord.losses + "-" + proSummary.pro.proRecord.draws + " (KO " + proSummary.pro.proRecord.kos + ")") : "0-0-0") + ".</div>" +
+            "<div class='muted'>Промоутер: " + (proSummary.promoter ? proSummary.promoter.name : "пока нет") + ".</div>" +
+            "<div class='muted'>Менеджер: " + (proSummary.manager ? proSummary.manager.name : "пока нет") + ".</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerPro\")'>Открыть панель</button></div>") :
+            ("<div class='muted'>Профи остаются отдельным карьерным треком.</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerPro\")'>Посмотреть путь</button></div>");
+        }, false, "профи"));
+        html.push(renderLazySectionCard("career_transitions", "Переходы", function () {
+          return "<div class='muted'>Открыто переходов: " + availableTransitions + ".</div>" +
+            "<div class='muted'>" + (nextTransition ? ("Ближайший шаг: " + nextTransition.title + ".") : "Сейчас новых развилок нет.") + "</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть панель</button></div>";
+        }, false, "развилки"));
+        html.push(renderLazySectionCard("career_contract", "Контракт", function () {
+          return contract ?
+            ("<div class='muted'>" + contract.label + ". До недели " + contract.endsWeek + ".</div>" +
+            "<div class='muted'>Гарантия $" + contract.guaranteedPurse + ", победа $" + contract.winBonus + ", KO $" + contract.koBonus + ".</div>" +
+            "<div class='muted'>Штраф за разрыв: -$80, -8 славы, +10 стресса.</div>" +
+            "<div class='footer-actions'><button class='danger' " + (state.fighter.money < 80 ? "disabled='disabled'" : "") + " onclick='breakActiveContract()'>Разорвать контракт</button></div>") :
+            (adultSandboxUnlocked(state.fighter) ? ("<div class='muted'>Активного контракта пока нет.</div>" +
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerContract\")'>Посмотреть контракты</button></div>") :
+            ("<div class='muted'>Контракты откроются после 18 лет.</div>"));
+        }, false, "сделка"));
+        html.push(renderLazySectionCard("career_territory", "Территория", function () {
+          return "<div class='muted'>" + getCountryInfo(fighter.currentCountry).name + " · " + getCountryInfo(fighter.currentCountry).city + ".</div>";
+        }, false, "страна"));
+        html.push("</div>");
+        return html.join("");
+      });
     }
 
     function renderCareerGymPanel() {
-      var gyms = listCareerGymChoices();
-      var current = currentGym();
-      var html = [];
-      var i;
-      var gym;
-      var org;
-      var access;
-      var reason;
-      var buttonLabel;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Выбор зала</h2><div class='choice-grid'>");
-      for (i = 0; i < gyms.length; i += 1) {
-        gym = gyms[i];
-        org = amateurOrganizationForGym(gym.id);
-        access = facilityGymAccessInfo(gym.id);
-        reason = !access.ok ? access.reason : (((!current || current.id !== gym.id) && state.fighter.money < gym.cost) ? "На балансе мало денег." : "");
-        buttonLabel = current && current.id === gym.id ? "Выбран" : (current ? "Перевести лагерь" : "Выбрать");
-        html.push("<div class='card compact-card'><h3>" + gym.name + "</h3><p>" + gym.city + ". $" + gym.cost + "/мес.</p><div class='muted'>Тип: " + gymTypeLabel(gym) + ".</div><div class='muted'>" + summarizeBonuses(gym.bonuses) + "</div>" + (org ? ("<div class='muted'>" + organizationTypeLabel(org.orgType) + " · " + org.label + ".</div>") : "") + (gym.minRankId ? ("<div class='muted'>Мин. разряд: " + localizedAmateurRankLabel(gym.minRankId, state.fighter.currentCountry) + ".</div>") : "") + (reason ? ("<div class='muted'>" + reason + "</div>") : "") + "<button class='" + (current && current.id === gym.id ? "ghost" : "button") + "' " + (((!current || current.id !== gym.id) && (state.fighter.money < gym.cost || !access.ok || !canJoinGym(gym, state.fighter))) ? "disabled='disabled'" : "") + " onclick='" + (current && current.id !== gym.id ? "relocateCamp" : "joinGym") + "(\"" + gym.id + "\")'>" + buttonLabel + "</button></div>");
-      }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
-      return html.join("");
+      return measurePerf("gymPanelBuildMs", function () {
+        var gameState = ensurePersistentGameState(false);
+        var gyms = listCareerGymChoices();
+        var current = currentGym();
+        var html = [];
+        var i;
+        var gym;
+        var org;
+        var access;
+        var reason;
+        var buttonLabel;
+        var joinAllowed;
+        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Выбор зала</h2><div class='choice-grid'>");
+        for (i = 0; i < gyms.length; i += 1) {
+          gym = gyms[i];
+          org = gym && typeof AmateurEcosystem !== "undefined" && AmateurEcosystem.getOrganizationForGym ? AmateurEcosystem.getOrganizationForGym(gameState, gym.id) : null;
+          access = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.gymAccessInfo) ? WorldFacilityEngine.gymAccessInfo(gameState, currentPlayerEntityId(), gym.id) : { ok: true, reason: "" };
+          joinAllowed = !!gym && access.ok && hasMinimumAmateurRank(gym.minRankId, state.fighter) && (!org || organizationAllowsFighter(org, state.fighter));
+          reason = !access.ok ? access.reason : (((!current || current.id !== gym.id) && state.fighter.money < gym.cost) ? "На балансе мало денег." : "");
+          buttonLabel = current && current.id === gym.id ? "Выбран" : (current ? "Перевести лагерь" : "Выбрать");
+          html.push("<div class='card compact-card'><h3>" + gym.name + "</h3><p>" + gym.city + ". $" + gym.cost + "/мес.</p><div class='muted'>Тип: " + gymTypeLabel(gym) + ".</div><div class='muted'>" + summarizeBonuses(gym.bonuses) + "</div>" + (org ? ("<div class='muted'>" + organizationTypeLabel(org.orgType) + " · " + org.label + ".</div>") : "") + (gym.minRankId ? ("<div class='muted'>Мин. разряд: " + localizedAmateurRankLabel(gym.minRankId, state.fighter.currentCountry) + ".</div>") : "") + (reason ? ("<div class='muted'>" + reason + "</div>") : "") + "<button class='" + (current && current.id === gym.id ? "ghost" : "button") + "' " + (((!current || current.id !== gym.id) && (state.fighter.money < gym.cost || !access.ok || !joinAllowed)) ? "disabled='disabled'" : "") + " onclick='" + (current && current.id !== gym.id ? "relocateCamp" : "joinGym") + "(\"" + gym.id + "\")'>" + buttonLabel + "</button></div>");
+        }
+        html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
+        return html.join("");
+      });
     }
 
     function renderCareerTrainerPanel() {
-      var trainerType = currentTrainerType();
-      var trainerOptions = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) ? WorldFacilityEngine.listTrainersByCountry(ensurePersistentGameState(false), state.fighter ? (state.fighter.currentCountry || state.fighter.homeCountry) : "", { trackId: currentTrackId() }) : guaranteedCountryTrainerTypes(state.fighter ? (state.fighter.currentCountry || state.fighter.homeCountry) : "");
-      var html = [];
-      var i;
-      var trainerOption;
-      var trainerNpcOption;
-      var roleInfo;
-      var access;
-      var reason;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Выбор тренера</h2><div class='choice-grid'>");
-      for (i = 0; i < trainerOptions.length; i += 1) {
-        trainerOption = trainerOptions[i];
-        trainerNpcOption = ensureTrainerNpcForGym(null, trainerOption.id);
-        roleInfo = amateurTrainerRoleInfo(trainerOption);
-        access = facilityTrainerAccessInfo(trainerOption.id);
-        reason = !access.ok ? access.reason : (((!trainerType || trainerType.id !== trainerOption.id) && state.fighter.money < (trainerOption.monthlyFee || trainerOption.weeklyFee)) ? "На балансе мало денег." : "");
-        html.push("<div class='card compact-card'><h3>" + trainerNpcOption.name + "</h3><p>$" + (trainerOption.monthlyFee || trainerOption.weeklyFee) + "/мес.</p><div class='muted'>Тип: " + trainerTypeLabel(trainerOption) + ".</div><div class='muted'>" + summarizeBonuses(trainerOption.bonuses) + "</div><div class='muted'>" + (trainerOption.currentGymId && getGym(trainerOption.currentGymId) ? ("База: " + getGym(trainerOption.currentGymId).name + ".") : (roleInfo ? roleInfo.label + "." : "Тренер.")) + "</div>" + (trainerOption.minRankId ? ("<div class='muted'>Мин. разряд: " + localizedAmateurRankLabel(trainerOption.minRankId, state.fighter.currentCountry) + ".</div>") : "") + (reason ? ("<div class='muted'>" + reason + "</div>") : "") + "<button class='" + (trainerType && trainerType.id === trainerOption.id ? "ghost" : "button") + "' " + (((!trainerType || trainerType.id !== trainerOption.id) && (state.fighter.money < (trainerOption.monthlyFee || trainerOption.weeklyFee) || !access.ok || !canHireTrainerType(trainerOption, state.fighter))) ? "disabled='disabled'" : "") + " onclick='followTrainer(\"" + trainerOption.id + "\")'>" + (trainerType && trainerType.id === trainerOption.id ? "Выбран" : "Выбрать") + "</button></div>");
-      }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
-      return html.join("");
+      return measurePerf("trainerPanelBuildMs", function () {
+        var gameState = ensurePersistentGameState(false);
+        var trainerType = currentTrainerType();
+        var countryId = state.fighter ? (state.fighter.currentCountry || state.fighter.homeCountry) : "";
+        var trainerOptions = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) ? WorldFacilityEngine.listTrainersByCountry(gameState, countryId, { trackId: currentTrackId() }) : guaranteedCountryTrainerTypes(countryId);
+        var html = [];
+        var i;
+        var trainerOption;
+        var roleInfo;
+        var access;
+        var reason;
+        var hireAllowed;
+        var minRankId;
+        var baseGym;
+        var displayName;
+        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Выбор тренера</h2><div class='choice-grid'>");
+        for (i = 0; i < trainerOptions.length; i += 1) {
+          trainerOption = trainerOptions[i];
+          roleInfo = amateurTrainerRoleInfo(trainerOption);
+          access = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.trainerAccessInfo) ? WorldFacilityEngine.trainerAccessInfo(gameState, currentPlayerEntityId(), trainerOption.id) : { ok: true, reason: "" };
+          minRankId = roleInfo && roleInfo.minRankId ? roleInfo.minRankId : (trainerOption ? trainerOption.minRankId : "");
+          hireAllowed = !!trainerOption && access.ok && hasMinimumAmateurRank(minRankId, state.fighter);
+          reason = !access.ok ? access.reason : (((!trainerType || trainerType.id !== trainerOption.id) && state.fighter.money < (trainerOption.monthlyFee || trainerOption.weeklyFee)) ? "На балансе мало денег." : "");
+          baseGym = trainerOption.currentGymId ? getGym(trainerOption.currentGymId) : null;
+          displayName = trainerOption.fullName || trainerOption.name || trainerOption.label || trainerOption.id;
+          html.push("<div class='card compact-card'><h3>" + displayName + "</h3><p>$" + (trainerOption.monthlyFee || trainerOption.weeklyFee) + "/мес.</p><div class='muted'>Тип: " + trainerTypeLabel(trainerOption) + ".</div><div class='muted'>" + summarizeBonuses(trainerOption.bonuses) + "</div><div class='muted'>" + (baseGym ? ("База: " + baseGym.name + ".") : (roleInfo ? roleInfo.label + "." : "Тренер.")) + "</div>" + (trainerOption.minRankId ? ("<div class='muted'>Мин. разряд: " + localizedAmateurRankLabel(trainerOption.minRankId, state.fighter.currentCountry) + ".</div>") : "") + (reason ? ("<div class='muted'>" + reason + "</div>") : "") + "<button class='" + (trainerType && trainerType.id === trainerOption.id ? "ghost" : "button") + "' " + (((!trainerType || trainerType.id !== trainerOption.id) && (state.fighter.money < (trainerOption.monthlyFee || trainerOption.weeklyFee) || !access.ok || !hireAllowed)) ? "disabled='disabled'" : "") + " onclick='followTrainer(\"" + trainerOption.id + "\")'>" + (trainerType && trainerType.id === trainerOption.id ? "Выбран" : "Выбрать") + "</button></div>");
+        }
+        html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
+        return html.join("");
+      });
     }
 
     function renderCareerContractPanel() {
@@ -13971,8 +14231,12 @@
     function render() {
       var app = document.getElementById("app");
       var html = "";
+      var debugHtml = "";
       var renderStarted = new Date().getTime();
+      var mainRenderTimer = startPerfTimer("renderGameMs");
+      var debugRenderTimer;
       ensureDebugRuntimeState();
+      beginRenderCycle();
       if (state.isSimulationMode) {
         return;
       }
@@ -13990,8 +14254,16 @@
       state.debug.metrics.renderCount += 1;
       state.debug.metrics.lastRenderAt = renderStarted;
       updateDebugPerformanceSnapshot();
-      app.innerHTML = renderUpdateBanner() + renderDebugPanel() + html;
-      saveGameState();
+      finishPerfTimer(mainRenderTimer);
+      if (state.debug && state.debug.enabled) {
+        debugRenderTimer = startPerfTimer("renderDebugMs");
+        debugHtml = renderDebugPanel();
+        finishPerfTimer(debugRenderTimer);
+      } else {
+        ensureDebugRuntimeState().performance.renderDebugMs = 0;
+      }
+      app.innerHTML = renderUpdateBanner() + debugHtml + html;
+      scheduleSaveGameState();
       state.debug.metrics.lastRenderMs = new Date().getTime() - renderStarted;
     }
 
