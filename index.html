@@ -1111,7 +1111,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.22.14";
+var APP_VERSION = "2026.03.23.5";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1151,6 +1151,7 @@
         debugMode: !!(state.debug && state.debug.enabled)
       });
       runtimeCache.gameVersion += 1;
+      touchProjectionVersions();
       runtimeCache.worldSectionSyncVersion = -1;
       runtimeCache.renderGameVersion = runtimeCache.gameVersion;
       return state.game;
@@ -1166,6 +1167,7 @@
         debugMode: DEBUG_MODE
       });
       runtimeCache.gameVersion += 1;
+      touchProjectionVersions();
       runtimeCache.worldSectionSyncVersion = -1;
       runtimeCache.renderGameVersion = runtimeCache.gameVersion;
       return result;
@@ -1175,6 +1177,12 @@
       if (!state.runtimePerf || typeof state.runtimePerf !== "object") {
         state.runtimePerf = {
           gameVersion: 0,
+          projectionVersions: {
+            roster: 0,
+            facility: 0,
+            ranking: 0,
+            profile: 0
+          },
           worldSectionSyncVersion: -1,
           renderId: 0,
           renderGameVersion: -1,
@@ -1184,7 +1192,8 @@
           saveScheduled: false,
           saveDelayMs: 180,
           panelOpenStartedAt: 0,
-          panelOpenKey: ""
+          panelOpenKey: "",
+          weeklyRefresh: {}
         };
       }
       if (!state.runtimePerf.renderMemo || typeof state.runtimePerf.renderMemo !== "object") {
@@ -1193,7 +1202,35 @@
       if (!state.runtimePerf.gameMemo || typeof state.runtimePerf.gameMemo !== "object") {
         state.runtimePerf.gameMemo = {};
       }
+      if (!state.runtimePerf.weeklyRefresh || typeof state.runtimePerf.weeklyRefresh !== "object") {
+        state.runtimePerf.weeklyRefresh = {};
+      }
+      if (!state.runtimePerf.projectionVersions || typeof state.runtimePerf.projectionVersions !== "object") {
+        state.runtimePerf.projectionVersions = {
+          roster: state.runtimePerf.gameVersion || 0,
+          facility: state.runtimePerf.gameVersion || 0,
+          ranking: state.runtimePerf.gameVersion || 0,
+          profile: state.runtimePerf.gameVersion || 0
+        };
+      }
       return state.runtimePerf;
+    }
+
+    function touchProjectionVersions(kinds) {
+      var runtimeCache = ensureRuntimePerfState();
+      var versions = runtimeCache.projectionVersions;
+      var list = kinds instanceof Array && kinds.length ? kinds : ["roster", "facility", "ranking", "profile"];
+      var i;
+      for (i = 0; i < list.length; i += 1) {
+        versions[list[i]] = (versions[list[i]] || runtimeCache.gameVersion || 0) + 1;
+      }
+      return versions;
+    }
+
+    function currentProjectionVersion(kind) {
+      var runtimeCache = ensureRuntimePerfState();
+      var versions = runtimeCache.projectionVersions || {};
+      return versions[kind] || runtimeCache.gameVersion || 0;
     }
 
     function beginRenderCycle() {
@@ -1239,6 +1276,7 @@
     function touchGameProjectionState() {
       var runtimeCache = ensureRuntimePerfState();
       runtimeCache.gameVersion += 1;
+      touchProjectionVersions();
       runtimeCache.worldSectionSyncVersion = -1;
       runtimeCache.gameMemo = {};
       return runtimeCache.gameVersion;
@@ -1263,6 +1301,47 @@
       elapsed = typeof explicitValue === "number" ? explicitValue : (nowMs() - timer.startedAt);
       ensureDebugRuntimeState().performance[timer.key] = elapsed;
       return elapsed;
+    }
+
+    function weekRefreshStore() {
+      return ensureRuntimePerfState().weeklyRefresh;
+    }
+
+    function isWeekRefreshStale(sectionKey, weekStamp) {
+      return weekRefreshStore()[sectionKey] !== weekStamp;
+    }
+
+    function markWeekRefresh(sectionKey, weekStamp) {
+      weekRefreshStore()[sectionKey] = weekStamp;
+    }
+
+    function resetWeekPhaseMetrics() {
+      var perf = ensureDebugRuntimeState().performance;
+      perf.weekPhase_playerMs = 0;
+      perf.weekPhase_worldSimMs = 0;
+      perf.weekPhase_cacheMs = 0;
+      perf.weekPhase_renderMs = 0;
+      perf.weekPhase_saveMs = 0;
+    }
+
+    function bindCanonicalGameState(gameState) {
+      var runtimeCache = ensureRuntimePerfState();
+      if (!gameState) {
+        return null;
+      }
+      state.game = gameState;
+      syncWorldSimSectionsFromGameState(gameState);
+      runtimeCache.worldSectionSyncVersion = runtimeCache.gameVersion;
+      runtimeCache.renderGameVersion = runtimeCache.gameVersion;
+      return gameState;
+    }
+
+    function commitGameStateBridge(gameState) {
+      if (!gameState) {
+        return null;
+      }
+      syncRuntimeStateFromGame(gameState);
+      return bindCanonicalGameState(gameState);
     }
 
     function measurePerf(metricKey, factory) {
@@ -1457,17 +1536,20 @@
       return "Стиль ещё не оформился";
     }
 
-    function refreshReputationState() {
-      var gameState;
+    function refreshReputationState(gameState) {
       if (!state.fighter) {
         return;
       }
       ensureBiographyState();
       state.fighter.bioFacts.chronicInjuries = countChronicInjuries(state.fighter);
-      gameState = syncGameStateFromRuntime();
+      gameState = gameState || syncGameStateFromRuntime();
       state.fighter.reputationTags = ReputationEngine.evaluateTags(gameState, ContentLoader.listReputationTags ? ContentLoader.listReputationTags() : [], {
         endingReason: state.endingReason || ""
       });
+      if (gameState && gameState.player && gameState.player.biography) {
+        gameState.player.biography.reputationTags = clonePlainData(state.fighter.reputationTags || []);
+        gameState.player.biography.facts = clonePlainData(state.fighter.bioFacts || {});
+      }
     }
 
     function recordCareerMedia(mediaType, payload) {
@@ -1856,7 +1938,10 @@
         screen: state.screen,
         panel: state.panel,
         saveBytes: debugState.metrics.saveBytes || 0,
-        renderCount: debugState.metrics.renderCount || 0
+        renderCount: debugState.metrics.renderCount || 0,
+        fullRenderCount: debugState.metrics.fullRenderCount || 0,
+        panelPartialRenderCount: debugState.metrics.panelPartialRenderCount || 0,
+        battlePartialRenderCount: debugState.metrics.battlePartialRenderCount || 0
       };
     }
 
@@ -1870,6 +1955,9 @@
       if (!state.debug.metrics || typeof state.debug.metrics !== "object") {
         state.debug.metrics = {
           renderCount: 0,
+          fullRenderCount: 0,
+          panelPartialRenderCount: 0,
+          battlePartialRenderCount: 0,
           lastRenderMs: 0,
           lastRenderAt: 0,
           saveBytes: 0,
@@ -1885,6 +1973,11 @@
           mediaEntries: 0,
           weekAdvanceMs: 0,
           weekTickMs: 0,
+          weekPhase_playerMs: 0,
+          weekPhase_worldSimMs: 0,
+          weekPhase_cacheMs: 0,
+          weekPhase_renderMs: 0,
+          weekPhase_saveMs: 0,
           gymPanelOpenMs: 0,
           gymPanelBuildMs: 0,
           trainerPanelBuildMs: 0,
@@ -1895,6 +1988,10 @@
           careerPanelBuildMs: 0,
           renderGameMs: 0,
           renderDebugMs: 0,
+          battleActionMs: 0,
+          animationTriggerMs: 0,
+          animationPaintDelayMs: 0,
+          battleRenderCountPerAction: 0,
           battleIssueCount: 0,
           battleSafeResolveCount: 0,
           lastBattleIssue: ""
@@ -2110,7 +2207,9 @@
     function toggleUiSection(sectionKey) {
       var debugState = ensureDebugRuntimeState();
       debugState.sections[sectionKey] = !debugState.sections[sectionKey];
-      render();
+      if (!updatePanelSubtree({ suppressSave: true })) {
+        render();
+      }
     }
 
     function uiSectionOpen(sectionKey, defaultOpen) {
@@ -2197,11 +2296,13 @@
         html.push("<div class='debug-row'>Save version: " + info.saveVersion + "</div>");
         html.push("<div class='debug-row'>Экран: " + info.screen + " / " + info.panel + "</div>");
         html.push("<div class='debug-row'>Сейв: " + info.saveBytes + " bytes</div>");
-        html.push("<div class='debug-row'>Рендеры: " + info.renderCount + " · save " + debugState.metrics.saveCount + "</div>");
+        html.push("<div class='debug-row'>Рендеры: всего " + info.renderCount + " · full " + info.fullRenderCount + " · panel " + info.panelPartialRenderCount + " · battle " + info.battlePartialRenderCount + " · save " + debugState.metrics.saveCount + "</div>");
         html.push("<div class='debug-row'>Render: " + Math.round(perf.renderGameMs || 0) + " мс · Debug: " + Math.round(perf.renderDebugMs || 0) + " мс</div>");
         html.push("<div class='debug-row'>Week: " + Math.round(perf.weekAdvanceMs || 0) + " мс · Tick: " + Math.round(perf.weekTickMs || 0) + " мс</div>");
-          html.push("<div class='debug-row'>Gym UI: " + Math.round(perf.gymPanelOpenMs || 0) + " мс · Rankings: " + Math.round(perf.rankingsOpenMs || 0) + " мс</div>");
-          html.push("<div class='debug-row'>Battle issues: " + Math.round(perf.battleIssueCount || 0) + " · safe resolve " + Math.round(perf.battleSafeResolveCount || 0) + "</div>");
+        html.push("<div class='debug-row'>Week phases: player " + Math.round(perf.weekPhase_playerMs || 0) + " · world " + Math.round(perf.weekPhase_worldSimMs || 0) + " · cache " + Math.round(perf.weekPhase_cacheMs || 0) + " · render " + Math.round(perf.weekPhase_renderMs || 0) + " · save " + Math.round(perf.weekPhase_saveMs || 0) + " мс</div>");
+        html.push("<div class='debug-row'>Gym UI: " + Math.round(perf.gymPanelOpenMs || 0) + " мс · Rankings: " + Math.round(perf.rankingsOpenMs || 0) + " мс</div>");
+        html.push("<div class='debug-row'>Battle action: " + Math.round(perf.battleActionMs || 0) + " мс · anim trigger " + Math.round(perf.animationTriggerMs || 0) + " мс · paint " + Math.round(perf.animationPaintDelayMs || 0) + " мс · battle renders " + Math.round(perf.battleRenderCountPerAction || 0) + "</div>");
+        html.push("<div class='debug-row'>Battle issues: " + Math.round(perf.battleIssueCount || 0) + " · safe resolve " + Math.round(perf.battleSafeResolveCount || 0) + "</div>");
 
         if (state.fighter) {
           html.push("<div class='debug-section'><strong>Ресурсы</strong><div class='debug-grid'>");
@@ -2431,7 +2532,8 @@
         rematchRivalryId: fight.rematchRivalryId || "",
         pendingTimeout: null,
         animation: null,
-        animationTimeout: null
+        animationTimeout: null,
+        animationFrameRequest: null
       };
     }
 
@@ -2878,7 +2980,9 @@
         var gyms;
         if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) {
           roster = gameState && gameState.rosterState ? gameState.rosterState : null;
-          gyms = gameState && roster ? WorldFacilityEngine.listGymsByCountry(gameState, countryKey, {}) : [];
+          gyms = gameState && roster ? WorldFacilityEngine.listGymsByCountry(gameState, countryKey, {
+            versionToken: currentProjectionVersion("facility")
+          }) : [];
           if (gyms instanceof Array && gyms.length) {
             return clonePlainData(gyms);
           }
@@ -2967,7 +3071,9 @@
         var trainerTypes;
         if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) {
           roster = gameState && gameState.rosterState ? gameState.rosterState : null;
-          trainerTypes = gameState && roster ? WorldFacilityEngine.listTrainersByCountry(gameState, countryKey, {}) : [];
+          trainerTypes = gameState && roster ? WorldFacilityEngine.listTrainersByCountry(gameState, countryKey, {
+            versionToken: currentProjectionVersion("facility")
+          }) : [];
           if (trainerTypes instanceof Array && trainerTypes.length) {
             return clonePlainData(trainerTypes);
           }
@@ -7221,7 +7327,9 @@
         trainerName: trainerNpc.name
       });
       refreshWorldState();
-      render();
+      if (!updateFacilitySubtree({ refreshNavigation: true, suppressSave: false }) && !updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+        render();
+      }
     }
 
     function leaveGym() {
@@ -7243,7 +7351,9 @@
       pushLog("Ты покидаешь зал " + gym.name + ".", "warn");
       addBiographyHistory("Покидает зал " + gym.name + ".", "gym");
       refreshWorldState();
-      render();
+      if (!updateFacilitySubtree({ refreshNavigation: true, suppressSave: false }) && !updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+        render();
+      }
     }
 
     function followTrainer(trainerId) {
@@ -7694,7 +7804,8 @@
         }
         return WorldRankingsEngine.buildStreetRankingView(gameState, {
           countryId: directory.streetCountryId || "",
-          page: directory.streetPage || 0
+          page: directory.streetPage || 0,
+          versionToken: currentProjectionVersion("ranking")
         });
       });
     }
@@ -7707,7 +7818,8 @@
         }
         return WorldRankingsEngine.buildAmateurRankingView(gameState, {
           countryId: directory.amateurCountryId || "",
-          page: directory.amateurPage || 0
+          page: directory.amateurPage || 0,
+          versionToken: currentProjectionVersion("ranking")
         });
       });
     }
@@ -7720,7 +7832,8 @@
         }
         return WorldRankingsEngine.buildProRankingView(gameState, {
           tabId: directory.proTabId || "ring",
-          page: directory.proPage || 0
+          page: directory.proPage || 0,
+          versionToken: currentProjectionVersion("ranking")
         });
       });
     }
@@ -7734,7 +7847,8 @@
         return WorldRankingsEngine.buildRosterDirectoryView(gameState, {
           trackId: directory.rosterTrackId || "all",
           countryId: directory.rosterCountryId || "",
-          page: directory.rosterPage || 0
+          page: directory.rosterPage || 0,
+          versionToken: currentProjectionVersion("ranking")
         });
       });
     }
@@ -7748,7 +7862,10 @@
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildFighterProfile) {
           return null;
         }
-        return WorldRankingsEngine.buildFighterProfile(gameState, fighterId);
+        return WorldRankingsEngine.buildFighterProfile(gameState, fighterId, {
+          versionToken: currentProjectionVersion("profile"),
+          rankingVersionToken: currentProjectionVersion("ranking")
+        });
       });
     }
 
@@ -7761,7 +7878,9 @@
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildTrainerProfile) {
           return null;
         }
-        return WorldRankingsEngine.buildTrainerProfile(gameState, trainerId);
+        return WorldRankingsEngine.buildTrainerProfile(gameState, trainerId, {
+          versionToken: currentProjectionVersion("profile")
+        });
       });
     }
 
@@ -7770,7 +7889,9 @@
         if (!trainerId || typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.getTrainerRosterCount) {
           return 0;
         }
-        return WorldRankingsEngine.getTrainerRosterCount(gameState, trainerId, excludedFighterId || "");
+        return WorldRankingsEngine.getTrainerRosterCount(gameState, trainerId, excludedFighterId || "", {
+          versionToken: currentProjectionVersion("profile")
+        });
       });
     }
 
@@ -7851,7 +7972,9 @@
         return [];
       }
       return memoizeGameProjection("fightersByTrack", trackId || currentOpponentTrackId(), function (gameState) {
-        return PersistentFighterRegistry.getFightersByTrack(gameState, trackId || currentOpponentTrackId());
+        return PersistentFighterRegistry.getFightersByTrack(gameState, trackId || currentOpponentTrackId(), {
+          versionToken: currentProjectionVersion("roster")
+        });
       });
     }
 
@@ -7860,7 +7983,9 @@
         return [];
       }
       return memoizeGameProjection("fightersByCountry", countryId, function (gameState) {
-        return PersistentFighterRegistry.getFightersByCountry(gameState, countryId);
+        return PersistentFighterRegistry.getFightersByCountry(gameState, countryId, {
+          versionToken: currentProjectionVersion("roster")
+        });
       });
     }
 
@@ -7869,7 +7994,9 @@
         return [];
       }
       return memoizeGameProjection("fightersByGym", gymId, function (gameState) {
-        return PersistentFighterRegistry.getFightersByGym(gameState, gymId);
+        return PersistentFighterRegistry.getFightersByGym(gameState, gymId, {
+          versionToken: currentProjectionVersion("facility")
+        });
       });
     }
 
@@ -7878,11 +8005,19 @@
         return [];
       }
       return memoizeGameProjection("trainersByGym", gymId, function (gameState) {
-        var roster = gameState && gameState.rosterState ? gameState.rosterState : null;
-        var gym = roster && roster.gymsById ? roster.gymsById[gymId] : null;
-        var ids = gym && gym.coachIds instanceof Array ? gym.coachIds : [];
+        var roster;
+        var gym;
+        var ids;
         var list = [];
         var i;
+        if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByGym) {
+          return WorldFacilityEngine.listTrainersByGym(gameState, gymId, {
+            versionToken: currentProjectionVersion("facility")
+          });
+        }
+        roster = gameState && gameState.rosterState ? gameState.rosterState : null;
+        gym = roster && roster.gymsById ? roster.gymsById[gymId] : null;
+        ids = gym && gym.coachIds instanceof Array ? gym.coachIds : [];
         if (!roster || !roster.trainersById) {
           return [];
         }
@@ -7998,8 +8133,14 @@
 
     function resolveOpponentCamp(opponentCountryKey, preferredGymId, preferredTrainerTypeId, trackId) {
       var gameState = ensurePersistentGameState(false);
-      var countryGyms = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) ? WorldFacilityEngine.listGymsByCountry(gameState, opponentCountryKey, { trackId: trackId || currentOpponentTrackId() }) : guaranteedCountryGyms(opponentCountryKey);
-      var countryTrainerTypes = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) ? WorldFacilityEngine.listTrainersByCountry(gameState, opponentCountryKey, { trackId: trackId || currentOpponentTrackId() }) : guaranteedCountryTrainerTypes(opponentCountryKey);
+      var countryGyms = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) ? WorldFacilityEngine.listGymsByCountry(gameState, opponentCountryKey, {
+        trackId: trackId || currentOpponentTrackId(),
+        versionToken: currentProjectionVersion("facility")
+      }) : guaranteedCountryGyms(opponentCountryKey);
+      var countryTrainerTypes = (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) ? WorldFacilityEngine.listTrainersByCountry(gameState, opponentCountryKey, {
+        trackId: trackId || currentOpponentTrackId(),
+        versionToken: currentProjectionVersion("facility")
+      }) : guaranteedCountryTrainerTypes(opponentCountryKey);
       var gymTrainerTypes = [];
       var gym = preferredGymId ? getGym(preferredGymId) : null;
       var trainerType = preferredTrainerTypeId ? getTrainerType(preferredTrainerTypeId) : null;
@@ -8011,7 +8152,10 @@
         gym = choice(countryGyms);
       }
       if (gym && typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByGym) {
-        gymTrainerTypes = WorldFacilityEngine.listTrainersByGym(gameState, gym.id, { trackId: trackId || currentOpponentTrackId() });
+        gymTrainerTypes = WorldFacilityEngine.listTrainersByGym(gameState, gym.id, {
+          trackId: trackId || currentOpponentTrackId(),
+          versionToken: currentProjectionVersion("facility")
+        });
       } else if (gym && gym.coachIds && gym.coachIds.length) {
         for (candidateTrainer = 0; candidateTrainer < gym.coachIds.length; candidateTrainer += 1) {
           if (getTrainerType(gym.coachIds[candidateTrainer])) {
@@ -9203,15 +9347,14 @@
       render();
     }
 
-    function weeklyEvent() {
-      var gameState;
+    function weeklyEvent(gameState) {
       var arcEvent;
       var eventDef;
       ensureLifeState();
       if (state.activeEvent || !state.fighter) {
         return;
       }
-      gameState = syncGameStateFromRuntime();
+      gameState = gameState || syncGameStateFromRuntime();
       arcEvent = RelationshipArcEngine.pickEvent(gameState, listRelationshipArcTemplates(), state.rng);
       if (arcEvent && arcEvent.event) {
         if (arcEvent.started) {
@@ -10210,23 +10353,99 @@
       return html.join("");
     }
 
-    function runPersistentWorldCareerSimulation(action) {
-      var gameState;
+    function runPersistentWorldCareerSimulation(action, gameState) {
+      var activeGameState = gameState || syncGameStateFromRuntime();
       var absoluteWeek;
       if (typeof WorldCareerSimEngine === "undefined" || !WorldCareerSimEngine.runWeeklyPass) {
-        return null;
+        return activeGameState;
       }
-      gameState = syncGameStateFromRuntime();
-      absoluteWeek = gameState && gameState.career ? gameState.career.week || 1 : (state && state.fighter ? state.fighter.week || 1 : 1);
-      WorldCareerSimEngine.runWeeklyPass(gameState, {
+      absoluteWeek = activeGameState && activeGameState.career ? activeGameState.career.week || 1 : (state && state.fighter ? state.fighter.week || 1 : 1);
+      WorldCareerSimEngine.runWeeklyPass(activeGameState, {
         actionType: action && action.type ? action.type : "",
         absoluteWeek: absoluteWeek
       });
-      syncRuntimeStateFromGame(gameState);
-      return gameState;
+      return activeGameState;
     }
 
-    function runWorldTick() {
+    function buildWeeklyRefreshPlan(action, weekStamp) {
+      return {
+        weekStamp: typeof weekStamp === "number" ? weekStamp : 1,
+        refreshReputation: isWeekRefreshStale("reputation", weekStamp),
+        refreshSparring: isWeekRefreshStale("sparring", weekStamp),
+        refreshTransitions: isWeekRefreshStale("transitions", weekStamp),
+        refreshStory: isWeekRefreshStale("story", weekStamp)
+      };
+    }
+
+    function rebuildWeeklyRuntimeViews() {
+      var fighter = state.fighter;
+      var offers;
+      var i;
+      if (!fighter) {
+        return;
+      }
+      state.world.offers = buildWeeklyOffers();
+      offers = state.world.offers && state.world.offers.fightOffers instanceof Array ? state.world.offers.fightOffers : [];
+      state.opponents = [];
+      for (i = 0; i < offers.length; i += 1) {
+        if (offers[i] && offers[i].opponent) {
+          state.opponents.push(offers[i].opponent);
+        }
+      }
+      state.world.opponents = state.opponents;
+      state.world.scene.updatedWeek = fighter.week;
+      state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
+      state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
+      rememberCountryVisit(fighter.currentCountry);
+      syncAllNpcRelationSnapshots();
+    }
+
+    function runWeeklyCacheRefresh(action, gameState) {
+      var fighter = state.fighter;
+      var refreshPlan = buildWeeklyRefreshPlan(action, fighter && typeof fighter.week === "number" ? fighter.week : 1);
+      var noticeCount = 0;
+      var activeGameState = gameState || syncGameStateFromRuntime();
+      ensureBiographyState();
+      ensureEncounterHistoryState(activeGameState);
+      if (refreshPlan.refreshSparring && typeof SparringCampEngine !== "undefined" && SparringCampEngine.refreshWeeklyOffers) {
+        SparringCampEngine.ensureState(activeGameState);
+        SparringCampEngine.refreshWeeklyOffers(activeGameState);
+        markWeekRefresh("sparring", refreshPlan.weekStamp);
+      }
+      if (refreshPlan.refreshTransitions && typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.syncPlayerTransitionState) {
+        CareerTransitionEngine.syncPlayerTransitionState(activeGameState, refreshPlan.weekStamp);
+        markWeekRefresh("transitions", refreshPlan.weekStamp);
+      }
+      if (refreshPlan.refreshStory && typeof WorldStoryEngine !== "undefined" && WorldStoryEngine.syncWorldStory) {
+        WorldStoryEngine.ensureState(activeGameState);
+        WorldStoryEngine.syncWorldStory(activeGameState);
+        markWeekRefresh("story", refreshPlan.weekStamp);
+      }
+      if (refreshPlan.refreshReputation) {
+        refreshReputationState(activeGameState);
+        markWeekRefresh("reputation", refreshPlan.weekStamp);
+      }
+      commitGameStateBridge(activeGameState);
+      noticeCount += drainAmateurSeasonNotices(activeGameState, true);
+      noticeCount += drainWorldCareerNotices(activeGameState, true);
+      noticeCount += drainCareerTransitionNotices(activeGameState, true);
+      bindCanonicalGameState(activeGameState);
+      rebuildWeeklyRuntimeViews();
+      state.world.lastWeekAction = {
+        type: "idle",
+        label: "",
+        meta: null
+      };
+      if (!state.activeEvent) {
+        weeklyEvent(activeGameState);
+      }
+      return {
+        gameState: activeGameState,
+        noticeCount: noticeCount
+      };
+    }
+
+    function applyWeeklyPlayerMutationPhase() {
       var fighter = state.fighter;
       var previousCalendar;
       var nextCalendar;
@@ -10323,17 +10542,26 @@
       }
       applyBounds(fighter);
       syncAmateurRankState(fighter, true);
-      runPersistentWorldCareerSimulation(action);
       updateNpcWorldForWeek(action);
-      refreshWorldState();
-      state.world.lastWeekAction = {
-        type: "idle",
-        label: "",
-        meta: null
-      };
-      if (!state.activeEvent) {
-        weeklyEvent();
-      }
+      return action;
+    }
+
+    function runWorldTick() {
+      var tickTimer = startPerfTimer("weekTickMs");
+      var phaseTimer;
+      var action;
+      var gameState;
+      resetWeekPhaseMetrics();
+      phaseTimer = startPerfTimer("weekPhase_playerMs");
+      action = applyWeeklyPlayerMutationPhase();
+      finishPerfTimer(phaseTimer);
+      phaseTimer = startPerfTimer("weekPhase_worldSimMs");
+      gameState = runPersistentWorldCareerSimulation(action);
+      finishPerfTimer(phaseTimer);
+      phaseTimer = startPerfTimer("weekPhase_cacheMs");
+      runWeeklyCacheRefresh(action, gameState);
+      finishPerfTimer(phaseTimer);
+      finishPerfTimer(tickTimer);
     }
 
     function applyBounds(fighter) {
@@ -10890,12 +11118,16 @@
       var started = nowMs();
       if (state.activeEvent && panel !== "worldEvent") {
         state.panel = "worldEvent";
-        render();
+        if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: true })) {
+          render();
+        }
         trackPanelOpenMetric("worldEvent", nowMs() - started);
         return;
       }
       state.panel = panel;
-      render();
+      if (isFightPanelKey(panel) || !updatePanelSubtree({ refreshNavigation: true, suppressSave: true })) {
+        render();
+      }
       trackPanelOpenMetric(panel, nowMs() - started);
     }
 
@@ -10909,14 +11141,15 @@
         return;
       }
       state.panel = state.activeEvent ? "worldEvent" : "home";
-      render();
+      render({
+        performanceRenderMetricKey: "weekPhase_renderMs",
+        performanceSaveMetricKey: "weekPhase_saveMs"
+      });
       ensureDebugRuntimeState().performance.weekAdvanceMs = nowMs() - started;
     }
 
     function advanceWeek() {
-      var started = nowMs();
       runWorldTick();
-      ensureDebugRuntimeState().performance.weekTickMs = nowMs() - started;
     }
 
     function evaluateEndState() {
@@ -11359,7 +11592,9 @@
         return;
       }
       state.fight.uiTab = tabKey;
-      render();
+      if (!updateBattleSubtree({ suppressSave: true })) {
+        render();
+      }
     }
 
     function openFightActionGroup(groupKey) {
@@ -11368,7 +11603,9 @@
       }
       state.fight.uiTab = "controls";
       state.fight.actionGroup = groupKey;
-      render();
+      if (!updateBattleSubtree({ suppressSave: true })) {
+        render();
+      }
     }
 
     function previewAttackChain(actor, actionKey) {
@@ -11547,7 +11784,10 @@
         return;
       }
       state.panel = "fightResult";
-      render();
+      if (!updateBattleSubtree({ suppressSave: false })) {
+        render();
+      }
+      endBattleRenderCounting();
     }
 
     function closeFightResult() {
@@ -11852,6 +12092,125 @@
         return html;
       }
       return "<div class='page-stack page-" + panelKey + "'>" + html + "</div>";
+    }
+
+    function isFightPanelKey(panelKey) {
+      return panelKey === "fightLive" || panelKey === "fightBreak" || panelKey === "fightResult";
+    }
+
+    function gamePanelRoot() {
+      return document.getElementById("game-panel-root");
+    }
+
+    function gameNavRoot() {
+      return document.getElementById("game-nav-root");
+    }
+
+    function battleRoot() {
+      return document.getElementById("battle-root");
+    }
+
+    function battleLiveTopbarRoot() {
+      return document.getElementById("fight-live-topbar");
+    }
+
+    function battleLiveTabsRoot() {
+      return document.getElementById("fight-live-tabs");
+    }
+
+    function battleLiveStageRoot() {
+      return document.getElementById("fight-live-stage");
+    }
+
+    function fightTokenNode(side) {
+      return document.getElementById(side === "player" ? "fight-token-player" : "fight-token-opponent");
+    }
+
+    function canPartialUpdatePanel() {
+      return state.screen === "game" && !isFightPanelKey(state.panel) && !!gamePanelRoot();
+    }
+
+    function canPartialUpdateBattle() {
+      return state.screen === "game" && isFightPanelKey(state.panel) && !!battleRoot();
+    }
+
+    function trackPartialRender(metricKey) {
+      var debugState = ensureDebugRuntimeState();
+      debugState.metrics[metricKey] = (debugState.metrics[metricKey] || 0) + 1;
+    }
+
+    function trackBattleRenderPerAction() {
+      var runtimeCache = ensureRuntimePerfState();
+      if (!runtimeCache.battleRenderCounting) {
+        return;
+      }
+      ensureDebugRuntimeState().performance.battleRenderCountPerAction = Math.max(0, finiteNumber(ensureDebugRuntimeState().performance.battleRenderCountPerAction, 0)) + 1;
+    }
+
+    function updatePanelSubtree(options) {
+      var opts = options || {};
+      var panelRoot = gamePanelRoot();
+      var navRoot = gameNavRoot();
+      if (!canPartialUpdatePanel() || !panelRoot) {
+        return false;
+      }
+      if (opts.refreshNavigation && navRoot) {
+        navRoot.innerHTML = renderNavigationTabs();
+      }
+      panelRoot.innerHTML = renderMainPanel();
+      trackPartialRender("panelPartialRenderCount");
+      if (!opts.suppressSave) {
+        scheduleSaveGameState();
+      }
+      return true;
+    }
+
+    function updateFacilitySubtree(options) {
+      if (state.panel !== "careerGym" && state.panel !== "careerTrainer") {
+        return false;
+      }
+      return updatePanelSubtree(options);
+    }
+
+    function updateBattleLiveSubtree(options) {
+      var opts = options || {};
+      var fight = state.fight;
+      var topbarRoot = battleLiveTopbarRoot();
+      var tabsRoot = battleLiveTabsRoot();
+      var stageRoot = battleLiveStageRoot();
+      if (!fight || state.panel !== "fightLive" || !canPartialUpdateBattle() || !topbarRoot || !tabsRoot || !stageRoot) {
+        return false;
+      }
+      topbarRoot.innerHTML = renderFightLiveTopbar(fight);
+      tabsRoot.innerHTML = renderFightLiveTabs(fight);
+      stageRoot.className = "battle-stage" + ((fight.uiTab || "controls") === "controls" ? " controls-stage" : "");
+      stageRoot.innerHTML = renderFightLiveStage(fight);
+      applyFightAnimationDom();
+      trackPartialRender("battlePartialRenderCount");
+      trackBattleRenderPerAction();
+      if (!opts.suppressSave) {
+        scheduleSaveGameState();
+      }
+      return true;
+    }
+
+    function updateBattleSubtree(options) {
+      var opts = options || {};
+      var root = battleRoot();
+      if (!canPartialUpdateBattle() || !root) {
+        return false;
+      }
+      if (state.panel === "fightLive" && updateBattleLiveSubtree(opts)) {
+        return true;
+      }
+      root.innerHTML = renderMainPanel();
+      applyFightAnimationDom();
+      trackPartialRender("battlePartialRenderCount");
+      trackBattleRenderPerAction();
+      if (!opts.suppressSave) {
+        scheduleSaveGameState();
+      }
+      return true;
     }
 
     function renderNavigationTabs() {
@@ -12305,7 +12664,10 @@
       var trackId = currentTrackId();
       if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) {
         return memoizeGameProjection("careerGymChoices", countryKey + "|" + trackId, function (gameState) {
-          return WorldFacilityEngine.listGymsByCountry(gameState, countryKey, { trackId: trackId });
+          return WorldFacilityEngine.listGymsByCountry(gameState, countryKey, {
+            trackId: trackId,
+            versionToken: currentProjectionVersion("facility")
+          });
         });
       }
       return guaranteedCountryGyms(countryKey);
@@ -12319,7 +12681,10 @@
       }
       if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByGym) {
         return memoizeGameProjection("careerTrainerChoices", gymId + "|" + trackId, function (gameState) {
-          return WorldFacilityEngine.listTrainersByGym(gameState, gymId, { trackId: trackId });
+          return WorldFacilityEngine.listTrainersByGym(gameState, gymId, {
+            trackId: trackId,
+            versionToken: currentProjectionVersion("facility")
+          });
         });
       }
       return guaranteedCountryTrainerTypes(countryKey).filter(function (trainer) {
@@ -13784,6 +14149,33 @@
       }
     }
 
+    function requestPaintFrame(callback) {
+      var raf = window.requestAnimationFrame || window.msRequestAnimationFrame;
+      if (raf) {
+        return raf(callback);
+      }
+      return window.setTimeout(callback, 16);
+    }
+
+    function cancelPaintFrame(requestId) {
+      var cancel = window.cancelAnimationFrame || window.msCancelAnimationFrame;
+      if (!requestId) {
+        return;
+      }
+      if (cancel) {
+        cancel(requestId);
+        return;
+      }
+      window.clearTimeout(requestId);
+    }
+
+    function clearFightAnimationFrameRequest() {
+      if (state.fight && state.fight.animationFrameRequest) {
+        cancelPaintFrame(state.fight.animationFrameRequest);
+        state.fight.animationFrameRequest = null;
+      }
+    }
+
     function clearFightAnimationTimeout() {
       if (state.fight && state.fight.animationTimeout) {
         window.clearTimeout(state.fight.animationTimeout);
@@ -13794,21 +14186,98 @@
     function clearFightAnimationState() {
       if (state.fight) {
         clearFightAnimationTimeout();
+        clearFightAnimationFrameRequest();
         state.fight.animation = null;
       }
     }
 
+    function removeFightAnimationClasses(node) {
+      if (!node || typeof node.className !== "string") {
+        return;
+      }
+      node.className = node.className
+        .replace(/\battack\-(left|right|up|down)\b/g, "")
+        .replace(/\bdodge\-(left|right|up|down)\b/g, "")
+        .replace(/\bhit\-react\b/g, "")
+        .replace(/\bcrit\-flash\b/g, "")
+        .replace(/\s+/g, " ")
+        .replace(/^\s+|\s+$/g, "");
+    }
+
+    function clearFightAnimationDom() {
+      removeFightAnimationClasses(fightTokenNode("player"));
+      removeFightAnimationClasses(fightTokenNode("opponent"));
+    }
+
+    function applyFightAnimationDom() {
+      var fight = state.fight;
+      var animation = fight ? fight.animation : null;
+      var playerNode;
+      var opponentNode;
+      var requestedAt;
+      if (!fight || !animation || state.panel !== "fightLive") {
+        return false;
+      }
+      playerNode = fightTokenNode("player");
+      opponentNode = fightTokenNode("opponent");
+      if (!playerNode || !opponentNode) {
+        return false;
+      }
+      clearFightAnimationFrameRequest();
+      clearFightAnimationDom();
+      requestedAt = typeof animation.requestedAt === "number" ? animation.requestedAt : nowMs();
+      fight.animationFrameRequest = requestPaintFrame(function () {
+        if (!state.fight || state.fight !== fight || !fight.animation) {
+          return;
+        }
+        fight.animationFrameRequest = requestPaintFrame(function () {
+          if (!state.fight || state.fight !== fight || !fight.animation) {
+            return;
+          }
+          playerNode = fightTokenNode("player");
+          opponentNode = fightTokenNode("opponent");
+          if (!playerNode || !opponentNode) {
+            fight.animationFrameRequest = null;
+            return;
+          }
+          if (playerNode.offsetWidth) {}
+          if (opponentNode.offsetWidth) {}
+          if (fight.animation.playerClass) {
+            playerNode.className += " " + fight.animation.playerClass;
+          }
+          if (fight.animation.opponentClass) {
+            opponentNode.className += " " + fight.animation.opponentClass;
+          }
+          ensureDebugRuntimeState().performance.animationPaintDelayMs = nowMs() - requestedAt;
+          fight.animationFrameRequest = null;
+        });
+      });
+      return true;
+    }
+
     function clearFightAnimation() {
       var hadAnimation = state.fight && state.fight.animation;
+      clearFightAnimationDom();
       clearFightAnimationState();
       if (hadAnimation) {
-        render();
+        return;
       }
     }
 
     function clearFightTimers() {
       clearFightStepTimeout();
+      clearFightAnimationDom();
       clearFightAnimationState();
+    }
+
+    function beginBattleActionMetrics() {
+      var runtimeCache = ensureRuntimePerfState();
+      ensureDebugRuntimeState().performance.battleRenderCountPerAction = 0;
+      runtimeCache.battleRenderCounting = true;
+    }
+
+    function endBattleRenderCounting() {
+      ensureRuntimePerfState().battleRenderCounting = false;
     }
 
     function scheduleFightStep(callbackName, delay) {
@@ -13826,15 +14295,17 @@
     }
 
     function setFightAnimationFrame(playerClass, opponentClass, duration) {
+      var triggerStarted = nowMs();
       if (!state.fight) {
         return;
       }
       clearFightAnimationState();
       state.fight.animation = {
         playerClass: playerClass || "",
-        opponentClass: opponentClass || ""
+        opponentClass: opponentClass || "",
+        requestedAt: triggerStarted
       };
-      render();
+      ensureDebugRuntimeState().performance.animationTriggerMs = nowMs() - triggerStarted;
       state.fight.animationTimeout = window.setTimeout("clearFightAnimation()", duration || ACTION_ANIMATION_MS);
     }
 
@@ -13866,20 +14337,7 @@
     }
 
     function tokenClassFor(side) {
-      var fight = state.fight;
-      var tokenClass = "token " + (side === "player" ? "player" : "opponent");
-      var sideClass;
-      if (!fight) {
-        return tokenClass;
-      }
-      if (!fight.animation) {
-        return tokenClass;
-      }
-      sideClass = side === "player" ? fight.animation.playerClass : fight.animation.opponentClass;
-      if (sideClass) {
-        tokenClass += " " + sideClass;
-      }
-      return tokenClass;
+      return "token " + (side === "player" ? "player" : "opponent");
     }
 
     function actionReachAllowed(fight, side, actionKey) {
@@ -15110,16 +15568,16 @@
     function renderGame() {
       var calendar = currentCalendarView(state.fighter);
       if (state.panel === "fightLive" || state.panel === "fightBreak" || state.panel === "fightResult") {
-        return renderMainPanel();
+        return "<div id='battle-root'>" + renderMainPanel() + "</div>";
       }
       return "" +
-        "<div class='shell'>" +
+        "<div class='shell' id='game-shell'>" +
           "<div class='topbar'>" +
             "<div class='brand'><div class='eyebrow'>Street Boxer Simulator</div><div class='title'>" + state.fighter.name + "</div></div>" +
             "<div class='week-chip'>Неделя " + state.fighter.week + " · " + calendar.monthName + " " + calendar.year + "</div>" +
           "</div>" +
-          renderNavigationTabs() +
-          "<div class='tab-screen'>" + renderMainPanel() + "</div>" +
+          "<div id='game-nav-root'>" + renderNavigationTabs() + "</div>" +
+          "<div class='tab-screen' id='game-panel-root'>" + renderMainPanel() + "</div>" +
         "</div>";
     }
 
@@ -15233,6 +15691,7 @@
         pendingTimeout: null,
         animation: null,
         animationTimeout: null,
+        animationFrameRequest: null,
         rematchRivalryId: offer ? (offer.rematchRivalryId || "") : "",
         isSparring: !!fightExtra.isSparring,
         sparringMeta: fightExtra.sparringMeta ? clonePlainData(fightExtra.sparringMeta) : null,
@@ -15479,7 +15938,10 @@
       };
       fight.actionLock = false;
       state.panel = "fightBreak";
-      render();
+      if (!updateBattleSubtree({ suppressSave: false })) {
+        render();
+      }
+      endBattleRenderCounting();
     }
 
     function completeFightTurn() {
@@ -15520,7 +15982,10 @@
       fight.turn += 1;
       fight.aiActionsLeft = 1;
       fight.actionLock = false;
-      render();
+      if (!updateBattleSubtree({ suppressSave: false })) {
+        render();
+      }
+      endBattleRenderCounting();
     }
 
     function startNextRound() {
@@ -15556,7 +16021,9 @@
       resetRingPositions(fight);
       pushFightLine(fight, "Начинается раунд " + fight.round + ". После перерыва бойцы снова сходятся в центре.");
       state.panel = "fightLive";
-      render();
+      if (!updateBattleSubtree({ suppressSave: false })) {
+        render();
+      }
     }
 
     function renderFightBreakPanel() {
@@ -15630,20 +16097,26 @@
       if (FIGHT_ACTIONS[aiActionKey].type === "move") {
         moveActor(fight, "opponent", aiActionKey);
         fight.aiActionsLeft = 0;
-        render();
+        if (!updateBattleSubtree({ suppressSave: false })) {
+          render();
+        }
         scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
         return;
       }
       if (FIGHT_ACTIONS[aiActionKey].type === "defense") {
         applyDefenseAction(fight, "opponent", aiActionKey);
         fight.aiActionsLeft = 0;
-        render();
+        if (!updateBattleSubtree({ suppressSave: false })) {
+          render();
+        }
         scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
         return;
       }
       strikeOutcome = strikeActor(fight, "opponent", aiActionKey);
       fight.aiActionsLeft = 0;
-      render();
+      if (!updateBattleSubtree({ suppressSave: false })) {
+        render();
+      }
       if (strikeOutcome) {
         return;
       }
@@ -15653,34 +16126,50 @@
     function fightAction(actionKey) {
       var fight = state.fight;
       var action = FIGHT_ACTIONS[actionKey];
+      var actionStarted;
       var strikeOutcome;
       if (!fight || fight.result || !action || fight.actionLock) {
         return;
       }
+      actionStarted = nowMs();
+      beginBattleActionMetrics();
       sanitizeFightState(fight, "player_action");
       if (maybeForceStopFight(fight, "player_action")) {
         return;
       }
       if (!canUseFightAction(fight, "player", actionKey)) {
         pushFightLine(fight, "Это действие сейчас недоступно из-за позиции на ринге или нехватки стамины.");
-        render();
+        if (!updateBattleSubtree({ suppressSave: false })) {
+          render();
+        }
+        ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
+        endBattleRenderCounting();
         return;
       }
       fight.actionLock = true;
       if (action.type === "move") {
         moveActor(fight, "player", actionKey);
-        render();
+        if (!updateBattleSubtree({ suppressSave: false })) {
+          render();
+        }
+        ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
         scheduleFightStep("runAiAfterPlayer", ACTION_DELAY_MS);
         return;
       }
       if (action.type === "defense") {
         applyDefenseAction(fight, "player", actionKey);
-        render();
+        if (!updateBattleSubtree({ suppressSave: false })) {
+          render();
+        }
+        ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
         scheduleFightStep("runAiAfterPlayer", ACTION_DELAY_MS);
         return;
       }
       strikeOutcome = strikeActor(fight, "player", actionKey);
-      render();
+      if (!updateBattleSubtree({ suppressSave: false })) {
+        render();
+      }
+      ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
       if (strikeOutcome) {
         return;
       }
@@ -15704,17 +16193,8 @@
       return html.join("");
     }
 
-    function renderFightLivePanel() {
-      var fight = state.fight;
+    function renderFightLiveTopbar(fight) {
       var html = [];
-      var x;
-      var y;
-      var playerCell;
-      var opponentCell;
-      var activeTab = fight.uiTab || "controls";
-      ensureFightRulesetState(fight);
-      html.push("<div class='battle-shell'>");
-      html.push("<div class='battle-topbar'>");
       html.push("<div class='battle-health-card'>");
       html.push("<div class='chip gold'>Ты</div>");
       html.push("<div class='battle-stats-line'>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + "</div>");
@@ -15725,53 +16205,84 @@
       html.push("<div class='battle-stats-line'>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + "</div>");
       html.push("<div class='battle-stats-line'>" + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "</div>");
       html.push("</div>");
-      html.push("</div>");
-      html.push("<div class='battle-panel'><div class='battle-tabs'>");
-      html.push("<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>");
-      html.push("<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>");
-      html.push("<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>");
-      html.push("</div></div>");
-      if (activeTab === "stats") {
-        html.push("<div class='battle-stage'>" + renderFightStatsPanel(fight) + "</div>");
-      } else if (activeTab === "log") {
-        html.push("<div class='battle-stage'>" + renderFightLogPanel(fight) + "</div>");
-      } else {
-        html.push("<div class='battle-stage controls-stage'>");
-        html.push("<div class='eyebrow'>" + (fight.ruleset && fight.ruleset.label ? fight.ruleset.label + " • " : "") + "Раунд " + fight.round + " / " + fight.roundLimit + " • Ход " + fight.turn + " / " + fight.turnsPerRound + "</div>");
-        html.push("<div class='title' style='font-size:28px'>Ринг 5x5</div>");
-        if (fight.knockdown && fight.knockdown.text) {
-          html.push("<div class='knockdown-banner'>" + fight.knockdown.text + "</div>");
+      return html.join("");
+    }
+
+    function renderFightLiveTabs(fight) {
+      var activeTab = fight.uiTab || "controls";
+      return "" +
+        "<button class='" + (activeTab === "controls" ? "button" : "ghost") + "' onclick='openFightTab(\"controls\")'>Управление</button>" +
+        "<button class='" + (activeTab === "stats" ? "button" : "ghost") + "' onclick='openFightTab(\"stats\")'>Статистика</button>" +
+        "<button class='" + (activeTab === "log" ? "button" : "ghost") + "' onclick='openFightTab(\"log\")'>Лента</button>";
+    }
+
+    function renderFightRingBoard(fight) {
+      var html = [];
+      var x;
+      var y;
+      var playerCell;
+      var opponentCell;
+      html.push("<div class='ring-board' id='fight-ring-board'>");
+      for (y = 0; y < RING_SIZE; y += 1) {
+        html.push("<div class='ring-row'>");
+        for (x = 0; x < RING_SIZE; x += 1) {
+          playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
+          opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
+          html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div id='fight-token-player' class='" + tokenClassFor("player") + "'>Ты</div>" : (opponentCell ? "<div id='fight-token-opponent' class='" + tokenClassFor("opponent") + "'>Он</div>" : "")) + "</div>");
         }
-        html.push("<div class='ring-board'>");
-        for (y = 0; y < RING_SIZE; y += 1) {
-          html.push("<div class='ring-row'>");
-          for (x = 0; x < RING_SIZE; x += 1) {
-            playerCell = fight.playerState.position.x === x && fight.playerState.position.y === y;
-            opponentCell = fight.opponentState.position.x === x && fight.opponentState.position.y === y;
-            html.push("<div class='ring-cell' data-cell='" + (x + 1) + ":" + (y + 1) + "'>" + (playerCell ? "<div class='" + tokenClassFor("player") + "'>Ты</div>" : (opponentCell ? "<div class='" + tokenClassFor("opponent") + "'>Он</div>" : "")) + "</div>");
-          }
-          html.push("</div>");
-        }
-        html.push("</div>");
-        html.push(renderFightControlsPanel(fight));
         html.push("</div>");
       }
       html.push("</div>");
       return html.join("");
     }
 
-    function render() {
+    function renderFightLiveStage(fight) {
+      var html = [];
+      var activeTab = fight.uiTab || "controls";
+      if (activeTab === "stats") {
+        return renderFightStatsPanel(fight);
+      }
+      if (activeTab === "log") {
+        return renderFightLogPanel(fight);
+      }
+      html.push("<div class='eyebrow'>" + (fight.ruleset && fight.ruleset.label ? fight.ruleset.label + " • " : "") + "Раунд " + fight.round + " / " + fight.roundLimit + " • Ход " + fight.turn + " / " + fight.turnsPerRound + "</div>");
+      html.push("<div class='title' style='font-size:28px'>Ринг 5x5</div>");
+      if (fight.knockdown && fight.knockdown.text) {
+        html.push("<div class='knockdown-banner'>" + fight.knockdown.text + "</div>");
+      }
+      html.push(renderFightRingBoard(fight));
+      html.push(renderFightControlsPanel(fight));
+      return html.join("");
+    }
+
+    function renderFightLivePanel() {
+      var fight = state.fight;
+      var html = [];
+      ensureFightRulesetState(fight);
+      html.push("<div class='battle-shell'>");
+      html.push("<div class='battle-topbar' id='fight-live-topbar'>" + renderFightLiveTopbar(fight) + "</div>");
+      html.push("<div class='battle-panel'><div class='battle-tabs' id='fight-live-tabs'>" + renderFightLiveTabs(fight) + "</div></div>");
+      html.push("<div class='battle-stage" + ((fight.uiTab || "controls") === "controls" ? " controls-stage" : "") + "' id='fight-live-stage'>" + renderFightLiveStage(fight) + "</div>");
+      html.push("</div>");
+      return html.join("");
+    }
+
+    function render(options) {
       var app = document.getElementById("app");
       var html = "";
       var debugHtml = "";
       var renderStarted = new Date().getTime();
       var mainRenderTimer = startPerfTimer("renderGameMs");
       var debugRenderTimer;
+      var phaseRenderTimer;
+      var phaseSaveTimer;
+      options = options || {};
       ensureDebugRuntimeState();
       beginRenderCycle();
       if (state.isSimulationMode) {
         return;
       }
+      state.debug.metrics.fullRenderCount += 1;
       if (state.screen === "menu") {
         html = renderMainMenu();
       } else if (state.screen === "archive") {
@@ -15795,7 +16306,21 @@
         ensureDebugRuntimeState().performance.renderDebugMs = 0;
       }
       app.innerHTML = renderUpdateBanner() + debugHtml + html;
-      scheduleSaveGameState();
+      if (options.performanceRenderMetricKey) {
+        phaseRenderTimer = startPerfTimer(options.performanceRenderMetricKey);
+        finishPerfTimer(phaseRenderTimer, nowMs() - renderStarted);
+      }
+      if (options.skipSave !== true) {
+        if (options.performanceSaveMetricKey) {
+          phaseSaveTimer = startPerfTimer(options.performanceSaveMetricKey);
+          scheduleSaveGameState();
+          finishPerfTimer(phaseSaveTimer);
+        } else {
+          scheduleSaveGameState();
+        }
+      } else if (options.performanceSaveMetricKey) {
+        ensureDebugRuntimeState().performance[options.performanceSaveMetricKey] = 0;
+      }
       state.debug.metrics.lastRenderMs = new Date().getTime() - renderStarted;
     }
 

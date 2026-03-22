@@ -105,6 +105,100 @@ var PersistentFighterRegistry = (function () {
     return gameState.rosterState;
   }
 
+  var rosterIndexCache = {
+    gameState: null,
+    versionToken: "",
+    indexes: null
+  };
+
+  function pushIndexValue(mapObject, key, value) {
+    if (!key) {
+      return;
+    }
+    if (!(mapObject[key] instanceof Array)) {
+      mapObject[key] = [];
+    }
+    mapObject[key].push(value);
+  }
+
+  function defaultRosterVersionToken(gameState) {
+    var roster = rosterRoot(gameState);
+    var calendar = gameState && gameState.career ? gameState.career.calendar || {} : {};
+    return [
+      roster.fighterIds.length,
+      roster.gymIds ? roster.gymIds.length : 0,
+      roster.trainerIds ? roster.trainerIds.length : 0,
+      calendar.year || 0,
+      calendar.week || 0
+    ].join("|");
+  }
+
+  function rosterVersionToken(gameState, options) {
+    return options && options.versionToken != null && options.versionToken !== "" ? String(options.versionToken) : defaultRosterVersionToken(gameState);
+  }
+
+  function buildRosterIndexes(gameState) {
+    var roster = rosterRoot(gameState);
+    var indexes = {
+      fightersByTrack: {},
+      fightersByCountry: {},
+      fightersByGym: {},
+      fightersByTrainer: {},
+      fightersByTrackCountry: {},
+      activeFighterIds: []
+    };
+    var i;
+    var fighter;
+    var trackId;
+    var countryId;
+    for (i = 0; i < roster.fighterIds.length; i += 1) {
+      fighter = roster.fightersById[roster.fighterIds[i]];
+      if (!fighter || fighter.status === "retired") {
+        continue;
+      }
+      trackId = fighter.currentTrack || fighter.trackId || "street";
+      countryId = fighter.country || "";
+      indexes.activeFighterIds.push(fighter.id);
+      pushIndexValue(indexes.fightersByTrack, trackId, fighter.id);
+      pushIndexValue(indexes.fightersByCountry, countryId, fighter.id);
+      pushIndexValue(indexes.fightersByTrackCountry, trackId + "|" + countryId, fighter.id);
+      if (fighter.currentGymId) {
+        pushIndexValue(indexes.fightersByGym, fighter.currentGymId, fighter.id);
+      }
+      if (fighter.currentTrainerId) {
+        pushIndexValue(indexes.fightersByTrainer, fighter.currentTrainerId, fighter.id);
+      }
+    }
+    return indexes;
+  }
+
+  function ensureRosterIndexes(gameState, options) {
+    var token = rosterVersionToken(gameState, options);
+    if (rosterIndexCache.gameState !== gameState || rosterIndexCache.versionToken !== token || !rosterIndexCache.indexes) {
+      rosterIndexCache.gameState = gameState;
+      rosterIndexCache.versionToken = token;
+      rosterIndexCache.indexes = buildRosterIndexes(gameState);
+    }
+    return rosterIndexCache.indexes;
+  }
+
+  function fightersFromIds(gameState, ids) {
+    var roster = rosterRoot(gameState);
+    var result = [];
+    var i;
+    var fighter;
+    if (!(ids instanceof Array) || !ids.length) {
+      return result;
+    }
+    for (i = 0; i < ids.length; i += 1) {
+      fighter = roster.fightersById[ids[i]];
+      if (fighter) {
+        result.push(fighter);
+      }
+    }
+    return result;
+  }
+
   function listCacheIds(mapObject) {
     var ids = [];
     var key;
@@ -566,36 +660,29 @@ var PersistentFighterRegistry = (function () {
     return roster.fightersById[fighterId] || null;
   }
 
-  function collectByFilter(gameState, callback) {
-    var roster = rosterRoot(gameState);
-    var result = [];
-    var i;
-    var fighter;
-    for (i = 0; i < roster.fighterIds.length; i += 1) {
-      fighter = roster.fightersById[roster.fighterIds[i]];
-      if (fighter && callback(fighter)) {
-        result.push(fighter);
-      }
-    }
-    return result;
+  function getFightersByTrack(gameState, trackId, options) {
+    var indexes = ensureRosterIndexes(gameState, options);
+    return fightersFromIds(gameState, indexes.fightersByTrack[trackId || "street"] || []);
   }
 
-  function getFightersByTrack(gameState, trackId) {
-    return collectByFilter(gameState, function (fighter) {
-      return fighter.currentTrack === trackId && fighter.status !== "retired";
-    });
+  function getFightersByCountry(gameState, countryId, options) {
+    var indexes = ensureRosterIndexes(gameState, options);
+    return fightersFromIds(gameState, indexes.fightersByCountry[countryId || ""] || []);
   }
 
-  function getFightersByCountry(gameState, countryId) {
-    return collectByFilter(gameState, function (fighter) {
-      return fighter.country === countryId && fighter.status !== "retired";
-    });
+  function getFightersByGym(gameState, gymId, options) {
+    var indexes = ensureRosterIndexes(gameState, options);
+    return fightersFromIds(gameState, indexes.fightersByGym[gymId || ""] || []);
   }
 
-  function getFightersByGym(gameState, gymId) {
-    return collectByFilter(gameState, function (fighter) {
-      return fighter.currentGymId === gymId && fighter.status !== "retired";
-    });
+  function getFightersByTrainer(gameState, trainerId, options) {
+    var indexes = ensureRosterIndexes(gameState, options);
+    return fightersFromIds(gameState, indexes.fightersByTrainer[trainerId || ""] || []);
+  }
+
+  function getFightersByTrackCountry(gameState, trackId, countryId, options) {
+    var indexes = ensureRosterIndexes(gameState, options);
+    return fightersFromIds(gameState, indexes.fightersByTrackCountry[(trackId || "street") + "|" + (countryId || "")] || []);
   }
 
   function chooseClosestFighter(gameState, trackId, countryId, tier, playerStats, excludedId) {
@@ -770,6 +857,8 @@ var PersistentFighterRegistry = (function () {
     getFightersByTrack: getFightersByTrack,
     getFightersByCountry: getFightersByCountry,
     getFightersByGym: getFightersByGym,
+    getFightersByTrainer: getFightersByTrainer,
+    getFightersByTrackCountry: getFightersByTrackCountry,
     chooseClosestFighter: chooseClosestFighter,
     buildOpponentSnapshot: buildOpponentSnapshot,
     ensureFighterEntity: ensureFighterEntity,

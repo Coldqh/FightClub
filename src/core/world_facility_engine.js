@@ -36,6 +36,115 @@ var WorldFacilityEngine = (function () {
     return gameState.rosterState;
   }
 
+  var facilityIndexCache = {
+    gameState: null,
+    versionToken: "",
+    indexes: null
+  };
+
+  function pushIndexValue(mapObject, key, value) {
+    if (!key) {
+      return;
+    }
+    if (!(mapObject[key] instanceof Array)) {
+      mapObject[key] = [];
+    }
+    if (mapObject[key].indexOf(value) === -1) {
+      mapObject[key].push(value);
+    }
+  }
+
+  function defaultFacilityVersionToken(gameState) {
+    var roster = rosterRoot(gameState);
+    var calendar = gameState && gameState.career ? gameState.career.calendar || {} : {};
+    return [
+      roster.gymIds.length,
+      roster.trainerIds.length,
+      roster.fighterIds.length,
+      calendar.year || 0,
+      calendar.week || 0
+    ].join("|");
+  }
+
+  function facilityVersionToken(gameState, options) {
+    return options && options.versionToken != null && options.versionToken !== "" ? String(options.versionToken) : defaultFacilityVersionToken(gameState);
+  }
+
+  function buildFacilityIndexes(gameState) {
+    var roster = rosterRoot(gameState);
+    var indexes = {
+      gymsByCountry: {},
+      trainersByCountry: {},
+      trainersByGym: {},
+      trainersByGymRecovery: {}
+    };
+    var i;
+    var gym;
+    var trainer;
+    for (i = 0; i < roster.gymIds.length; i += 1) {
+      gym = normalizeGym(roster.gymsById[roster.gymIds[i]]);
+      roster.gymsById[gym.id] = gym;
+      pushIndexValue(indexes.gymsByCountry, gym.country || "", gym.id);
+      indexes.trainersByGym[gym.id] = gym.trainerIds instanceof Array ? gym.trainerIds.slice(0) : [];
+    }
+    for (i = 0; i < roster.trainerIds.length; i += 1) {
+      trainer = normalizeTrainer(roster.trainersById[roster.trainerIds[i]]);
+      roster.trainersById[trainer.id] = trainer;
+      pushIndexValue(indexes.trainersByCountry, trainer.country || "", trainer.id);
+      if (trainer.currentGymId) {
+        pushIndexValue(indexes.trainersByGymRecovery, trainer.currentGymId, trainer.id);
+        if (!(indexes.trainersByGym[trainer.currentGymId] instanceof Array)) {
+          indexes.trainersByGym[trainer.currentGymId] = [];
+        }
+      }
+    }
+    return indexes;
+  }
+
+  function ensureFacilityIndexes(gameState, options) {
+    var token = facilityVersionToken(gameState, options);
+    if (facilityIndexCache.gameState !== gameState || facilityIndexCache.versionToken !== token || !facilityIndexCache.indexes) {
+      facilityIndexCache.gameState = gameState;
+      facilityIndexCache.versionToken = token;
+      facilityIndexCache.indexes = buildFacilityIndexes(gameState);
+    }
+    return facilityIndexCache.indexes;
+  }
+
+  function gymsFromIds(gameState, ids) {
+    var roster = rosterRoot(gameState);
+    var result = [];
+    var i;
+    var gym;
+    if (!(ids instanceof Array) || !ids.length) {
+      return result;
+    }
+    for (i = 0; i < ids.length; i += 1) {
+      gym = roster.gymsById[ids[i]];
+      if (gym) {
+        result.push(gym);
+      }
+    }
+    return result;
+  }
+
+  function trainersFromIds(gameState, ids) {
+    var roster = rosterRoot(gameState);
+    var result = [];
+    var i;
+    var trainer;
+    if (!(ids instanceof Array) || !ids.length) {
+      return result;
+    }
+    for (i = 0; i < ids.length; i += 1) {
+      trainer = roster.trainersById[ids[i]];
+      if (trainer) {
+        result.push(trainer);
+      }
+    }
+    return result;
+  }
+
   function compareRanks(leftId, rightId) {
     if (!rightId) {
       return 1;
@@ -170,17 +279,9 @@ var WorldFacilityEngine = (function () {
   }
 
   function listGymsByCountry(gameState, countryId, options) {
-    var roster = rosterRoot(gameState);
-    var result = [];
-    var i;
-    var gym;
+    var indexes = ensureFacilityIndexes(gameState, options);
+    var result = gymsFromIds(gameState, indexes.gymsByCountry[countryId || ""] || []);
     var opts = options || {};
-    for (i = 0; i < roster.gymIds.length; i += 1) {
-      gym = roster.gymsById[roster.gymIds[i]];
-      if (gym && gym.country === countryId) {
-        result.push(gym);
-      }
-    }
     if (opts.trackId) {
       result = filterTrack(result, opts.trackId);
     }
@@ -188,17 +289,9 @@ var WorldFacilityEngine = (function () {
   }
 
   function listTrainersByCountry(gameState, countryId, options) {
-    var roster = rosterRoot(gameState);
-    var result = [];
-    var i;
-    var trainer;
+    var indexes = ensureFacilityIndexes(gameState, options);
+    var result = trainersFromIds(gameState, indexes.trainersByCountry[countryId || ""] || []);
     var opts = options || {};
-    for (i = 0; i < roster.trainerIds.length; i += 1) {
-      trainer = roster.trainersById[roster.trainerIds[i]];
-      if (trainer && trainer.country === countryId) {
-        result.push(trainer);
-      }
-    }
     if (opts.trackId) {
       result = filterTrack(result, opts.trackId);
     }
@@ -207,14 +300,28 @@ var WorldFacilityEngine = (function () {
 
   function listTrainersByGym(gameState, gymId, options) {
     var roster = rosterRoot(gameState);
+    var indexes = ensureFacilityIndexes(gameState, options);
+    var gym = roster.gymsById[gymId] || null;
+    var ids = gym && gym.trainerIds instanceof Array ? gym.trainerIds : [];
     var result = [];
+    var fallbackIds;
     var i;
     var trainer;
     var opts = options || {};
-    for (i = 0; i < roster.trainerIds.length; i += 1) {
-      trainer = roster.trainersById[roster.trainerIds[i]];
+
+    for (i = 0; i < ids.length; i += 1) {
+      trainer = roster.trainersById[ids[i]];
       if (trainer && trainer.currentGymId === gymId) {
         result.push(trainer);
+      }
+    }
+    fallbackIds = indexes.trainersByGymRecovery[gymId] || indexes.trainersByGym[gymId] || [];
+    if (!result.length || ((ids instanceof Array && ids.length) && fallbackIds.length > result.length)) {
+      result = trainersFromIds(gameState, fallbackIds);
+      for (i = result.length - 1; i >= 0; i -= 1) {
+        if (!result[i] || result[i].currentGymId !== gymId) {
+          result.splice(i, 1);
+        }
       }
     }
     if (opts.trackId) {

@@ -62,6 +62,7 @@ var WorldRankingsEngine = (function () {
         trainerRosterPreview: 18
       }
     };
+    });
   }
 
   function rosterRoot(gameState) {
@@ -95,6 +96,181 @@ var WorldRankingsEngine = (function () {
       gameState.rosterState.trainersById = {};
     }
     return gameState.rosterState;
+  }
+
+  var projectionCache = {
+    gameState: null,
+    rankingVersion: "",
+    profileVersion: "",
+    rankingViews: {},
+    profileViews: {},
+    streetStandingsRefreshed: false
+  };
+
+  function clearRankingProjectionCache() {
+    projectionCache.rankingViews = {};
+    projectionCache.streetStandingsRefreshed = false;
+  }
+
+  function clearProfileProjectionCache() {
+    projectionCache.profileViews = {};
+  }
+
+  function defaultRankingVersionToken(gameState) {
+    var roster = rosterRoot(gameState);
+    var calendar = gameState && gameState.career ? gameState.career.calendar || {} : {};
+    var seasonState = getSeasonState(gameState);
+    var orgState = gameState && gameState.organizationState ? gameState.organizationState : {};
+    return [
+      roster.fighterIds.length,
+      calendar.year || 0,
+      calendar.week || 0,
+      seasonState.currentSeasonYear || 0,
+      seasonState.currentSeasonWeek || 0,
+      seasonState.resultHistory instanceof Array ? seasonState.resultHistory.length : 0,
+      orgState.rankingTableIds instanceof Array ? orgState.rankingTableIds.length : 0,
+      orgState.organizationIds instanceof Array ? orgState.organizationIds.length : 0
+    ].join("|");
+  }
+
+  function defaultProfileVersionToken(gameState) {
+    var narrative = gameState && gameState.narrativeState ? gameState.narrativeState : {};
+    var worldCareer = gameState && gameState.worldState ? gameState.worldState.worldCareer || {} : {};
+    return [
+      defaultRankingVersionToken(gameState),
+      narrative.worldMediaIds instanceof Array ? narrative.worldMediaIds.length : 0,
+      worldCareer.encounterHistoryIds instanceof Array ? worldCareer.encounterHistoryIds.length : 0
+    ].join("|");
+  }
+
+  function rankingVersionToken(gameState, options) {
+    return options && options.versionToken != null && options.versionToken !== "" ? String(options.versionToken) : defaultRankingVersionToken(gameState);
+  }
+
+  function profileVersionToken(gameState, options) {
+    return options && options.versionToken != null && options.versionToken !== "" ? String(options.versionToken) : defaultProfileVersionToken(gameState);
+  }
+
+  function ensureProjectionCache(gameState, options) {
+    var rankingToken = rankingVersionToken(gameState, options || {});
+    var profileToken = profileVersionToken(gameState, options || {});
+    if (projectionCache.gameState !== gameState) {
+      projectionCache.gameState = gameState;
+      projectionCache.rankingVersion = rankingToken;
+      projectionCache.profileVersion = profileToken;
+      clearRankingProjectionCache();
+      clearProfileProjectionCache();
+      return projectionCache;
+    }
+    if (projectionCache.rankingVersion !== rankingToken) {
+      projectionCache.rankingVersion = rankingToken;
+      clearRankingProjectionCache();
+    }
+    if (projectionCache.profileVersion !== profileToken) {
+      projectionCache.profileVersion = profileToken;
+      clearProfileProjectionCache();
+    }
+    return projectionCache;
+  }
+
+  function cachedRankingProjection(gameState, options, cacheKey, factory) {
+    var cache = ensureProjectionCache(gameState, options);
+    if (cache.rankingViews.hasOwnProperty(cacheKey)) {
+      return cache.rankingViews[cacheKey];
+    }
+    cache.rankingViews[cacheKey] = factory();
+    return cache.rankingViews[cacheKey];
+  }
+
+  function cachedProfileProjection(gameState, options, cacheKey, factory) {
+    var cache = ensureProjectionCache(gameState, options);
+    if (cache.profileViews.hasOwnProperty(cacheKey)) {
+      return cache.profileViews[cacheKey];
+    }
+    cache.profileViews[cacheKey] = factory();
+    return cache.profileViews[cacheKey];
+  }
+
+  function activeFightersForView(gameState, trackId, countryId, options) {
+    var list = [];
+    var roster = rosterRoot(gameState);
+    var i;
+    var fighter;
+    if (typeof PersistentFighterRegistry !== "undefined") {
+      if (trackId && countryId && PersistentFighterRegistry.getFightersByTrackCountry) {
+        return PersistentFighterRegistry.getFightersByTrackCountry(gameState, trackId, countryId, { versionToken: options && options.versionToken ? options.versionToken : "" });
+      }
+      if (trackId && PersistentFighterRegistry.getFightersByTrack) {
+        list = PersistentFighterRegistry.getFightersByTrack(gameState, trackId, { versionToken: options && options.versionToken ? options.versionToken : "" });
+        if (countryId) {
+          for (i = list.length - 1; i >= 0; i -= 1) {
+            if (!list[i] || list[i].country !== countryId) {
+              list.splice(i, 1);
+            }
+          }
+        }
+        return list;
+      }
+      if (countryId && PersistentFighterRegistry.getFightersByCountry) {
+        list = PersistentFighterRegistry.getFightersByCountry(gameState, countryId, { versionToken: options && options.versionToken ? options.versionToken : "" });
+        if (trackId) {
+          for (i = list.length - 1; i >= 0; i -= 1) {
+            if (!list[i] || currentTrackId(list[i]) !== trackId) {
+              list.splice(i, 1);
+            }
+          }
+        }
+        return list;
+      }
+    }
+    for (i = 0; i < roster.fighterIds.length; i += 1) {
+      fighter = roster.fightersById[roster.fighterIds[i]];
+      if (!isActiveFighter(fighter)) {
+        continue;
+      }
+      if (trackId && currentTrackId(fighter) !== trackId) {
+        continue;
+      }
+      if (countryId && fighter.country !== countryId) {
+        continue;
+      }
+      list.push(fighter);
+    }
+    return list;
+  }
+
+  function activeRosterDirectorySource(gameState, trackId, countryId, options) {
+    var list = [];
+    var seen = {};
+    var i;
+    var j;
+    var bucket;
+    var fighter;
+    if (trackId && trackId !== "all") {
+      return activeFightersForView(gameState, trackId, countryId, options);
+    }
+    if (countryId && typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByCountry) {
+      return PersistentFighterRegistry.getFightersByCountry(gameState, countryId, { versionToken: options && options.versionToken ? options.versionToken : "" });
+    }
+    for (i = 0; i < 3; i += 1) {
+      bucket = activeFightersForView(gameState, i === 0 ? "street" : (i === 1 ? "amateur" : "pro"), "", options);
+      for (j = 0; j < bucket.length; j += 1) {
+        fighter = bucket[j];
+        if (fighter && !seen[fighter.id]) {
+          seen[fighter.id] = true;
+          list.push(fighter);
+        }
+      }
+    }
+    return list;
+  }
+
+  function applyPositions(list) {
+    var i;
+    for (i = 0; i < list.length; i += 1) {
+      list[i].position = i + 1;
+    }
+    return list;
   }
 
   function listCountries() {
@@ -232,6 +408,32 @@ var WorldRankingsEngine = (function () {
   }
 
   function listGymsForTrack(gameState, countryId, trackId) {
+    if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) {
+      var facilities = WorldFacilityEngine.listGymsByCountry(gameState, countryId, {
+        trackId: trackId,
+        versionToken: defaultRankingVersionToken(gameState)
+      });
+      var filtered = [];
+      var k;
+      var facilityGym;
+      for (k = 0; k < facilities.length; k += 1) {
+        facilityGym = facilities[k];
+        if (trackId === "street" && facilityGym.gymType && facilityGym.gymType !== "street" && facilityGym.gymType !== "mixed") {
+          continue;
+        }
+        if (trackId === "amateur" && facilityGym.gymType && ["youth", "amateur", "regional_center", "national_team_base", "mixed"].indexOf(facilityGym.gymType) === -1) {
+          continue;
+        }
+        if (trackId === "pro" && facilityGym.gymType && ["pro", "mixed"].indexOf(facilityGym.gymType) === -1) {
+          continue;
+        }
+        filtered.push(facilityGym);
+      }
+      filtered.sort(function (left, right) {
+        return (left.cost || 0) - (right.cost || 0);
+      });
+      return filtered;
+    }
     var roster = rosterRoot(gameState);
     var result = [];
     var i;
@@ -262,6 +464,12 @@ var WorldRankingsEngine = (function () {
   }
 
   function listTrainersForGymTrack(gameState, gymId, trackId) {
+    if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByGym) {
+      return WorldFacilityEngine.listTrainersByGym(gameState, gymId, {
+        trackId: trackId,
+        versionToken: defaultRankingVersionToken(gameState)
+      });
+    }
     var roster = rosterRoot(gameState);
     var gym = roster.gymsById[gymId] || null;
     var ids = gym && gym.trainerIds instanceof Array && gym.trainerIds.length ? gym.trainerIds : roster.trainerIds;
@@ -293,6 +501,7 @@ var WorldRankingsEngine = (function () {
       gymId: gym ? gym.id : "",
       trainerId: trainer ? trainer.id : ""
     };
+    });
   }
 
   function styleIdForSlot(slotIndex) {
@@ -772,47 +981,45 @@ var WorldRankingsEngine = (function () {
 
   function buildStreetRankingView(gameState, options) {
     var opts = options || {};
-    var roster = rosterRoot(gameState);
-    var list = [];
-    var i;
-    var fighter;
     var paging;
-    if (typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.refreshStreetStandings) {
-      StreetCareerEngine.refreshStreetStandings(gameState);
-    }
-    for (i = 0; i < roster.fighterIds.length; i += 1) {
-      fighter = roster.fightersById[roster.fighterIds[i]];
-      if (!isActiveFighter(fighter) || currentTrackId(fighter) !== "street") {
-        continue;
+    var countryKey = opts.countryId || "";
+    var list = cachedRankingProjection(gameState, opts, "street|" + (countryKey || "world"), function () {
+      var cache = ensureProjectionCache(gameState, opts);
+      var fighters;
+      var result = [];
+      var i;
+      var fighter;
+      if (!cache.streetStandingsRefreshed && typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.refreshStreetStandings) {
+        StreetCareerEngine.refreshStreetStandings(gameState);
+        cache.streetStandingsRefreshed = true;
       }
-      if (opts.countryId && fighter.country !== opts.countryId) {
-        continue;
+      fighters = activeFightersForView(gameState, "street", countryKey, opts);
+      for (i = 0; i < fighters.length; i += 1) {
+        fighter = fighters[i];
+        result.push({
+          fighterId: fighter.id,
+          label: fighterDisplayName(fighter),
+          countryId: fighter.country,
+          countryLabel: countryLabel(fighter.country),
+          age: fighter.age || 16,
+          streetRating: fighter.streetRating || 0,
+          streetStanding: fighter.streetData ? (fighter.streetData.nationalStreetStanding || 0) : 0,
+          cityStanding: fighter.streetData ? (fighter.streetData.cityStreetStanding || 0) : 0,
+          statusLabel: fighter.streetData && fighter.streetData.currentStatusId ? fighter.streetData.currentStatusId : "neighborhood_unknown",
+          score: streetScore(fighter),
+          isPlayer: !!fighter.isPlayer
+        });
       }
-      list.push({
-        fighterId: fighter.id,
-        label: fighterDisplayName(fighter),
-        countryId: fighter.country,
-        countryLabel: countryLabel(fighter.country),
-        age: fighter.age || 16,
-        streetRating: fighter.streetRating || 0,
-        streetStanding: fighter.streetData ? (fighter.streetData.nationalStreetStanding || 0) : 0,
-        cityStanding: fighter.streetData ? (fighter.streetData.cityStreetStanding || 0) : 0,
-        statusLabel: fighter.streetData && fighter.streetData.currentStatusId ? fighter.streetData.currentStatusId : "neighborhood_unknown",
-        score: streetScore(fighter),
-        isPlayer: !!fighter.isPlayer
+      result.sort(function (left, right) {
+        var leftStanding = left.streetStanding > 0 ? left.streetStanding : 9999;
+        var rightStanding = right.streetStanding > 0 ? right.streetStanding : 9999;
+        if (leftStanding !== rightStanding) {
+          return leftStanding - rightStanding;
+        }
+        return right.score - left.score;
       });
-    }
-    list.sort(function (left, right) {
-      var leftStanding = left.streetStanding > 0 ? left.streetStanding : 9999;
-      var rightStanding = right.streetStanding > 0 ? right.streetStanding : 9999;
-      if (leftStanding !== rightStanding) {
-        return leftStanding - rightStanding;
-      }
-      return right.score - left.score;
+      return applyPositions(result);
     });
-    for (i = 0; i < list.length; i += 1) {
-      list[i].position = i + 1;
-    }
     paging = paginate(list, opts.page, opts.pageSize || dataRoot().pageSize || 20);
     return {
       sectionId: "street",
@@ -827,48 +1034,43 @@ var WorldRankingsEngine = (function () {
 
   function buildAmateurRankingView(gameState, options) {
     var opts = options || {};
-    var roster = rosterRoot(gameState);
     var seasonState = getSeasonState(gameState);
-    var list = [];
-    var i;
-    var fighter;
-    var stats;
     var paging;
     if (typeof AmateurSeasonEngine !== "undefined" && AmateurSeasonEngine.ensureState) {
       AmateurSeasonEngine.ensureState(gameState);
     }
-    for (i = 0; i < roster.fighterIds.length; i += 1) {
-      fighter = roster.fightersById[roster.fighterIds[i]];
-      if (!isActiveFighter(fighter) || currentTrackId(fighter) !== "amateur") {
-        continue;
+    var countryKey = opts.countryId || "";
+    var list = cachedRankingProjection(gameState, opts, "amateur|" + (countryKey || "world"), function () {
+      var fighters = activeFightersForView(gameState, "amateur", countryKey, opts);
+      var result = [];
+      var i;
+      var fighter;
+      var stats;
+      for (i = 0; i < fighters.length; i += 1) {
+        fighter = fighters[i];
+        stats = seasonState && seasonState.fighterSeasonStatsById ? seasonState.fighterSeasonStatsById[fighter.id] || null : null;
+        result.push({
+          fighterId: fighter.id,
+          label: fighterDisplayName(fighter),
+          countryId: fighter.country,
+          countryLabel: countryLabel(fighter.country),
+          age: fighter.age || 16,
+          amateurRank: fighter.amateurRank || fighter.amateurClass || "",
+          amateurRankLabel: getLocalizedRankLabel(fighter.country, fighter.amateurRank || fighter.amateurClass || ""),
+          teamStatus: fighter.nationalTeamStatus || "none",
+          medals: clone(stats && stats.medals ? stats.medals : { gold: 0, silver: 0, bronze: 0 }),
+          seasonPoints: stats ? (stats.seasonPoints || 0) : 0,
+          federationPoints: stats ? (stats.federationPoints || 0) : 0,
+          record: clone(fighter.amateurRecord || { wins: 0, losses: 0, draws: 0 }),
+          score: amateurScore(gameState, fighter),
+          isPlayer: !!fighter.isPlayer
+        });
       }
-      if (opts.countryId && fighter.country !== opts.countryId) {
-        continue;
-      }
-      stats = seasonState && seasonState.fighterSeasonStatsById ? seasonState.fighterSeasonStatsById[fighter.id] || null : null;
-      list.push({
-        fighterId: fighter.id,
-        label: fighterDisplayName(fighter),
-        countryId: fighter.country,
-        countryLabel: countryLabel(fighter.country),
-        age: fighter.age || 16,
-        amateurRank: fighter.amateurRank || fighter.amateurClass || "",
-        amateurRankLabel: getLocalizedRankLabel(fighter.country, fighter.amateurRank || fighter.amateurClass || ""),
-        teamStatus: fighter.nationalTeamStatus || "none",
-        medals: clone(stats && stats.medals ? stats.medals : { gold: 0, silver: 0, bronze: 0 }),
-        seasonPoints: stats ? (stats.seasonPoints || 0) : 0,
-        federationPoints: stats ? (stats.federationPoints || 0) : 0,
-        record: clone(fighter.amateurRecord || { wins: 0, losses: 0, draws: 0 }),
-        score: amateurScore(gameState, fighter),
-        isPlayer: !!fighter.isPlayer
+      result.sort(function (left, right) {
+        return right.score - left.score;
       });
-    }
-    list.sort(function (left, right) {
-      return right.score - left.score;
+      return applyPositions(result);
     });
-    for (i = 0; i < list.length; i += 1) {
-      list[i].position = i + 1;
-    }
     paging = paginate(list, opts.page, opts.pageSize || dataRoot().pageSize || 20);
     return {
       sectionId: "amateur",
@@ -881,65 +1083,63 @@ var WorldRankingsEngine = (function () {
     };
   }
 
-  function organizationRankingEntries(gameState, orgId) {
-    var orgState = gameState && gameState.organizationState ? gameState.organizationState : {};
-    var table = orgState.rankingTablesById ? orgState.rankingTablesById[rankingTableId(orgId)] : null;
-    var roster = rosterRoot(gameState);
-    var entries = [];
-    var i;
-    var entry;
-    var fighter;
-    var champion = orgChampion(gameState, orgId);
-    if (!table || !(table.entries instanceof Array)) {
-      return entries;
-    }
-    for (i = 0; i < table.entries.length; i += 1) {
-      entry = table.entries[i];
-      fighter = entry && entry.fighterId ? roster.fightersById[entry.fighterId] : null;
-      if (!entry || !fighter) {
-        continue;
+  function organizationRankingEntries(gameState, orgId, options) {
+    return cachedRankingProjection(gameState, options || {}, "orgEntries|" + orgId, function () {
+      var orgState = gameState && gameState.organizationState ? gameState.organizationState : {};
+      var table = orgState.rankingTablesById ? orgState.rankingTablesById[rankingTableId(orgId)] : null;
+      var roster = rosterRoot(gameState);
+      var entries = [];
+      var i;
+      var entry;
+      var fighter;
+      var champion = orgChampion(gameState, orgId);
+      if (!table || !(table.entries instanceof Array)) {
+        return entries;
       }
-      entries.push({
-        fighterId: fighter.id,
-        position: entry.position || (i + 1),
-        label: fighterDisplayName(fighter),
-        countryId: fighter.country,
-        countryLabel: countryLabel(fighter.country),
-        record: formatRecord(fighter.proRecord || fighter.record),
-        isChampion: !!(champion && champion.id === fighter.id),
-        isPlayer: !!fighter.isPlayer
-      });
-    }
-    return entries;
+      for (i = 0; i < table.entries.length; i += 1) {
+        entry = table.entries[i];
+        fighter = entry && entry.fighterId ? roster.fightersById[entry.fighterId] : null;
+        if (!entry || !fighter) {
+          continue;
+        }
+        entries.push({
+          fighterId: fighter.id,
+          position: entry.position || (i + 1),
+          label: fighterDisplayName(fighter),
+          countryId: fighter.country,
+          countryLabel: countryLabel(fighter.country),
+          record: formatRecord(fighter.proRecord || fighter.record),
+          isChampion: !!(champion && champion.id === fighter.id),
+          isPlayer: !!fighter.isPlayer
+        });
+      }
+      return entries;
+    });
   }
 
-  function buildRingRanking(gameState) {
-    var roster = rosterRoot(gameState);
-    var list = [];
-    var i;
-    var fighter;
-    for (i = 0; i < roster.fighterIds.length; i += 1) {
-      fighter = roster.fightersById[roster.fighterIds[i]];
-      if (!isActiveFighter(fighter) || currentTrackId(fighter) !== "pro") {
-        continue;
+  function buildRingRanking(gameState, options) {
+    return cachedRankingProjection(gameState, options || {}, "ring", function () {
+      var fighters = activeFightersForView(gameState, "pro", "", options || {});
+      var list = [];
+      var i;
+      var fighter;
+      for (i = 0; i < fighters.length; i += 1) {
+        fighter = fighters[i];
+        list.push({
+          fighterId: fighter.id,
+          label: fighterDisplayName(fighter),
+          countryId: fighter.country,
+          countryLabel: countryLabel(fighter.country),
+          score: proRingScore(gameState, fighter),
+          record: formatRecord(fighter.proRecord || fighter.record),
+          isPlayer: !!fighter.isPlayer
+        });
       }
-      list.push({
-        fighterId: fighter.id,
-        label: fighterDisplayName(fighter),
-        countryId: fighter.country,
-        countryLabel: countryLabel(fighter.country),
-        score: proRingScore(gameState, fighter),
-        record: formatRecord(fighter.proRecord || fighter.record),
-        isPlayer: !!fighter.isPlayer
+      list.sort(function (left, right) {
+        return right.score - left.score;
       });
-    }
-    list.sort(function (left, right) {
-      return right.score - left.score;
+      return applyPositions(list);
     });
-    for (i = 0; i < list.length; i += 1) {
-      list[i].position = i + 1;
-    }
-    return list;
   }
 
   function buildProRankingView(gameState, options) {
@@ -947,7 +1147,7 @@ var WorldRankingsEngine = (function () {
     var tabId = opts.tabId || "ring";
     var orgs = typeof ContentLoader !== "undefined" && ContentLoader.listProOrganizations ? ContentLoader.listProOrganizations() : [];
     var summary = typeof ProCareerEngine !== "undefined" && ProCareerEngine.summary ? ProCareerEngine.summary(gameState) : { organizations: [] };
-    var ring = buildRingRanking(gameState);
+    var ring = buildRingRanking(gameState, opts);
     var playerRingEntry = null;
     var entries = [];
     var champions = [];
@@ -972,7 +1172,9 @@ var WorldRankingsEngine = (function () {
     if (tabId === "ring") {
       entries = ring;
     } else if (tabId !== "champions") {
-      entries = organizationRankingEntries(gameState, tabId);
+      entries = cachedRankingProjection(gameState, opts, "orgView|" + tabId, function () {
+        return organizationRankingEntries(gameState, tabId, opts);
+      });
     }
     paging = paginate(entries, opts.page, opts.pageSize || dataRoot().pageSize || 20);
     return {
@@ -1004,48 +1206,44 @@ var WorldRankingsEngine = (function () {
 
   function buildRosterDirectoryView(gameState, options) {
     var opts = options || {};
-    var roster = rosterRoot(gameState);
-    var list = [];
-    var i;
-    var fighter;
-    var trackId;
     var paging;
-    for (i = 0; i < roster.fighterIds.length; i += 1) {
-      fighter = roster.fightersById[roster.fighterIds[i]];
-      if (!isActiveFighter(fighter)) {
-        continue;
+    var trackKey = opts.trackId || "all";
+    var countryKey = opts.countryId || "";
+    var list = cachedRankingProjection(gameState, opts, "roster|" + trackKey + "|" + (countryKey || "world"), function () {
+      var fighters = activeRosterDirectorySource(gameState, trackKey, countryKey, opts);
+      var result = [];
+      var i;
+      var fighter;
+      var currentTrack;
+      for (i = 0; i < fighters.length; i += 1) {
+        fighter = fighters[i];
+        currentTrack = currentTrackId(fighter);
+        result.push({
+          fighterId: fighter.id,
+          label: fighterDisplayName(fighter),
+          countryId: fighter.country,
+          countryLabel: countryLabel(fighter.country),
+          trackId: currentTrack,
+          trackLabel: trackLabel(currentTrack),
+          age: fighter.age || 16,
+          statusLabel: fighterRankLabel(fighter),
+          score: currentTrack === "street" ? streetScore(fighter) : (currentTrack === "amateur" ? amateurScore(gameState, fighter) : proRingScore(gameState, fighter)),
+          isPlayer: !!fighter.isPlayer
+        });
       }
-      trackId = currentTrackId(fighter);
-      if (opts.trackId && opts.trackId !== "all" && trackId !== opts.trackId) {
-        continue;
-      }
-      if (opts.countryId && fighter.country !== opts.countryId) {
-        continue;
-      }
-      list.push({
-        fighterId: fighter.id,
-        label: fighterDisplayName(fighter),
-        countryId: fighter.country,
-        countryLabel: countryLabel(fighter.country),
-        trackId: trackId,
-        trackLabel: trackLabel(trackId),
-        age: fighter.age || 16,
-        statusLabel: fighterRankLabel(fighter),
-        score: trackId === "street" ? streetScore(fighter) : (trackId === "amateur" ? amateurScore(gameState, fighter) : proRingScore(gameState, fighter)),
-        isPlayer: !!fighter.isPlayer
+      result.sort(function (left, right) {
+        if (left.isPlayer && !right.isPlayer) {
+          return -1;
+        }
+        if (!left.isPlayer && right.isPlayer) {
+          return 1;
+        }
+        if (left.trackId !== right.trackId) {
+          return left.trackId.localeCompare(right.trackId);
+        }
+        return right.score - left.score;
       });
-    }
-    list.sort(function (left, right) {
-      if (left.isPlayer && !right.isPlayer) {
-        return -1;
-      }
-      if (!left.isPlayer && right.isPlayer) {
-        return 1;
-      }
-      if (left.trackId !== right.trackId) {
-        return left.trackId.localeCompare(right.trackId);
-      }
-      return right.score - left.score;
+      return result;
     });
     paging = paginate(list, opts.page, opts.pageSize || dataRoot().pageSize || 20);
     return {
@@ -1170,13 +1368,25 @@ var WorldRankingsEngine = (function () {
     return EncounterHistoryEngine.getEncounterHistory(gameState, playerId, fighterId);
   }
 
-  function trainerFighterIds(gameState, trainerId) {
+  function trainerFighterIds(gameState, trainerId, options) {
     var roster = rosterRoot(gameState);
     var trainer = trainerId ? roster.trainersById[trainerId] || null : null;
     var ids = trainer && trainer.boxerIds instanceof Array ? trainer.boxerIds.slice(0) : [];
+    var indexed;
     var i;
     var fighter;
     if (!ids.length) {
+      if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByTrainer) {
+        indexed = PersistentFighterRegistry.getFightersByTrainer(gameState, trainerId, {
+          versionToken: options && options.versionToken ? options.versionToken : ""
+        });
+        for (i = 0; i < indexed.length; i += 1) {
+          ids.push(indexed[i].id);
+        }
+        if (ids.length) {
+          return ids;
+        }
+      }
       for (i = 0; i < roster.fighterIds.length; i += 1) {
         fighter = roster.fightersById[roster.fighterIds[i]];
         if (fighter && fighter.currentTrainerId === trainerId) {
@@ -1187,8 +1397,8 @@ var WorldRankingsEngine = (function () {
     return ids;
   }
 
-  function trainerRosterCount(gameState, trainerId, excludeFighterId) {
-    var ids = trainerFighterIds(gameState, trainerId);
+  function trainerRosterCount(gameState, trainerId, excludeFighterId, options) {
+    var ids = trainerFighterIds(gameState, trainerId, options);
     var count = 0;
     var i;
     for (i = 0; i < ids.length; i += 1) {
@@ -1199,23 +1409,27 @@ var WorldRankingsEngine = (function () {
     return count;
   }
 
-  function buildFighterProfile(gameState, fighterId) {
-    var roster = rosterRoot(gameState);
-    var fighter = fighterId ? roster.fightersById[fighterId] || null : null;
-    var trainer = fighter && fighter.currentTrainerId ? roster.trainersById[fighter.currentTrainerId] || null : null;
-    var gym = fighter && fighter.currentGymId ? roster.gymsById[fighter.currentGymId] || null : null;
-    var encounter = fighter ? getEncounterWithPlayer(gameState, fighter.id) : null;
-    var seasonStats = fighter ? (amateurStats(gameState, fighter.id) || null) : null;
-    var ring = currentTrackId(fighter) === "pro" ? buildRingRanking(gameState) : [];
-    var ringEntry = null;
-    var orgs = typeof ContentLoader !== "undefined" && ContentLoader.listProOrganizations ? ContentLoader.listProOrganizations() : [];
-    var orgRanks = [];
-    var i;
-    var orgEntries;
-    if (!fighter) {
-      return null;
-    }
-    if (currentTrackId(fighter) === "pro") {
+  function buildFighterProfile(gameState, fighterId, options) {
+    var opts = options || {};
+    return cachedProfileProjection(gameState, opts, "fighter|" + fighterId, function () {
+      var roster = rosterRoot(gameState);
+      var fighter = fighterId ? roster.fightersById[fighterId] || null : null;
+      var trainer = fighter && fighter.currentTrainerId ? roster.trainersById[fighter.currentTrainerId] || null : null;
+      var gym = fighter && fighter.currentGymId ? roster.gymsById[fighter.currentGymId] || null : null;
+      var encounter = fighter ? getEncounterWithPlayer(gameState, fighter.id) : null;
+      var seasonStats = fighter ? (amateurStats(gameState, fighter.id) || null) : null;
+      var ring = currentTrackId(fighter) === "pro" ? buildRingRanking(gameState, {
+        versionToken: opts.rankingVersionToken || opts.versionToken || ""
+      }) : [];
+      var ringEntry = null;
+      var orgs = typeof ContentLoader !== "undefined" && ContentLoader.listProOrganizations ? ContentLoader.listProOrganizations() : [];
+      var orgRanks = [];
+      var i;
+      var orgEntries;
+      if (!fighter) {
+        return null;
+      }
+      if (currentTrackId(fighter) === "pro") {
       for (i = 0; i < ring.length; i += 1) {
         if (ring[i].fighterId === fighter.id) {
           ringEntry = ring[i];
@@ -1223,7 +1437,9 @@ var WorldRankingsEngine = (function () {
         }
       }
       for (i = 0; i < orgs.length; i += 1) {
-        orgEntries = organizationRankingEntries(gameState, orgs[i].id);
+        orgEntries = organizationRankingEntries(gameState, orgs[i].id, {
+          versionToken: opts.rankingVersionToken || opts.versionToken || ""
+        });
         orgRanks.push({
           organizationId: orgs[i].id,
           name: orgs[i].name,
@@ -1255,7 +1471,9 @@ var WorldRankingsEngine = (function () {
       gymTypeLabel: gym ? getGymTypeLabel(gym.gymType || "") : "",
       trainerId: trainer ? trainer.id : "",
       trainerLabel: trainer ? (trainer.fullName || trainer.name || trainer.id) : "Без тренера",
-      trainerRosterCount: trainer ? trainerRosterCount(gameState, trainer.id, fighter.id) : 0,
+      trainerRosterCount: trainer ? trainerRosterCount(gameState, trainer.id, fighter.id, {
+        versionToken: opts.versionToken || ""
+      }) : 0,
       styleId: fighter.styleId || fighter.style || "",
       archetypeId: fighter.archetypeId || "",
       attributes: clone(fighter.attributes || fighter.stats || {}),
@@ -1298,6 +1516,7 @@ var WorldRankingsEngine = (function () {
         organizationRanks: orgRanks
       } : null
     };
+    });
   }
 
   function trackStatusText(fighter, gameState) {
@@ -1313,11 +1532,15 @@ var WorldRankingsEngine = (function () {
     return "Профи " + formatRecord(fighter.proRecord || fighter.record);
   }
 
-  function buildTrainerProfile(gameState, trainerId) {
+  function buildTrainerProfile(gameState, trainerId, options) {
+    var opts = options || {};
+    return cachedProfileProjection(gameState, opts, "trainer|" + trainerId, function () {
     var roster = rosterRoot(gameState);
     var trainer = trainerId ? roster.trainersById[trainerId] || null : null;
     var gym = trainer && trainer.currentGymId ? roster.gymsById[trainer.currentGymId] || null : null;
-    var ids = trainer ? trainerFighterIds(gameState, trainer.id) : [];
+    var ids = trainer ? trainerFighterIds(gameState, trainer.id, {
+      versionToken: opts.versionToken || ""
+    }) : [];
     var grouped = {
       street: [],
       amateur: [],
@@ -1360,6 +1583,7 @@ var WorldRankingsEngine = (function () {
       groupedFighters: grouped,
       totalFighters: grouped.street.length + grouped.amateur.length + grouped.pro.length
     };
+    });
   }
 
   return {
