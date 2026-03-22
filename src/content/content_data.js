@@ -245,7 +245,7 @@
     {
       "id": "pressure",
       "label": "Давит и лезет вперёд",
-      "focusId": "sparring",
+      "focusId": "endurance",
       "styleWeights": {
         "tempo": 3,
         "puncher": 2

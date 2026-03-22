@@ -9,10 +9,217 @@
     return Math.max(4, Math.ceil((value || 0) / 4));
   }
 
+  function canonicalFocusId(focusId) {
+    if (focusId === "sparring") {
+      return "technique";
+    }
+    return typeof focusId === "string" && focusId ? focusId : "technique";
+  }
+
+  function sanitizeNicknameWord(value) {
+    var label = String(value || "").replace(/["']/g, " ").replace(/[.,!?;:]+/g, " ").replace(/^\s+|\s+$/g, "");
+    var parts;
+    if (!label) {
+      return "";
+    }
+    parts = label.split(/\s+/);
+    label = parts.length ? parts[0] : "";
+    if (label.indexOf("-") >= 0) {
+      label = label.split("-")[0];
+    }
+    return label.replace(/^\s+|\s+$/g, "");
+  }
+
+  function stableTextHash(value) {
+    var text = String(value || "");
+    var hash = 0;
+    var i;
+    for (i = 0; i < text.length; i += 1) {
+      hash = (hash * 31 + text.charCodeAt(i)) % 10007;
+    }
+    return Math.abs(hash);
+  }
+
+  function trackAllowsNickname(trackId) {
+    return trackId === "street" || trackId === "pro";
+  }
+
+  function normalizeNicknameForTrack(nickname, trackId, stableSeed) {
+    var cleaned = sanitizeNicknameWord(nickname);
+    if (!trackAllowsNickname(trackId)) {
+      return "";
+    }
+    if (trackId === "pro" && cleaned && stableTextHash(stableSeed || cleaned) % 100 >= 45) {
+      return "";
+    }
+    return cleaned;
+  }
+
+  function buildDisplayName(firstName, lastName, nickname, trackId) {
+    var first = String(firstName || "").replace(/^\s+|\s+$/g, "");
+    var last = String(lastName || "").replace(/^\s+|\s+$/g, "");
+    var nick = normalizeNicknameForTrack(nickname, trackId, first + "_" + last + "_" + trackId);
+    if (nick) {
+      return first + ' "' + nick + '" ' + last;
+    }
+    return first + (last ? (" " + last) : "");
+  }
+
+  function normalizeFocusList(list) {
+    var result = [];
+    var seen = {};
+    var i;
+    var focusId;
+    if (!(list instanceof Array)) {
+      return result;
+    }
+    for (i = 0; i < list.length; i += 1) {
+      focusId = canonicalFocusId(list[i]);
+      if (focusId && !seen[focusId]) {
+        seen[focusId] = true;
+        result.push(focusId);
+      }
+    }
+    return result;
+  }
+
+  function normalizeFocusBoosts(mapObject) {
+    var result = {};
+    var key;
+    var focusId;
+    if (!mapObject || typeof mapObject !== "object") {
+      return result;
+    }
+    for (key in mapObject) {
+      if (mapObject.hasOwnProperty(key) && typeof mapObject[key] === "number") {
+        focusId = canonicalFocusId(key);
+        result[focusId] = (result[focusId] || 0) + mapObject[key];
+      }
+    }
+    return result;
+  }
+
+  function normalizeDevelopmentProfile(profile) {
+    var normalized = clone(profile || {});
+    if (normalized.focusBoosts && typeof normalized.focusBoosts === "object") {
+      normalized.focusBoosts = normalizeFocusBoosts(normalized.focusBoosts);
+    }
+    return normalized;
+  }
+
+  function normalizeDevelopmentProfileMap(mapObject) {
+    var normalized = {};
+    var key;
+    if (!mapObject || typeof mapObject !== "object") {
+      return normalized;
+    }
+    for (key in mapObject) {
+      if (mapObject.hasOwnProperty(key)) {
+        normalized[key] = normalizeDevelopmentProfile(mapObject[key]);
+      }
+    }
+    return normalized;
+  }
+
+  function normalizeTrainingFocusEntries(entries) {
+    var normalized = [];
+    var seen = {};
+    var i;
+    var entry;
+    var focusId;
+    if (!(entries instanceof Array)) {
+      return normalized;
+    }
+    for (i = 0; i < entries.length; i += 1) {
+      entry = clone(entries[i] || {});
+      focusId = canonicalFocusId(entry.id);
+      if (!focusId || seen[focusId]) {
+        continue;
+      }
+      seen[focusId] = true;
+      entry.id = focusId;
+      normalized.push(entry);
+    }
+    return normalized;
+  }
+
+  function normalizePerkEntries(entries) {
+    var normalized = [];
+    var i;
+    var entry;
+    if (!(entries instanceof Array)) {
+      return normalized;
+    }
+    for (i = 0; i < entries.length; i += 1) {
+      entry = clone(entries[i] || {});
+      if (entry.requirements && entry.requirements.focusAtLeast) {
+        entry.requirements.focusAtLeast = normalizeFocusBoosts(entry.requirements.focusAtLeast);
+      }
+      normalized.push(entry);
+    }
+    return normalized;
+  }
+
+  function normalizeOrganizationFocusFields(entries) {
+    var normalized = [];
+    var i;
+    var entry;
+    if (!(entries instanceof Array)) {
+      return normalized;
+    }
+    for (i = 0; i < entries.length; i += 1) {
+      entry = clone(entries[i] || {});
+      if (entry.defaultTrainingFocus instanceof Array) {
+        entry.defaultTrainingFocus = normalizeFocusList(entry.defaultTrainingFocus);
+      }
+      if (entry.trainingFocus instanceof Array) {
+        entry.trainingFocus = normalizeFocusList(entry.trainingFocus);
+      }
+      normalized.push(entry);
+    }
+    return normalized;
+  }
+
+  function normalizeHintMap(mapObject) {
+    var normalized = {};
+    var key;
+    if (!mapObject || typeof mapObject !== "object") {
+      return normalized;
+    }
+    for (key in mapObject) {
+      if (mapObject.hasOwnProperty(key)) {
+        normalized[key] = canonicalFocusId(mapObject[key]);
+      }
+    }
+    return normalized;
+  }
+
+  function normalizeFacilityEntries(entries) {
+    var normalized = [];
+    var i;
+    var entry;
+    if (!(entries instanceof Array)) {
+      return normalized;
+    }
+    for (i = 0; i < entries.length; i += 1) {
+      entry = clone(entries[i] || {});
+      if (entry.developmentProfile) {
+        entry.developmentProfile = normalizeDevelopmentProfile(entry.developmentProfile);
+      }
+      normalized.push(entry);
+    }
+    return normalized;
+  }
+
   function normalizeSeedRosterEntry(entry, trackId) {
     var normalized = clone(entry || {});
     normalized.currentTrack = normalized.currentTrack || trackId || "street";
     normalized.trackId = normalized.trackId || normalized.currentTrack;
+    normalized.nickname = normalizeNicknameForTrack(normalized.nickname, normalized.trackId, normalized.id || (normalized.firstName + "_" + normalized.lastName));
+    normalized.fullName = buildDisplayName(normalized.firstName, normalized.lastName, normalized.nickname, normalized.trackId);
+    if (normalized.growthProfile && typeof normalized.growthProfile === "object") {
+      normalized.growthProfile.focusId = canonicalFocusId(normalized.growthProfile.focusId);
+    }
     return normalized;
   }
 
@@ -150,12 +357,23 @@
     };
   }
 
+  function rankingProfileDataRoot() {
+    return typeof RANKING_PROFILE_DATA !== "undefined" && RANKING_PROFILE_DATA ? RANKING_PROFILE_DATA : {
+      rosterTargets: {
+        streetPerCountry: 50,
+        amateurPerCountry: 50,
+        proGlobal: 100
+      },
+      pageSize: 20
+    };
+  }
+
   function generatedGymTemplates() {
-    return clone(worldFacilityDataRoot().gymTemplates || []);
+    return normalizeFacilityEntries(clone(worldFacilityDataRoot().gymTemplates || []));
   }
 
   function generatedTrainerTemplates() {
-    return clone(worldFacilityDataRoot().trainerTemplates || []);
+    return normalizeFacilityEntries(clone(worldFacilityDataRoot().trainerTemplates || []));
   }
 
   function cityFromDefinition(definition, index) {
@@ -201,23 +419,131 @@
     };
   }
 
+  function listOverlap(left, right) {
+    var result = [];
+    var seen = {};
+    var i;
+    if (!(left instanceof Array) || !(right instanceof Array)) {
+      return result;
+    }
+    for (i = 0; i < left.length; i += 1) {
+      if (typeof left[i] === "string" && left[i] && right.indexOf(left[i]) !== -1 && !seen[left[i]]) {
+        seen[left[i]] = true;
+        result.push(left[i]);
+      }
+    }
+    return result;
+  }
+
+  function trainerCountForGymTemplate(template) {
+    var cost = template && typeof template.cost === "number" ? template.cost : 0;
+    if (cost <= 25) {
+      return 1;
+    }
+    if (cost <= 50) {
+      return 2;
+    }
+    if (cost <= 100) {
+      return 3;
+    }
+    if (cost <= 120) {
+      return 4;
+    }
+    return 5;
+  }
+
+  function trainerTypeMatchesGymType(trainerTypeId, gymTypeId) {
+    if (!trainerTypeId || !gymTypeId) {
+      return true;
+    }
+    if (gymTypeId === "street") {
+      return trainerTypeId === "street";
+    }
+    if (gymTypeId === "youth") {
+      return trainerTypeId === "youth";
+    }
+    if (gymTypeId === "amateur") {
+      return trainerTypeId === "amateur" || trainerTypeId === "elite_amateur";
+    }
+    if (gymTypeId === "regional_center") {
+      return trainerTypeId === "elite_amateur" || trainerTypeId === "amateur";
+    }
+    if (gymTypeId === "national_team_base") {
+      return trainerTypeId === "national_team" || trainerTypeId === "elite_amateur";
+    }
+    if (gymTypeId === "pro") {
+      return trainerTypeId === "pro";
+    }
+    if (gymTypeId === "mixed") {
+      return trainerTypeId === "pro" || trainerTypeId === "street" || trainerTypeId === "elite_amateur" || trainerTypeId === "amateur";
+    }
+    return true;
+  }
+
+  function trainerTemplatesForGymTemplate(gymTemplate, trainerTemplates) {
+    var compatible = [];
+    var fallback = [];
+    var overlap;
+    var i;
+    var template;
+    for (i = 0; i < trainerTemplates.length; i += 1) {
+      template = trainerTemplates[i];
+      if (!template) {
+        continue;
+      }
+      overlap = listOverlap(template.allowedTracks || [], gymTemplate.allowedTracks || []);
+      if (overlap.length) {
+        fallback.push(template);
+        if (trainerTypeMatchesGymType(template.trainerType || "", gymTemplate.gymType || "")) {
+          compatible.push(template);
+        }
+      }
+    }
+    if (compatible.length) {
+      return compatible;
+    }
+    if (fallback.length) {
+      return fallback;
+    }
+    return trainerTemplates.slice(0);
+  }
+
+  function generatedTrainerId(countryId, gymSlot, trainerIndex) {
+    return countryId + "_gym_" + gymSlot + "_trainer_" + trainerIndex;
+  }
+
   function buildGeneratedTrainerTypes(countryDefinitions) {
     var templates = generatedTrainerTemplates();
+    var gymTemplates = generatedGymTemplates();
     var trainerTypes = [];
     var i;
     var j;
+    var k;
     var definition;
     var template;
+    var gymTemplate;
+    var gymSlot;
+    var trainerIndex;
+    var trainerCount;
+    var archetypePool;
+    var archetype;
     var city;
     var identity;
     for (i = 0; i < countryDefinitions.length; i += 1) {
       definition = countryDefinitions[i];
-      for (j = 0; j < templates.length; j += 1) {
-        template = templates[j];
-        city = cityFromSource(definition, template, j);
-        identity = generatedTrainerIdentity(definition, j);
-        trainerTypes.push({
-          id: definition.id + "_trainer_" + (template.slot || (j + 1)),
+      for (j = 0; j < gymTemplates.length; j += 1) {
+        gymTemplate = gymTemplates[j];
+        gymSlot = gymTemplate.slot || (j + 1);
+        trainerCount = trainerCountForGymTemplate(gymTemplate);
+        archetypePool = trainerTemplatesForGymTemplate(gymTemplate, templates);
+        for (k = 0; k < trainerCount; k += 1) {
+          trainerIndex = k + 1;
+          archetype = archetypePool[(j + k) % archetypePool.length];
+          template = archetype || {};
+          city = cityFromSource(definition, gymTemplate, j);
+          identity = generatedTrainerIdentity(definition, (j * 11) + k);
+          trainerTypes.push({
+            id: generatedTrainerId(definition.id, gymSlot, trainerIndex),
           country: definition.id,
           city: city,
           fullName: identity.fullName,
@@ -227,12 +553,12 @@
           lastName: identity.lastName,
           trainerType: template.trainerType || "",
           coachRoleId: template.coachRoleId || "",
-          currentGymId: definition.id + "_gym_" + (template.gymSlot || 1),
-          gymId: definition.id + "_gym_" + (template.gymSlot || 1),
+            currentGymId: definition.id + "_gym_" + gymSlot,
+            gymId: definition.id + "_gym_" + gymSlot,
           salary: typeof template.salary === "number" ? template.salary : 0,
           monthlyFee: typeof template.salary === "number" ? template.salary : 0,
           weeklyFee: monthlyToWeekly(typeof template.salary === "number" ? template.salary : 0),
-          reputation: typeof template.reputation === "number" ? template.reputation : (35 + j * 5),
+            reputation: typeof template.reputation === "number" ? template.reputation : (35 + j * 5 + (k * 2)),
           minRankId: template.minRankId || "",
           bonuses: clone(template.bonuses || {}),
           trainingBonuses: clone(template.bonuses || {}),
@@ -240,7 +566,8 @@
           preferredStyles: clone(template.preferredStyles || []),
           specialization: clone(template.specialization || []),
           allowedTracks: clone(template.allowedTracks || [])
-        });
+          });
+        }
       }
     }
     return trainerTypes;
@@ -261,9 +588,9 @@
       for (j = 0; j < templates.length; j += 1) {
         template = templates[j];
         city = cityFromSource(definition, template, j);
-        trainerIds = template.trainerSlots instanceof Array ? clone(template.trainerSlots) : [];
-        for (k = 0; k < trainerIds.length; k += 1) {
-          trainerIds[k] = definition.id + "_trainer_" + trainerIds[k];
+        trainerIds = [];
+        for (k = 0; k < trainerCountForGymTemplate(template); k += 1) {
+          trainerIds.push(generatedTrainerId(definition.id, template.slot || (j + 1), k + 1));
         }
         gyms.push({
           id: definition.id + "_gym_" + (template.slot || (j + 1)),
@@ -358,11 +685,11 @@
       trainerTypes: buildGeneratedTrainerTypes(CONTENT_DATA.countries || []),
       trainerTypesById: {},
       trainerTypesByCountry: {},
-      amateurOrganizationTypes: clone((amateurDataRoot().organizationTypes) || []),
+      amateurOrganizationTypes: normalizeOrganizationFocusFields(clone((amateurDataRoot().organizationTypes) || [])),
       amateurOrganizationTypesById: {},
       amateurTrainerRoles: clone((amateurDataRoot().trainerRoleTypes) || []),
       amateurTrainerRolesById: {},
-      amateurOrganizationTemplates: clone((amateurDataRoot().organizationTemplates) || []),
+      amateurOrganizationTemplates: normalizeOrganizationFocusFields(clone((amateurDataRoot().organizationTemplates) || [])),
       amateurOrganizationTemplatesById: {},
       amateurTeamTemplate: clone((amateurDataRoot().teamTemplate) || null),
       nationalTeamStatuses: clone((amateurDataRoot().nationalTeamStatuses) || []),
@@ -420,12 +747,12 @@
       socialActionsById: {},
       developmentStyles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.styles) || []),
       developmentStylesById: {},
-      trainingFocuses: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainingFocuses) || []),
+      trainingFocuses: normalizeTrainingFocusEntries(clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainingFocuses) || [])),
       trainingFocusesById: {},
-      developmentPerks: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.perks) || []),
+      developmentPerks: normalizePerkEntries(clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.perks) || [])),
       developmentPerksById: {},
-      trainerDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainerProfiles) || {}),
-      gymDevelopmentProfiles: clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.gymProfiles) || {}),
+      trainerDevelopmentProfiles: normalizeDevelopmentProfileMap(clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.trainerProfiles) || {})),
+      gymDevelopmentProfiles: normalizeDevelopmentProfileMap(clone((typeof DEVELOPMENT_DATA !== "undefined" && DEVELOPMENT_DATA.gymProfiles) || {})),
       injuryTypes: clone((typeof COMBAT_STATE_DATA !== "undefined" && COMBAT_STATE_DATA.injuryTypes) || []),
       injuryTypesById: {},
       opponentArchetypes: clone((typeof COMBAT_STATE_DATA !== "undefined" && COMBAT_STATE_DATA.opponentArchetypes) || []),
@@ -444,8 +771,8 @@
       sparringOfferSourcesById: {},
       trainingCampTemplates: clone((sparringCampDataRoot().campTemplates) || []),
       trainingCampTemplatesById: {},
-      styleFocusHints: clone((sparringCampDataRoot().styleFocusHints) || {}),
-      countryFocusHints: clone((sparringCampDataRoot().countryFocusHints) || {}),
+      styleFocusHints: normalizeHintMap(clone((sparringCampDataRoot().styleFocusHints) || {})),
+      countryFocusHints: normalizeHintMap(clone((sparringCampDataRoot().countryFocusHints) || {})),
       habitTextsByStyle: clone((sparringCampDataRoot().habitTextsByStyle) || {}),
       relationshipArcTemplates: clone((typeof RELATIONSHIP_ARC_DATA !== "undefined" && RELATIONSHIP_ARC_DATA.templates) || []),
       reputationTags: clone((typeof REPUTATION_LEGEND_DATA !== "undefined" && REPUTATION_LEGEND_DATA.reputationTags) || []),
@@ -478,6 +805,13 @@
       contextEvents = contextEvents.concat(clone(encounterMemoryDataRoot().events));
     }
     cache.contextEvents = contextEvents;
+    cache.gyms = normalizeFacilityEntries(cache.gyms);
+    cache.trainerTypes = normalizeFacilityEntries(cache.trainerTypes);
+    for (i = 0; i < cache.opponentTypes.length; i += 1) {
+      if (cache.opponentTypes[i]) {
+        cache.opponentTypes[i].focusId = canonicalFocusId(cache.opponentTypes[i].focusId);
+      }
+    }
     for (i = 0; i < CONTENT_DATA.countries.length; i += 1) {
       country = buildCountry(CONTENT_DATA.countries[i]);
       cache.countries.push(country);
@@ -1053,7 +1387,7 @@
   }
 
   function getTrainingFocus(focusId) {
-    return ensureCache().trainingFocusesById[focusId] || null;
+    return ensureCache().trainingFocusesById[canonicalFocusId(focusId)] || null;
   }
 
   function listDevelopmentPerks() {
@@ -1093,7 +1427,7 @@
   }
 
   function getCampFightProfile(focusId) {
-    return ensureCache().campFightProfiles[focusId] || null;
+    return ensureCache().campFightProfiles[canonicalFocusId(focusId)] || null;
   }
 
   function listBattleRulesets() {
@@ -1141,11 +1475,11 @@
   }
 
   function getSparringStyleFocusHint(styleId) {
-    return ensureCache().styleFocusHints[styleId] || "";
+    return canonicalFocusId(ensureCache().styleFocusHints[styleId] || "");
   }
 
   function getSparringCountryFocusHint(countryId) {
-    return ensureCache().countryFocusHints[countryId] || "";
+    return canonicalFocusId(ensureCache().countryFocusHints[countryId] || "");
   }
 
   function getSparringHabitTexts(styleId) {
@@ -1210,6 +1544,10 @@
 
   function listWorldQaRetirementReasons() {
     return ensureCache().worldQaRetirementReasons;
+  }
+
+  function getRankingProfileData() {
+    return clone(rankingProfileDataRoot());
   }
 
   return {
@@ -1339,6 +1677,7 @@
     listWorldQaTeamStatusActions: listWorldQaTeamStatusActions,
     listWorldQaTrackActions: listWorldQaTrackActions,
     listWorldQaRetirementReasons: listWorldQaRetirementReasons,
+    getRankingProfileData: getRankingProfileData,
     getContextEventTriggerChance: getContextEventTriggerChance,
     getContextEvents: getContextEvents
   };

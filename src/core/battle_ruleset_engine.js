@@ -138,6 +138,8 @@
       layer.risks.push("Уличный формат быстрее наказывает за ошибки.");
     } else if (ruleset.trackType === "amateur") {
       layer.notes.push("Судьи сильнее смотрят на чистые очки.");
+    } else if (ruleset.trackType === "sparring") {
+      layer.notes.push("Спарринг идёт легче и не влияет на официальный рекорд.");
     } else if (ruleset.trackType === "pro") {
       layer.risks.push("Профи-формат сильнее копит урон и износ.");
     }

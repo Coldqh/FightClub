@@ -156,6 +156,49 @@ var PersistentFighterRegistry = (function () {
     };
   }
 
+  function canonicalFocusId(focusId) {
+    if (focusId === "sparring") {
+      return "technique";
+    }
+    return typeof focusId === "string" && focusId ? focusId : "technique";
+  }
+
+  function sanitizeNicknameWord(value) {
+    var label = String(value || "").replace(/["']/g, " ").replace(/[.,!?;:]+/g, " ").replace(/^\s+|\s+$/g, "");
+    var parts;
+    if (!label) {
+      return "";
+    }
+    parts = label.split(/\s+/);
+    label = parts.length ? parts[0] : "";
+    if (label.indexOf("-") >= 0) {
+      label = label.split("-")[0];
+    }
+    return label.replace(/^\s+|\s+$/g, "");
+  }
+
+  function trackAllowsNickname(trackId) {
+    return trackId === "street" || trackId === "pro";
+  }
+
+  function buildDisplayName(firstName, lastName, nickname, trackId) {
+    var first = String(firstName || "").replace(/^\s+|\s+$/g, "");
+    var last = String(lastName || "").replace(/^\s+|\s+$/g, "");
+    var nick = trackAllowsNickname(trackId) ? sanitizeNicknameWord(nickname) : "";
+    if (nick) {
+      return first + ' "' + nick + '" ' + last;
+    }
+    return first + (last ? (" " + last) : "");
+  }
+
+  function applyIdentityRules(entity, trackId) {
+    var activeTrackId = trackId || entity.currentTrack || entity.trackId || "street";
+    entity.nickname = trackAllowsNickname(activeTrackId) ? sanitizeNicknameWord(entity.nickname) : "";
+    entity.name = entity.firstName + (entity.lastName ? (" " + entity.lastName) : "");
+    entity.fullName = buildDisplayName(entity.firstName, entity.lastName, entity.nickname, activeTrackId);
+    return entity;
+  }
+
   function profileFromStyle(styleId) {
     if (styleId === "outboxer") {
       return "jab_control";
@@ -200,8 +243,7 @@ var PersistentFighterRegistry = (function () {
     entity.firstName = seed.firstName || "";
     entity.lastName = seed.lastName || "";
     entity.nickname = seed.nickname || "";
-    entity.name = entity.firstName + (entity.lastName ? (" " + entity.lastName) : "");
-    entity.fullName = entity.firstName + ' "' + entity.nickname + '" ' + entity.lastName;
+    applyIdentityRules(entity, trackId);
     entity.country = seed.country || "";
     entity.age = typeof seed.age === "number" ? seed.age : 21;
     entity.birthWeek = typeof seed.birthWeek === "number" ? seed.birthWeek : 1;
@@ -214,6 +256,7 @@ var PersistentFighterRegistry = (function () {
     entity.attributes = clone(seed.attributes || entity.attributes);
     entity.stats = clone(entity.attributes);
     entity.growthProfile = clone(seed.growthProfile || {});
+    entity.growthProfile.focusId = canonicalFocusId(entity.growthProfile.focusId);
     entity.healthState = { health: typeof seed.health === "number" ? seed.health : 100, injuries: clone(seed.injuries || []) };
     entity.wearState = { wear: typeof seed.wear === "number" ? seed.wear : 0, fatigue: typeof seed.fatigue === "number" ? seed.fatigue : 0 };
     entity.moraleState = { morale: typeof seed.morale === "number" ? seed.morale : 55 };
@@ -318,14 +361,13 @@ var PersistentFighterRegistry = (function () {
     entity.firstName = nameParts.firstName;
     entity.lastName = nameParts.lastName;
     entity.nickname = nameParts.nickname;
-    entity.name = gameState && gameState.player && gameState.player.profile ? gameState.player.profile.name || "" : "";
-    entity.fullName = entity.name;
     entity.country = gameState && gameState.player && gameState.player.profile ? gameState.player.profile.currentCountry || "" : "";
     entity.age = ageView.years || 16;
     entity.birthWeek = 1;
     entity.birthYear = 2026 - entity.age;
     entity.currentTrack = gameState && gameState.playerState ? gameState.playerState.currentTrackId || "street" : "street";
     entity.trackId = entity.currentTrack;
+    applyIdentityRules(entity, entity.currentTrack);
     if (styleProgress) {
       for (key in styleProgress) {
         if (styleProgress.hasOwnProperty(key) && typeof styleProgress[key] === "number" && styleProgress[key] > bestScore) {
@@ -339,6 +381,7 @@ var PersistentFighterRegistry = (function () {
     entity.attributes = clone(gameState && gameState.player ? gameState.player.stats : entity.attributes);
     entity.stats = clone(entity.attributes);
     entity.growthProfile = clone(gameState && gameState.player ? gameState.player.development || {} : {});
+    entity.growthProfile.focusId = canonicalFocusId(entity.growthProfile.focusId);
     entity.healthState = { health: gameState && gameState.player && gameState.player.resources ? gameState.player.resources.health || 100 : 100, injuries: clone(gameState && gameState.player && gameState.player.conditions ? gameState.player.conditions.injuries || [] : []) };
     entity.wearState = { wear: gameState && gameState.player && gameState.player.conditions ? gameState.player.conditions.wear || 0 : 0, fatigue: gameState && gameState.player && gameState.player.conditions ? gameState.player.conditions.fatigue || 0 : 0 };
     entity.moraleState = { morale: gameState && gameState.player && gameState.player.conditions ? gameState.player.conditions.morale || 55 : 55 };
@@ -400,7 +443,8 @@ var PersistentFighterRegistry = (function () {
     var country = snapshot.countryKey || snapshot.country || "";
     var firstName = snapshot.firstName || "";
     var lastName = snapshot.lastName || "";
-    var nickname = snapshot.nickname || "";
+    var trackId = snapshot.currentTrack || snapshot.trackId || (snapshot.amateurRank || snapshot.amateurClass ? "amateur" : "street");
+    var nickname = trackAllowsNickname(trackId) ? sanitizeNicknameWord(snapshot.nickname || "") : "";
     for (i = 0; i < roster.fighterIds.length; i += 1) {
       candidate = roster.fightersById[roster.fighterIds[i]];
       if (!candidate || candidate.isPlayer) {
@@ -409,7 +453,7 @@ var PersistentFighterRegistry = (function () {
       if (candidate.country === country &&
           candidate.firstName === firstName &&
           candidate.lastName === lastName &&
-          candidate.nickname === nickname) {
+          (trackAllowsNickname(candidate.currentTrack || candidate.trackId || "street") ? sanitizeNicknameWord(candidate.nickname || "") : "") === nickname) {
         return candidate;
       }
     }
@@ -420,17 +464,18 @@ var PersistentFighterRegistry = (function () {
     var nameParts = splitDisplayName(snapshot && (snapshot.fullName || snapshot.name || ""));
     var entity = entityBase();
     var stats = snapshot && snapshot.stats ? snapshot.stats : {};
-    entity.id = stableId("fighter_migrated", [snapshot && (snapshot.countryKey || snapshot.country || "world"), snapshot && (snapshot.firstName || nameParts.firstName || "fighter"), snapshot && (snapshot.lastName || nameParts.lastName || "unknown"), snapshot && (snapshot.nickname || nameParts.nickname || "")]);
+    var trackId = preferredTrack || snapshot.currentTrack || snapshot.trackId || "street";
+    var sanitizedNickname = trackAllowsNickname(trackId) ? sanitizeNicknameWord(snapshot.nickname || nameParts.nickname || "") : "";
+    entity.id = stableId("fighter_migrated", [snapshot && (snapshot.countryKey || snapshot.country || "world"), snapshot && (snapshot.firstName || nameParts.firstName || "fighter"), snapshot && (snapshot.lastName || nameParts.lastName || "unknown"), sanitizedNickname]);
     entity.firstName = snapshot.firstName || nameParts.firstName || "Unknown";
     entity.lastName = snapshot.lastName || nameParts.lastName || "Fighter";
-    entity.nickname = snapshot.nickname || nameParts.nickname || "No Name";
-    entity.name = entity.firstName + " " + entity.lastName;
-    entity.fullName = snapshot.fullName || (entity.firstName + ' "' + entity.nickname + '" ' + entity.lastName);
+    entity.nickname = sanitizedNickname;
+    applyIdentityRules(entity, trackId);
     entity.country = snapshot.countryKey || snapshot.country || "";
     entity.age = typeof snapshot.age === "number" ? snapshot.age : 24;
     entity.birthWeek = 1;
     entity.birthYear = 2026 - entity.age;
-    entity.currentTrack = preferredTrack || "street";
+    entity.currentTrack = trackId;
     entity.trackId = entity.currentTrack;
     entity.style = snapshot.styleId || "";
     entity.styleId = snapshot.styleId || "";
@@ -441,9 +486,15 @@ var PersistentFighterRegistry = (function () {
     entity.attributes.end = typeof stats.end === "number" ? stats.end : 1;
     entity.attributes.vit = typeof stats.vit === "number" ? stats.vit : 1;
     entity.stats = clone(entity.attributes);
-    entity.growthProfile = { focusId: snapshot.focusId || "technique", ceiling: 55, volatility: 5, migrated: true };
-    entity.healthState = { health: 100, injuries: clone(snapshot.injuries || []) };
-    entity.wearState = { wear: typeof snapshot.wear === "number" ? snapshot.wear : 0, fatigue: typeof snapshot.fatigue === "number" ? snapshot.fatigue : 0 };
+    entity.growthProfile = { focusId: canonicalFocusId(snapshot.focusId || "technique"), ceiling: 55, volatility: 5, migrated: true };
+    entity.healthState = {
+      health: typeof snapshot.condition === "number" ? snapshot.condition : (typeof snapshot.health === "number" ? snapshot.health : 100),
+      injuries: clone(snapshot.injuries || [])
+    };
+    entity.wearState = {
+      wear: typeof snapshot.wear === "number" ? snapshot.wear : Math.max(0, Math.round((100 - entity.healthState.health) * 0.4)),
+      fatigue: typeof snapshot.fatigue === "number" ? snapshot.fatigue : 0
+    };
     entity.moraleState = { morale: typeof snapshot.morale === "number" ? snapshot.morale : 55 };
     entity.currentGymId = snapshot.gymId || "";
     entity.currentTrainerId = snapshot.trainerTypeId || snapshot.trainerId || "";
@@ -599,15 +650,21 @@ var PersistentFighterRegistry = (function () {
   function buildOpponentSnapshot(entity, existingSnapshot, countryInfo) {
     var snapshot = clone(existingSnapshot || {});
     var country = entity.country || (countryInfo ? countryInfo.id : "");
+    var trackId = entity.currentTrack || entity.trackId || snapshot.currentTrack || snapshot.trackId || "street";
     snapshot.fighterId = entity.id;
     snapshot.firstName = entity.firstName;
     snapshot.lastName = entity.lastName;
-    snapshot.nickname = entity.nickname;
-    snapshot.fullName = entity.fullName || (entity.firstName + ' "' + entity.nickname + '" ' + entity.lastName);
+    snapshot.nickname = trackAllowsNickname(trackId) ? sanitizeNicknameWord(entity.nickname) : "";
+    snapshot.fullName = buildDisplayName(entity.firstName, entity.lastName, snapshot.nickname, trackId);
     snapshot.countryKey = country;
     snapshot.stats = clone(entity.attributes || entity.stats);
     snapshot.styleId = entity.styleId || entity.style || "";
     snapshot.profileId = snapshot.profileId || profileFromStyle(snapshot.styleId);
+    snapshot.condition = entity.healthState && typeof entity.healthState.health === "number" ? entity.healthState.health : (typeof snapshot.condition === "number" ? snapshot.condition : 100);
+    snapshot.injuries = clone(entity.healthState && entity.healthState.injuries ? entity.healthState.injuries : (snapshot.injuries || []));
+    snapshot.wear = entity.wearState && typeof entity.wearState.wear === "number" ? entity.wearState.wear : (typeof snapshot.wear === "number" ? snapshot.wear : 0);
+    snapshot.fatigue = entity.wearState && typeof entity.wearState.fatigue === "number" ? entity.wearState.fatigue : (typeof snapshot.fatigue === "number" ? snapshot.fatigue : 0);
+    snapshot.morale = entity.moraleState && typeof entity.moraleState.morale === "number" ? entity.moraleState.morale : (typeof snapshot.morale === "number" ? snapshot.morale : 55);
     snapshot.gymId = entity.currentGymId || "";
     snapshot.trainerTypeId = entity.currentTrainerId || "";
     snapshot.archetypeId = entity.archetypeId || snapshot.archetypeId || "";
@@ -696,6 +753,9 @@ var PersistentFighterRegistry = (function () {
     roster.fightersById[playerEntity.id] = playerEntity;
     if (gameState.playerState) {
       gameState.playerState.fighterEntityId = playerEntity.id;
+    }
+    if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
+      WorldRankingsEngine.ensureMinimumRoster(gameState);
     }
     syncOfferRosterLinks(gameState);
     syncRivalryRosterLinks(gameState);

@@ -31,6 +31,39 @@ var COUNTRY_DATA = (function () {
     return values.slice(0, 200);
   }
 
+  function sanitizeNicknameWord(value) {
+    var label = String(value || "").replace(/["']/g, " ").replace(/[.,!?;:]+/g, " ").replace(/^\s+|\s+$/g, "");
+    var parts;
+    if (!label) {
+      return "";
+    }
+    parts = label.split(/\s+/);
+    label = parts.length ? parts[0] : "";
+    if (label.indexOf("-") >= 0) {
+      label = label.split("-")[0];
+    }
+    return label.replace(/^\s+|\s+$/g, "");
+  }
+
+  function buildNicknamePool(left, right) {
+    var values = [];
+    var seen = {};
+    var sources = [left || [], right || []];
+    var i;
+    var j;
+    var value;
+    for (i = 0; i < sources.length; i += 1) {
+      for (j = 0; j < sources[i].length; j += 1) {
+        value = sanitizeNicknameWord(sources[i][j]);
+        if (value && !seen[value]) {
+          seen[value] = true;
+          values.push(value);
+        }
+      }
+    }
+    return values.slice(0, 120);
+  }
+
   var seeds = {
     mexico: {
       firstJoin: "space",
@@ -140,7 +173,7 @@ var COUNTRY_DATA = (function () {
     pools[countryKey] = {
       firstNames: buildPool(seed.firstLeft, seed.firstRight, seed.firstJoin),
       lastNames: buildPool(seed.lastLeft, seed.lastRight, seed.lastJoin),
-      nicknames: buildPool(seed.nickLeft, seed.nickRight, seed.nickJoin)
+      nicknames: buildNicknamePool(seed.nickLeft, seed.nickRight)
     };
   }
 

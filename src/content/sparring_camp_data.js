@@ -126,7 +126,7 @@ var SPARRING_CAMP_DATA = {
   },
   countryFocusHints: {
     mexico: "power",
-    usa: "sparring",
+    usa: "technique",
     russia: "endurance",
     cuba: "technique",
     japan: "defense",

@@ -259,20 +259,6 @@
       }
     },
     {
-      "id": "sparring",
-      "label": "Спарринги",
-      "xpByTraining": {
-        "light": 7,
-        "medium": 12,
-        "hard": 16
-      },
-      "styleWeights": {
-        "tempo": 2,
-        "puncher": 1,
-        "counterpuncher": 1
-      }
-    },
-    {
       "id": "recovery",
       "label": "Восстановление",
       "xpByTraining": {
@@ -475,7 +461,7 @@
       "category": "career",
       "requirements": {
         "focusAtLeast": {
-          "sparring": 10
+          "technique": 10
         },
         "weekAtLeast": 3
       },
@@ -604,7 +590,7 @@
     "finisher": {
       "focusBoosts": {
         "power": 3,
-        "sparring": 1
+        "technique": 1
       },
       "styleWeights": {
         "puncher": 3,
@@ -613,8 +599,8 @@
     },
     "media_operator": {
       "focusBoosts": {
-        "sparring": 1,
-        "technique": 1
+        "technique": 1,
+        "recovery": 1
       },
       "styleWeights": {
         "outboxer": 1
@@ -623,7 +609,7 @@
     "body_lab": {
       "focusBoosts": {
         "power": 2,
-        "sparring": 2
+        "technique": 2
       },
       "styleWeights": {
         "puncher": 2,
@@ -635,7 +621,7 @@
     "mexico_barrio_pit": {
       "focusBoosts": {
         "power": 2,
-        "sparring": 1
+        "technique": 1
       },
       "styleWeights": {
         "puncher": 2,
@@ -654,7 +640,7 @@
     "usa_vegas_workshop": {
       "focusBoosts": {
         "technique": 2,
-        "sparring": 1
+        "defense": 1
       },
       "styleWeights": {
         "outboxer": 2,
@@ -703,7 +689,7 @@
     "cuba_santiago_rhythm": {
       "focusBoosts": {
         "endurance": 2,
-        "sparring": 1
+        "technique": 1
       },
       "styleWeights": {
         "tempo": 2,
@@ -723,7 +709,7 @@
     "japan_osaka_smoke": {
       "focusBoosts": {
         "technique": 2,
-        "sparring": 1
+        "defense": 1
       },
       "styleWeights": {
         "outboxer": 1,
@@ -772,7 +758,7 @@
     "philippines_manila_motor": {
       "focusBoosts": {
         "endurance": 2,
-        "sparring": 2
+        "technique": 2
       },
       "styleWeights": {
         "tempo": 2
@@ -780,7 +766,7 @@
     },
     "philippines_cebu_storm": {
       "focusBoosts": {
-        "sparring": 2,
+        "technique": 2,
         "power": 1
       },
       "styleWeights": {

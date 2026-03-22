@@ -138,6 +138,7 @@ var CareerTransitionEngine = (function () {
       actorType: "player",
       actorId: gameState && gameState.playerState ? gameState.playerState.fighterEntityId || "fighter_player_main" : "fighter_player_main",
       trackId: playerTrackId(gameState),
+      countryId: player.currentCountry || player.homeCountry || "",
       age: currentAge(gameState),
       streetRating: street.streetRating || 0,
       fame: player.resources ? player.resources.fame || 0 : 0,
@@ -174,6 +175,7 @@ var CareerTransitionEngine = (function () {
       actorId: fighter && fighter.id ? fighter.id : "",
       fighter: fighter || null,
       trackId: trackId,
+      countryId: fighter && fighter.country ? fighter.country : "",
       age: fighter && typeof fighter.age === "number" ? fighter.age : 16,
       streetRating: fighter && typeof fighter.streetRating === "number" ? fighter.streetRating : 0,
       fame: fighter && typeof fighter.fame === "number" ? fighter.fame : 0,
@@ -352,6 +354,305 @@ var CareerTransitionEngine = (function () {
       age: context.age,
       trackId: context.trackId
     };
+  }
+
+  function trackLabel(trackId) {
+    if (trackId === "amateur") {
+      return "\u043b\u044e\u0431\u0438\u0442\u0435\u043b\u0438";
+    }
+    if (trackId === "pro") {
+      return "\u043f\u0440\u043e\u0444\u0438";
+    }
+    return "\u0443\u043b\u0438\u0446\u0430";
+  }
+
+  function localizedRankLabel(countryId, rankId) {
+    if (!rankId) {
+      return "";
+    }
+    if (typeof ContentLoader !== "undefined" && ContentLoader.getLocalizedRankLabel) {
+      return ContentLoader.getLocalizedRankLabel(countryId || "default", rankId);
+    }
+    if (typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.getLocalizedRankLabel) {
+      return JuniorAmateurSystem.getLocalizedRankLabel(countryId || "default", rankId);
+    }
+    return rankId;
+  }
+
+  function addSummaryLine(list, text) {
+    var i;
+    if (!(list instanceof Array) || !text) {
+      return;
+    }
+    for (i = 0; i < list.length; i += 1) {
+      if (list[i] === text) {
+        return;
+      }
+    }
+    list.push(text);
+  }
+
+  function summarizeRequirements(definition, context) {
+    var req = definition && definition.requirements ? definition.requirements : {};
+    var list = [];
+    var minStreetRating = typeof req.minStreetRating === "number" ? req.minStreetRating : 0;
+    var minFame = typeof req.minFame === "number" ? req.minFame : 0;
+    if (typeof req.minAge === "number") {
+      addSummaryLine(list, req.minAge + "+ \u043b\u0435\u0442");
+    }
+    if (typeof req.maxAge === "number") {
+      addSummaryLine(list, "\u0434\u043e " + req.maxAge + " \u043b\u0435\u0442");
+    }
+    if (typeof req.hardMaxAge === "number") {
+      addSummaryLine(list, "\u0432\u0445\u043e\u0434 \u0437\u0430\u043a\u0440\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 " + req.hardMaxAge);
+    }
+    if (typeof req.lateStartAge === "number" && context.age >= req.lateStartAge) {
+      minStreetRating += typeof req.lateStartStreetRatingBonus === "number" ? req.lateStartStreetRatingBonus : 0;
+      minFame += typeof req.lateStartFameBonus === "number" ? req.lateStartFameBonus : 0;
+    }
+    if (minStreetRating > 0) {
+      addSummaryLine(list, "street-\u0440\u0435\u0439\u0442\u0438\u043d\u0433 " + minStreetRating + "+");
+    }
+    if (minFame > 0) {
+      addSummaryLine(list, "\u0441\u043b\u0430\u0432\u0430 " + minFame + "+");
+    }
+    if (typeof req.minMoney === "number") {
+      addSummaryLine(list, "\u043d\u0443\u0436\u043d\u043e \u0445\u043e\u0442\u044f \u0431\u044b $" + req.minMoney);
+    }
+    if (req.minAmateurRankId) {
+      addSummaryLine(list, "\u0440\u0430\u0437\u0440\u044f\u0434 \u043e\u0442 " + localizedRankLabel(context.countryId, req.minAmateurRankId));
+    }
+    if (typeof req.minAmateurScore === "number") {
+      addSummaryLine(list, "\u043e\u0447\u043a\u0438 \u043b\u044e\u0431\u0438\u0442\u0435\u043b\u0435\u0439 " + req.minAmateurScore + "+");
+    }
+    if (typeof req.minCareerWins === "number") {
+      addSummaryLine(list, "\u043f\u043e\u0431\u0435\u0434\u044b " + req.minCareerWins + "+");
+    }
+    if (req.requiredNationalTeamStatuses instanceof Array && req.requiredNationalTeamStatuses.length) {
+      addSummaryLine(list, "\u0441\u0442\u0430\u0442\u0443\u0441 \u0432 \u0441\u0431\u043e\u0440\u043d\u043e\u0439");
+    }
+    if (req.requiredBiographyFlags instanceof Array && req.requiredBiographyFlags.length) {
+      addSummaryLine(list, "\u043d\u0443\u0436\u043d\u0430 \u043d\u0443\u0436\u043d\u0430\u044f \u0438\u0441\u0442\u043e\u0440\u0438\u044f");
+    }
+    if (typeof req.maxWear === "number") {
+      addSummaryLine(list, "\u0438\u0437\u043d\u043e\u0441 \u0434\u043e " + req.maxWear);
+    }
+    if (typeof req.minHealth === "number") {
+      addSummaryLine(list, "\u0437\u0434\u043e\u0440\u043e\u0432\u044c\u0435 " + req.minHealth + "+");
+    }
+    if (req.requireProStreetFallback) {
+      addSummaryLine(list, "\u043d\u0443\u0436\u0435\u043d real street-\u043a\u0430\u043c\u0431\u044d\u043a");
+    }
+    return list.slice(0, 4);
+  }
+
+  function transitionReturnPath(definition, context) {
+    if (!definition) {
+      return "";
+    }
+    if (definition.id === "street_to_amateur") {
+      return "\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043d\u0430 \u0443\u043b\u0438\u0446\u0443 \u043c\u043e\u0436\u043d\u043e \u0447\u0435\u0440\u0435\u0437 \u0443\u043b\u0438\u0447\u043d\u044b\u0439 fallback \u0438\u043b\u0438 \u043f\u043e\u0442\u043e\u043c \u0447\u0435\u0440\u0435\u0437 \u043f\u0440\u043e\u0444\u0438.";
+    }
+    if (definition.id === "street_to_pro") {
+      return "\u0415\u0441\u043b\u0438 \u043f\u0440\u043e\u0444. \u043f\u0443\u0442\u044c \u043f\u043e\u0439\u0434\u0451\u0442 \u043f\u043b\u043e\u0445\u043e, \u0432\u043e\u0437\u0432\u0440\u0430\u0442 \u0432\u043e\u0437\u043c\u043e\u0436\u0435\u043d \u0447\u0435\u0440\u0435\u0437 street-\u043a\u0430\u043c\u0431\u044d\u043a.";
+    }
+    if (definition.id === "amateur_to_pro" || definition.id === "national_team_member_to_pro" || definition.id === "dropped_team_to_pro") {
+      return "\u041e\u0431\u0440\u0430\u0442\u043d\u044b\u0439 \u0445\u043e\u0434 \u0432 \u0441\u0431\u043e\u0440\u043d\u0443\u044e \u043e\u0431\u044b\u0447\u043d\u043e \u0437\u0430\u043a\u0440\u044b\u0442, \u043d\u043e street-\u0432\u043e\u0437\u0432\u0440\u0430\u0442 \u043e\u0441\u0442\u0430\u0451\u0442\u0441\u044f.";
+    }
+    if (definition.id === "amateur_to_street_fallback") {
+      return "\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0432 \u0441\u0438\u0441\u0442\u0435\u043c\u0443 \u043c\u043e\u0436\u043d\u043e \u043f\u043e\u0437\u0436\u0435 \u0447\u0435\u0440\u0435\u0437 \u043b\u044e\u0431\u0438\u0442\u0435\u043b\u0438 \u0438\u043b\u0438 \u043f\u0440\u044f\u043c\u043e\u0439 \u0432\u044b\u0445\u043e\u0434 \u0432 \u043f\u0440\u043e\u0444\u0438.";
+    }
+    if (definition.id === "dropped_team_regional_rebuild") {
+      return "\u042d\u0442\u043e \u0438 \u0435\u0441\u0442\u044c \u043f\u0443\u0442\u044c \u0432\u043e\u0437\u0432\u0440\u0430\u0442\u0430: \u0447\u0435\u0440\u0435\u0437 \u0440\u0435\u0433\u0438\u043e\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u043a\u0430\u043c\u0431\u044d\u043a \u0438 \u043d\u043e\u0432\u044b\u0439 \u043e\u0442\u0431\u043e\u0440.";
+    }
+    if (definition.id === "pro_to_street_comeback") {
+      return "\u042d\u0442\u043e \u0443\u0436\u0435 \u043f\u0443\u0442\u044c \u0432\u043e\u0437\u0432\u0440\u0430\u0442\u0430; \u0432\u043e \u0432\u0435\u0440\u0445 \u043d\u0430\u0437\u0430\u0434 \u043f\u0440\u0438\u0434\u0451\u0442\u0441\u044f \u0438\u0434\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u043d\u043e\u0432\u044b\u0435 street-\u043f\u043e\u0431\u0435\u0434\u044b.";
+    }
+    if (definition.toTrackId === "street") {
+      return "\u042d\u0442\u043e \u0437\u0430\u043f\u0430\u0441\u043d\u043e\u0439 \u043f\u0443\u0442\u044c: \u0438\u0437 street \u043c\u043e\u0436\u043d\u043e \u043b\u0438\u0431\u043e \u0441\u043d\u043e\u0432\u0430 \u0438\u0441\u043a\u0430\u0442\u044c \u0441\u0438\u0441\u0442\u0435\u043c\u0443, \u043b\u0438\u0431\u043e \u0440\u0432\u0430\u0442\u044c \u0432 \u043f\u0440\u043e\u0444\u0438.";
+    }
+    if (definition.toTrackId === "pro") {
+      return "\u041d\u0430\u0437\u0430\u0434 \u0432\u043e\u0437\u0432\u0440\u0430\u0442 \u043d\u0435 \u043f\u0440\u044f\u043c\u043e\u0439: \u043e\u0431\u044b\u0447\u043d\u043e \u043e\u043d \u0438\u0434\u0451\u0442 \u0447\u0435\u0440\u0435\u0437 \u0441\u043f\u0430\u0434 \u0438 street-\u043a\u0430\u043c\u0431\u044d\u043a.";
+    }
+    if (definition.toTrackId === "amateur") {
+      return context.age > 28 ? "\u041e\u0431\u0440\u0430\u0442\u043d\u044b\u0439 \u0432\u044b\u0445\u043e\u0434 \u0438\u0437 \u043b\u044e\u0431\u0438\u0442\u0435\u043b\u0435\u0439 \u0435\u0449\u0451 \u0432\u043e\u0437\u043c\u043e\u0436\u0435\u043d, \u043d\u043e \u044d\u043b\u0438\u0442\u043d\u043e\u0435 \u043e\u043a\u043d\u043e \u0443\u0436\u0435 \u0441\u0443\u0436\u0430\u0435\u0442\u0441\u044f." : "\u0415\u0441\u043b\u0438 \u043b\u044e\u0431\u0438\u0442\u0435\u043b\u044c\u0441\u043a\u0438\u0439 \u043f\u0443\u0442\u044c \u043d\u0435 \u043f\u043e\u0439\u0434\u0451\u0442, \u043e\u0441\u0442\u0430\u0451\u0442\u0441\u044f street fallback \u0438\u043b\u0438 \u043f\u043e\u0437\u0436\u0435 \u043f\u0440\u043e\u0444\u0438.";
+    }
+    return "\u0412\u043e\u0437\u0432\u0440\u0430\u0442 \u0432\u043e\u0437\u043c\u043e\u0436\u0435\u043d \u0447\u0435\u0440\u0435\u0437 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0443\u044e \u043a\u0430\u0440\u044c\u0435\u0440\u043d\u0443\u044e \u0440\u0430\u0437\u0432\u0438\u043b\u043a\u0443.";
+  }
+
+  function availableReasonText(definition, context) {
+    if (!definition) {
+      return "\u041f\u0435\u0440\u0435\u0445\u043e\u0434 \u0443\u0436\u0435 \u043e\u0442\u043a\u0440\u044b\u0442.";
+    }
+    if (definition.id === "street_to_pro") {
+      return "\u041c\u043e\u0436\u043d\u043e \u0443\u0439\u0442\u0438 \u0432 \u043f\u0440\u043e\u0444\u0438 \u043d\u0430\u043f\u0440\u044f\u043c\u0443\u044e.";
+    }
+    if (definition.id === "street_to_amateur") {
+      return "\u041c\u043e\u0436\u043d\u043e \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0432 \u043b\u044e\u0431\u0438\u0442\u0435\u043b\u0438.";
+    }
+    if (definition.id === "amateur_to_pro" || definition.id === "national_team_member_to_pro" || definition.id === "dropped_team_to_pro") {
+      return "\u041c\u043e\u0436\u043d\u043e \u0443\u0439\u0442\u0438 \u0432 \u043f\u0440\u043e\u0444\u0438.";
+    }
+    if (definition.id === "amateur_to_street_fallback") {
+      return "\u041c\u043e\u0436\u043d\u043e \u0443\u0439\u0442\u0438 \u043d\u0430 \u0443\u043b\u0438\u0446\u0443.";
+    }
+    if (definition.id === "pro_to_street_comeback") {
+      return "\u041c\u043e\u0436\u043d\u043e \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043d\u0430 \u0443\u043b\u0438\u0446\u0443.";
+    }
+    if (definition.id === "dropped_team_regional_rebuild") {
+      return "\u041c\u043e\u0436\u043d\u043e \u043e\u0441\u0442\u0430\u0442\u044c\u0441\u044f \u0432 \u0441\u0438\u0441\u0442\u0435\u043c\u0435 \u0438 \u0441\u043e\u0431\u0440\u0430\u0442\u044c\u0441\u044f \u0437\u0430\u043d\u043e\u0432\u043e.";
+    }
+    return "\u041c\u043e\u0436\u043d\u043e \u043f\u0435\u0440\u0435\u0439\u0442\u0438 \u043d\u0430 \u043f\u0443\u0442\u044c '" + trackLabel(definition.toTrackId || context.trackId) + "'.";
+  }
+
+  function blockedReasonText(card, definition, context) {
+    if (card && card.blockedReasons instanceof Array && card.blockedReasons.length) {
+      return card.blockedReasons[0];
+    }
+    if (definition && definition.id === "street_to_amateur" && context.age > 28) {
+      return "\u041f\u043e\u0437\u0434\u043d\u0438\u0439 \u0432\u0445\u043e\u0434 \u0432 \u043b\u044e\u0431\u0438\u0442\u0435\u043b\u0438 \u0443\u0436\u0435 \u0437\u0430\u043a\u0440\u044b\u0442.";
+    }
+    if (definition && definition.id === "pro_to_street_comeback") {
+      return "\u0412\u043e\u0437\u0432\u0440\u0430\u0442 \u043d\u0430 \u0443\u043b\u0438\u0446\u0443 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043e\u0442\u043a\u0440\u044b\u043b\u0441\u044f.";
+    }
+    return "\u041f\u043e\u043a\u0430 \u043f\u0435\u0440\u0435\u0445\u043e\u0434 \u0437\u0430\u043a\u0440\u044b\u0442.";
+  }
+
+  function transitionRelevanceScore(definition, context, card) {
+    var score = 10;
+    if (!definition) {
+      return score;
+    }
+    if (card.available) {
+      score += 25;
+    }
+    if (context.trackId === "street") {
+      if (definition.id === "street_to_pro") {
+        score += context.streetRating >= 105 ? 36 : 14;
+        score += context.fame >= 18 ? 14 : 0;
+      } else if (definition.id === "street_to_amateur") {
+        score += context.age <= 23 ? 30 : 18;
+        score += context.streetRating >= 22 ? 10 : 0;
+      }
+    } else if (context.trackId === "amateur") {
+      if (definition.id === "national_team_member_to_pro") {
+        score += (context.teamStatus === "active" || context.teamStatus === "reserve") ? 38 : 8;
+      } else if (definition.id === "amateur_to_pro") {
+        score += compareRanks(context.amateurRankId || "", "adult_class_1") >= 0 ? 32 : 10;
+      } else if (definition.id === "dropped_team_to_pro") {
+        score += context.isDroppedFromTeam ? 34 : 2;
+      } else if (definition.id === "dropped_team_regional_rebuild") {
+        score += context.isDroppedFromTeam ? 30 : 0;
+      } else if (definition.id === "amateur_to_street_fallback") {
+        score += (context.wear >= 72 || context.morale <= 34) ? 26 : 6;
+      }
+    } else if (context.trackId === "pro") {
+      if (definition.id === "pro_to_street_comeback") {
+        score += context.proFallbackEligible ? 34 : 4;
+      }
+    }
+    if (context.age > 28 && definition.toTrackId === "amateur") {
+      score -= 22;
+    }
+    return score;
+  }
+
+  function transitionTimingScore(definition, context, card) {
+    var score = 8;
+    if (card.available) {
+      score += 18;
+    }
+    if (definition && definition.requirements) {
+      if (typeof definition.requirements.hardMaxAge === "number") {
+        if (context.age >= definition.requirements.hardMaxAge - 1) {
+          score += 12;
+        }
+        if (context.age > definition.requirements.hardMaxAge) {
+          score -= 16;
+        }
+      }
+      if (typeof definition.requirements.minAge === "number") {
+        if (context.age === definition.requirements.minAge) {
+          score += 10;
+        }
+        if (context.age + 1 === definition.requirements.minAge) {
+          score += 4;
+        }
+      }
+    }
+    if (definition && definition.id === "amateur_to_pro" && compareRanks(context.amateurRankId || "", "adult_class_1") >= 0) {
+      score += 10;
+    }
+    if (definition && definition.id === "amateur_to_street_fallback" && (context.wear >= 72 || context.morale <= 34)) {
+      score += 10;
+    }
+    if (definition && definition.id === "pro_to_street_comeback" && context.proFallbackEligible) {
+      score += 14;
+    }
+    return score;
+  }
+
+  function transitionEligibilityScore(card) {
+    var blockers = card && card.blockedReasons instanceof Array ? card.blockedReasons.length : 0;
+    if (card && card.available) {
+      return 100;
+    }
+    return Math.max(6, 80 - blockers * 22);
+  }
+
+  function decorateTransitionCard(gameState, card, context) {
+    var definition = getTransition(card ? card.id : "") || card || {};
+    var decorated = clone(card || {});
+    var requirementsSummary = summarizeRequirements(definition, context);
+    decorated.relevanceScore = transitionRelevanceScore(definition, context, decorated);
+    decorated.timingScore = transitionTimingScore(definition, context, decorated);
+    decorated.eligibilityScore = transitionEligibilityScore(decorated);
+    decorated.score = decorated.relevanceScore + decorated.timingScore + decorated.eligibilityScore;
+    decorated.requirementsSummary = requirementsSummary;
+    decorated.requirementsPreview = requirementsSummary.length ? requirementsSummary.slice(0, 3).join(", ") : "\u041e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u0445 \u0442\u0440\u0435\u0431\u043e\u0432\u0430\u043d\u0438\u0439 \u043d\u0435\u0442.";
+    decorated.gainsPreview = decorated.gains && decorated.gains.length ? decorated.gains.slice(0, 2).join("; ") : "\u042f\u0432\u043d\u043e\u0433\u043e \u0431\u043e\u043d\u0443\u0441\u0430 \u043d\u0435\u0442.";
+    decorated.givesUpPreview = decorated.givesUp && decorated.givesUp.length ? decorated.givesUp.slice(0, 2).join("; ") : "\u041d\u0438\u0447\u0435\u0433\u043e \u043a\u0440\u0438\u0442\u0438\u0447\u043d\u043e\u0433\u043e \u043d\u0435 \u0442\u0435\u0440\u044f\u0435\u0448\u044c.";
+    decorated.returnPathSummary = transitionReturnPath(definition, context);
+    decorated.availableTransitionReason = availableReasonText(definition, context);
+    decorated.blockedTransitionReason = blockedReasonText(decorated, definition, context);
+    decorated.explanationText = decorated.available ? decorated.availableTransitionReason : decorated.blockedTransitionReason;
+    return decorated;
+  }
+
+  function compareDecoratedTransitionCards(left, right) {
+    var leftAvailable = left && left.available ? 1 : 0;
+    var rightAvailable = right && right.available ? 1 : 0;
+    if (leftAvailable !== rightAvailable) {
+      return rightAvailable - leftAvailable;
+    }
+    if ((right.score || 0) !== (left.score || 0)) {
+      return (right.score || 0) - (left.score || 0);
+    }
+    if ((right.relevanceScore || 0) !== (left.relevanceScore || 0)) {
+      return (right.relevanceScore || 0) - (left.relevanceScore || 0);
+    }
+    return String(left.id || "").localeCompare(String(right.id || ""));
+  }
+
+  function rankPlayerTransitionCards(gameState, cards) {
+    var context = playerContext(gameState);
+    var source = cards instanceof Array ? cards : evaluatePlayerTransitions(gameState);
+    var list = [];
+    var i;
+    for (i = 0; i < source.length; i += 1) {
+      list.push(decorateTransitionCard(gameState, source[i], context));
+    }
+    list.sort(compareDecoratedTransitionCards);
+    return list;
+  }
+
+  function topPlayerTransitionCards(gameState, limit, cards) {
+    var ranked = rankPlayerTransitionCards(gameState, cards);
+    var maxItems = typeof limit === "number" && limit > 0 ? limit : 2;
+    if (ranked.length > maxItems) {
+      ranked = ranked.slice(0, maxItems);
+    }
+    return ranked;
   }
 
   function evaluatePlayerTransitions(gameState) {
@@ -660,6 +961,8 @@ var CareerTransitionEngine = (function () {
     getTransitionDefinition: getTransition,
     listTransitionEventDefinitions: listTransitionEvents,
     evaluatePlayerTransitions: evaluatePlayerTransitions,
+    rankPlayerTransitionCards: rankPlayerTransitionCards,
+    topPlayerTransitionCards: topPlayerTransitionCards,
     canPlayerTransition: canPlayerTransition,
     syncPlayerTransitionState: syncPlayerTransitionState,
     executePlayerTransition: executePlayerTransition,

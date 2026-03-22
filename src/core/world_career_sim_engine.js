@@ -14,6 +14,33 @@ var WorldCareerSimEngine = (function () {
     return Math.max(minValue, Math.min(maxValue, value));
   }
 
+  function sanitizeNicknameWord(value) {
+    var label = String(value || "").replace(/["']/g, " ").replace(/[.,!?;:]+/g, " ").replace(/^\s+|\s+$/g, "");
+    var parts;
+    if (!label) {
+      return "";
+    }
+    parts = label.split(/\s+/);
+    label = parts.length ? parts[0] : "";
+    if (label.indexOf("-") >= 0) {
+      label = label.split("-")[0];
+    }
+    return label.replace(/^\s+|\s+$/g, "");
+  }
+
+  function trackAllowsNickname(trackId) {
+    return trackId === "street" || trackId === "pro";
+  }
+
+  function buildDisplayName(firstName, lastName, nickname, trackId) {
+    var fullName = String(firstName || "") + " " + String(lastName || "");
+    var nick = trackAllowsNickname(trackId) ? sanitizeNicknameWord(nickname) : "";
+    if (nick) {
+      return String(firstName || "") + ' "' + nick + '" ' + String(lastName || "");
+    }
+    return fullName.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+  }
+
   function dataRoot() {
     return typeof WORLD_CAREER_SIM_DATA !== "undefined" && WORLD_CAREER_SIM_DATA ? WORLD_CAREER_SIM_DATA : {
       goalProfiles: [],
@@ -120,6 +147,13 @@ var WorldCareerSimEngine = (function () {
       return WorldFacilityEngine.listTrainersByCountry(gameState, countryId, { trackId: trackId || "street" });
     }
     return typeof ContentLoader !== "undefined" && ContentLoader.listTrainerTypesByCountry ? ContentLoader.listTrainerTypesByCountry(countryId) : [];
+  }
+
+  function listTrainersByGym(gameState, gymId, trackId) {
+    if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByGym) {
+      return WorldFacilityEngine.listTrainersByGym(gameState, gymId, { trackId: trackId || "street" });
+    }
+    return [];
   }
 
   function getCountryPool(countryId) {
@@ -460,7 +494,7 @@ var WorldCareerSimEngine = (function () {
   function maybeTransferCoach(fighter, weekValue, gameState) {
     var rules = transitionRules();
     var goal = getGoalProfile(fighter.goalProfileId) || {};
-    var trainers = eligibleItemByRank(listTrainerTypesByCountry(gameState, fighter.country, fighterTrack(fighter)), fighter.amateurRank);
+    var trainers = eligibleItemByRank(fighter.currentGymId ? listTrainersByGym(gameState, fighter.currentGymId, fighterTrack(fighter)) : listTrainerTypesByCountry(gameState, fighter.country, fighterTrack(fighter)), fighter.amateurRank);
     var loyalty = goal.coachLoyalty || 1;
     var targetIndex;
     var target;
@@ -641,7 +675,7 @@ var WorldCareerSimEngine = (function () {
     return {
       firstName: firstNames[deterministicIndex(countryId + "_f_" + serial, firstNames.length)],
       lastName: lastNames[deterministicIndex(countryId + "_l_" + serial, lastNames.length)],
-      nickname: nicknames[deterministicIndex(countryId + "_n_" + serial, nicknames.length)]
+      nickname: sanitizeNicknameWord(nicknames[deterministicIndex(countryId + "_n_" + serial, nicknames.length)])
     };
   }
 
@@ -652,18 +686,18 @@ var WorldCareerSimEngine = (function () {
     var age = 14 + deterministicIndex(countryId + "_age_" + serial + "_" + weekValue, 4);
     var currentTrackId = (goal.trackBias && goal.trackBias.street > goal.trackBias.amateur) ? "street" : "amateur";
     var gyms = listGymsByCountry(gameState, countryId, currentTrackId);
-    var trainers = listTrainerTypesByCountry(gameState, countryId, currentTrackId);
-    var gymId = currentTrackId === "amateur" && gyms.length ? gyms[deterministicIndex(countryId + "_gym_new_" + serial, gyms.length)].id : "";
-    var trainerId = currentTrackId === "amateur" && trainers.length ? trainers[deterministicIndex(countryId + "_trainer_new_" + serial, trainers.length)].id : "";
+    var gymId = gyms.length ? gyms[deterministicIndex(countryId + "_gym_new_" + serial, gyms.length)].id : "";
+    var trainers = gymId ? listTrainersByGym(gameState, gymId, currentTrackId) : [];
+    var trainerId = trainers.length ? trainers[deterministicIndex(countryId + "_trainer_new_" + serial, trainers.length)].id : "";
     var styleId = styleFromGoalProfile(goalId);
     var base = 2 + deterministicIndex(countryId + "_base_" + serial + "_" + weekValue, 4);
     return {
       id: stableId("fighter_newgen", [countryId, yearValue, serial]),
       firstName: identity.firstName,
       lastName: identity.lastName,
-      nickname: identity.nickname,
+      nickname: trackAllowsNickname(currentTrackId) ? identity.nickname : "",
       name: identity.firstName + " " + identity.lastName,
-      fullName: identity.firstName + ' "' + identity.nickname + '" ' + identity.lastName,
+      fullName: buildDisplayName(identity.firstName, identity.lastName, identity.nickname, currentTrackId),
       country: countryId,
       age: age,
       birthWeek: ((weekValue + serial) % 52) + 1,

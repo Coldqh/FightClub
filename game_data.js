@@ -166,6 +166,10 @@ var NAV_TABS = [
     "label": "Карьера"
   },
   {
+    "key": "rankings",
+    "label": "Рейтинги"
+  },
+  {
     "key": "people",
     "label": "Люди"
   },

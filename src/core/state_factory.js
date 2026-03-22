@@ -1,7 +1,146 @@
-var SAVE_VERSION = 28;
+var SAVE_VERSION = 32;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function canonicalDevelopmentFocusId(focusId) {
+  if (focusId === "sparring") {
+    return "technique";
+  }
+  return typeof focusId === "string" && focusId ? focusId : "technique";
+}
+
+function sanitizeNicknameWord(value) {
+  var label = String(value || "").replace(/["']/g, " ").replace(/[.,!?;:]+/g, " ").replace(/^\s+|\s+$/g, "");
+  var parts;
+  if (!label) {
+    return "";
+  }
+  parts = label.split(/\s+/);
+  label = parts.length ? parts[0] : "";
+  if (label.indexOf("-") >= 0) {
+    label = label.split("-")[0];
+  }
+  return label.replace(/^\s+|\s+$/g, "");
+}
+
+function splitDisplayNameParts(displayName) {
+  var label = String(displayName || "");
+  var firstQuote = label.indexOf('"');
+  var lastQuote = label.lastIndexOf('"');
+  var parts;
+  if (firstQuote >= 0 && lastQuote > firstQuote) {
+    return {
+      firstName: label.substring(0, firstQuote).replace(/^\s+|\s+$/g, ""),
+      nickname: label.substring(firstQuote + 1, lastQuote).replace(/^\s+|\s+$/g, ""),
+      lastName: label.substring(lastQuote + 1).replace(/^\s+|\s+$/g, "")
+    };
+  }
+  parts = label.replace(/^\s+|\s+$/g, "").split(/\s+/);
+  return {
+    firstName: parts.length ? parts[0] : "",
+    nickname: "",
+    lastName: parts.length > 1 ? parts.slice(1).join(" ") : ""
+  };
+}
+
+function trackAllowsNickname(trackId) {
+  return trackId === "street" || trackId === "pro";
+}
+
+function inferTrackIdFromFighterLike(fighterLike, fallbackTrackId) {
+  if (fighterLike && typeof fighterLike.currentTrack === "string" && fighterLike.currentTrack) {
+    return fighterLike.currentTrack;
+  }
+  if (fighterLike && typeof fighterLike.trackId === "string" && fighterLike.trackId) {
+    return fighterLike.trackId;
+  }
+  return fallbackTrackId || "street";
+}
+
+function buildDisplayNameForTrack(firstName, lastName, nickname, trackId) {
+  var first = String(firstName || "").replace(/^\s+|\s+$/g, "");
+  var last = String(lastName || "").replace(/^\s+|\s+$/g, "");
+  var nick = trackAllowsNickname(trackId) ? sanitizeNicknameWord(nickname) : "";
+  if (nick) {
+    return first + ' "' + nick + '" ' + last;
+  }
+  return first + (last ? (" " + last) : "");
+}
+
+function normalizeFighterLikeIdentity(fighterLike, fallbackTrackId) {
+  var trackId;
+  var parts;
+  if (!fighterLike || typeof fighterLike !== "object") {
+    return fighterLike;
+  }
+  trackId = inferTrackIdFromFighterLike(fighterLike, fallbackTrackId);
+  parts = splitDisplayNameParts(fighterLike.fullName || fighterLike.name || "");
+  fighterLike.firstName = fighterLike.firstName || parts.firstName || "";
+  fighterLike.lastName = fighterLike.lastName || parts.lastName || "";
+  fighterLike.nickname = trackAllowsNickname(trackId) ? sanitizeNicknameWord(fighterLike.nickname || parts.nickname) : "";
+  fighterLike.fullName = buildDisplayNameForTrack(fighterLike.firstName, fighterLike.lastName, fighterLike.nickname, trackId);
+  return fighterLike;
+}
+
+function normalizePlayerProfileName(profile, trackId) {
+  var parts;
+  if (!profile || typeof profile !== "object") {
+    return;
+  }
+  parts = splitDisplayNameParts(profile.name || "");
+  profile.name = buildDisplayNameForTrack(parts.firstName, parts.lastName, parts.nickname, trackId || "street");
+}
+
+function normalizeRosterIdentityState(gameState) {
+  var roster = gameState && gameState.rosterState ? gameState.rosterState : null;
+  var ids;
+  var i;
+  var fighter;
+  if (!roster || !(roster.fighterIds instanceof Array) || !roster.fightersById) {
+    return;
+  }
+  ids = roster.fighterIds.slice(0);
+  for (i = 0; i < ids.length; i += 1) {
+    fighter = roster.fightersById[ids[i]];
+    if (!fighter) {
+      continue;
+    }
+    normalizeFighterLikeIdentity(fighter, fighter.currentTrack || fighter.trackId || "street");
+    if (fighter.growthProfile && typeof fighter.growthProfile === "object") {
+      fighter.growthProfile.focusId = canonicalDevelopmentFocusId(fighter.growthProfile.focusId);
+    }
+  }
+}
+
+function normalizeLegacyFightOfferSnapshots(gameState) {
+  var offers = gameState && gameState.world && gameState.world.offers ? gameState.world.offers.fightOffers || [] : [];
+  var worldOpponents = gameState && gameState.world ? gameState.world.opponents || [] : [];
+  var battleOpponent = gameState && gameState.battle && gameState.battle.current ? gameState.battle.current.opponent : null;
+  var rivalries = gameState && gameState.world ? gameState.world.rivalries || [] : [];
+  var i;
+  var trackId;
+  for (i = 0; i < offers.length; i += 1) {
+    if (!offers[i]) {
+      continue;
+    }
+    trackId = offers[i].trackId || "street";
+    if (offers[i].opponent) {
+      normalizeFighterLikeIdentity(offers[i].opponent, trackId);
+    }
+  }
+  for (i = 0; i < worldOpponents.length; i += 1) {
+    normalizeFighterLikeIdentity(worldOpponents[i], worldOpponents[i] ? (worldOpponents[i].currentTrack || worldOpponents[i].trackId || "street") : "street");
+  }
+  if (battleOpponent) {
+    normalizeFighterLikeIdentity(battleOpponent, gameState.battle.current.trackId || "street");
+  }
+  for (i = 0; i < rivalries.length; i += 1) {
+    if (rivalries[i] && rivalries[i].lastOpponentSnapshot) {
+      normalizeFighterLikeIdentity(rivalries[i].lastOpponentSnapshot, rivalries[i].lastOpponentSnapshot.currentTrack || rivalries[i].trackId || "street");
+    }
+  }
 }
 
 function basePlayerStatsSchema() {
@@ -139,7 +278,6 @@ function basePlayerDevelopmentSchema() {
       technique: 0,
       power: 0,
       defense: 0,
-      sparring: 0,
       recovery: 0
     },
     styleProgress: {
@@ -771,6 +909,13 @@ function normalizeWorldState(sourceWorld) {
     if (typeof sourceWorld.trainerAssignment.weeklyFee === "number") { normalized.trainerAssignment.weeklyFee = sourceWorld.trainerAssignment.weeklyFee; }
     normalized.trainerAssignment.status = sourceWorld.trainerAssignment.status || "active";
   }
+  if (normalized.trainerAssignment && normalized.gymMembership && !normalized.trainerAssignment.gymId && normalized.gymMembership.gymId) {
+    normalized.trainerAssignment.gymId = normalized.gymMembership.gymId;
+  }
+  if (normalized.trainerAssignment && normalized.trainerAssignment.gymId && !normalized.gymMembership) {
+    normalized.gymMembership = clonePlainData(baseGymMembershipSchema());
+    normalized.gymMembership.gymId = normalized.trainerAssignment.gymId;
+  }
   if (sourceWorld.activeContract && typeof sourceWorld.activeContract === "object") {
     normalized.activeContract = clonePlainData(baseContractSchema());
     normalized.activeContract.id = sourceWorld.activeContract.id || "";
@@ -883,13 +1028,16 @@ function normalizeGameState(gameState, options) {
         clonePlainData(source.player.preparation);
     }
     if (source.player.development) {
-      normalized.player.development.focusId = source.player.development.focusId || normalized.player.development.focusId;
+      normalized.player.development.focusId = canonicalDevelopmentFocusId(source.player.development.focusId || normalized.player.development.focusId);
       if (typeof source.player.development.totalXp === "number") { normalized.player.development.totalXp = source.player.development.totalXp; }
       if (typeof source.player.development.perkPoints === "number") { normalized.player.development.perkPoints = source.player.development.perkPoints; }
       for (key in normalized.player.development.focusProgress) {
         if (normalized.player.development.focusProgress.hasOwnProperty(key) && source.player.development.focusProgress && typeof source.player.development.focusProgress[key] === "number") {
           normalized.player.development.focusProgress[key] = source.player.development.focusProgress[key];
         }
+      }
+      if (source.player.development.focusProgress && typeof source.player.development.focusProgress.sparring === "number") {
+        normalized.player.development.focusProgress.technique += source.player.development.focusProgress.sparring;
       }
       for (key in normalized.player.development.styleProgress) {
         if (normalized.player.development.styleProgress.hasOwnProperty(key) && source.player.development.styleProgress && typeof source.player.development.styleProgress[key] === "number") {
@@ -973,6 +1121,17 @@ function normalizeGameState(gameState, options) {
   if (!normalized.player.preparation || typeof normalized.player.preparation !== "object") {
     normalized.player.preparation = basePlayerPreparationSchema();
   }
+  normalized.player.development.focusId = canonicalDevelopmentFocusId(normalized.player.development.focusId);
+  if (normalized.career.create && typeof normalized.career.create === "object") {
+    normalized.career.create.startingAge = normalized.career.create.startingAge === 18 ? 18 : 16;
+    normalized.career.create.focusId = canonicalDevelopmentFocusId(normalized.career.create.focusId || "technique");
+    if (normalized.career.create.identity && typeof normalized.career.create.identity === "object") {
+      normalizeFighterLikeIdentity(normalized.career.create.identity, "amateur");
+    }
+  }
+  normalizePlayerProfileName(normalized.player.profile, normalized.playerState && normalized.playerState.currentTrackId ? normalized.playerState.currentTrackId : "street");
+  normalizeRosterIdentityState(normalized);
+  normalizeLegacyFightOfferSnapshots(normalized);
   normalized.career.week = TimeSystem.getCalendarView(normalized.career.calendar).weekNumber;
   normalized.meta.saveVersion = SAVE_VERSION;
   return normalized;

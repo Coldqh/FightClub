@@ -49,6 +49,13 @@ var SparringCampEngine = (function () {
     return Math.round(typeof value === "number" ? value : 0);
   }
 
+  function canonicalFocusId(focusId) {
+    if (focusId === "sparring") {
+      return "technique";
+    }
+    return typeof focusId === "string" && focusId ? focusId : "technique";
+  }
+
   function emptyFightContext() {
     return {
       accuracy: 0,
@@ -386,7 +393,7 @@ var SparringCampEngine = (function () {
     if (!focusId && gameState && gameState.player && gameState.player.development) {
       focusId = gameState.player.development.focusId || "";
     }
-    return focusId || "sparring";
+    return canonicalFocusId(focusId);
   }
 
   function habitTextsForStyle(styleId, count) {
@@ -885,6 +892,109 @@ var SparringCampEngine = (function () {
     };
   }
 
+  function normalizeSparringFightInfo(source) {
+    return {
+      result: source && typeof source.result === "string" ? source.result : "draw",
+      roundsCompleted: Math.max(1, roundNumber(source && source.roundsCompleted)),
+      damageTaken: Math.max(0, roundNumber(source && source.damageTaken)),
+      damageDealt: Math.max(0, roundNumber(source && source.damageDealt)),
+      knockdownsFor: Math.max(0, roundNumber(source && source.knockdownsFor)),
+      knockdownsAgainst: Math.max(0, roundNumber(source && source.knockdownsAgainst))
+    };
+  }
+
+  function buildSparringOutcome(gameState, offer, partner, weekStamp, fightInfo) {
+    var prep = playerRoot(gameState);
+    var history = partnerHistoryEntry(prep, partner.id);
+    var focusId = canonicalFocusId(offer.preparationFocus || resolvePreparationFocus(gameState, partner));
+    var focusXp = Math.max(5, 6 + Math.round(offer.difficulty / 9) + Math.round(offer.scoutingValue / 8));
+    var skillPoints = Math.max(1, Math.round((offer.difficulty + offer.scoutingValue) / 40));
+    var styleId = fighterStyleId(partner) || "tempo";
+    var styleAmount = Math.max(2, Math.round(offer.difficulty / 12));
+    var moraleDelta = offer.difficulty <= 60 ? 2 : (offer.risk >= 18 ? -1 : 0);
+    var wearDelta = Math.max(1, Math.round(offer.risk / 5));
+    var scoutingGain = Math.max(4, roundNumber(offer.scoutingValue));
+    var familiarityGain = Math.max(3, 4 + history.sessions);
+    var target;
+    var rivalryHook = false;
+    var fight = fightInfo ? normalizeSparringFightInfo(fightInfo) : null;
+    history.sessions += 1;
+    history.lastWeek = weekStamp;
+    uniquePush(history.sourceIds, offer.sourceId);
+    if (fight) {
+      if (fight.result === "win") {
+        focusXp += 2;
+        styleAmount += 1;
+        moraleDelta += 1;
+        skillPoints += 1;
+      } else if (fight.result === "loss") {
+        focusXp = Math.max(4, focusXp - 1);
+        moraleDelta -= 1;
+      }
+      scoutingGain += Math.min(4, fight.roundsCompleted);
+      styleAmount += Math.max(0, Math.round(fight.damageDealt / 40));
+      wearDelta = Math.max(0, Math.round((wearDelta + Math.round(fight.damageTaken / 20) + fight.knockdownsAgainst) / 2));
+      familiarityGain += Math.min(8, fight.roundsCompleted + fight.knockdownsFor);
+    }
+    prep.lastSparringWeek = weekStamp;
+    rememberScouting(prep, partner.id, partner, scoutingGain + Math.round(familiarityGain / 2), "Спарринг", weekStamp);
+    target = prep.currentTargetFighterId ? findTarget(gameState, prep.currentTargetFighterId) : null;
+    if (target && target.id && target.id !== partner.id && (fighterStyleId(target) === fighterStyleId(partner) || fighterCountry(target) === fighterCountry(partner))) {
+      rememberScouting(prep, target.id, target, Math.max(3, Math.round(scoutingGain * 0.6)), "Похожий спарринг", weekStamp);
+    }
+    if (history.sessions >= 3) {
+      history.rivalryHook = true;
+      rivalryHook = true;
+      uniquePush(history.notes, "Жёсткий счёт на спаррингах");
+    }
+    return {
+      ok: true,
+      offer: offer,
+      partner: clone(partner),
+      focusId: focusId,
+      focusXp: focusXp,
+      skillPoints: skillPoints,
+      styleGains: [{ styleId: styleId, amount: styleAmount }],
+      moraleDelta: moraleDelta,
+      wearDelta: wearDelta,
+      scoutingGain: scoutingGain,
+      familiarityGain: familiarityGain,
+      cost: offer.cost,
+      rivalryHook: rivalryHook
+    };
+  }
+
+  function resolveSparring(gameState, offerId, weekValue) {
+    var offer = getSparringOfferById(gameState, offerId);
+    var partner;
+    var weekStamp = typeof weekValue === "number" ? weekValue : currentWeek(gameState);
+    if (!offer) {
+      return { ok: false, message: "Спарринг недоступен." };
+    }
+    partner = fighterById(gameState, offer.partnerFighterId);
+    if (!partner) {
+      return { ok: false, message: "Спарринг-партнёр пропал из реестра." };
+    }
+    if (playerMoney(gameState) < offer.cost) {
+      return { ok: false, message: "Не хватает денег." };
+    }
+    return buildSparringOutcome(gameState, offer, partner, weekStamp, null);
+  }
+
+  function resolveSparringFightOutcome(gameState, offerId, fightInfo, weekValue) {
+    var offer = getSparringOfferById(gameState, offerId);
+    var partner;
+    var weekStamp = typeof weekValue === "number" ? weekValue : currentWeek(gameState);
+    if (!offer) {
+      return { ok: false, message: "Спарринг недоступен." };
+    }
+    partner = fighterById(gameState, offer.partnerFighterId);
+    if (!partner) {
+      return { ok: false, message: "Спарринг-партнёр пропал из реестра." };
+    }
+    return buildSparringOutcome(gameState, offer, partner, weekStamp, fightInfo);
+  }
+
   function advanceCampWeek(gameState, weekValue) {
     var prep = playerRoot(gameState);
     var competition = competitionRoot(gameState);
@@ -952,7 +1062,7 @@ var SparringCampEngine = (function () {
     return {
       ok: true,
       camp: clone(camp),
-      focusId: camp.focusId || "sparring",
+      focusId: canonicalFocusId(camp.focusId || "technique"),
       focusXp: focusXp,
       styleGains: [{
         styleId: target ? (fighterStyleId(target) || "tempo") : "tempo",
@@ -1072,6 +1182,7 @@ var SparringCampEngine = (function () {
     advanceCampWeek: advanceCampWeek,
     getActiveCamp: getActiveCamp,
     resolveSparring: resolveSparring,
+    resolveSparringFightOutcome: resolveSparringFightOutcome,
     buildPreparationFightContext: buildPreparationFightContext,
     buildPlayerSummary: buildPlayerSummary
   };

@@ -10,6 +10,41 @@ var AmateurEcosystem = (function () {
     return prefix + "_" + String(parts instanceof Array ? parts.join("_") : parts);
   }
 
+  function sanitizeNicknameWord(value) {
+    var label = String(value || "").replace(/["']/g, " ").replace(/[.,!?;:]+/g, " ").replace(/^\s+|\s+$/g, "");
+    var parts;
+    if (!label) {
+      return "";
+    }
+    parts = label.split(/\s+/);
+    label = parts.length ? parts[0] : "";
+    if (label.indexOf("-") >= 0) {
+      label = label.split("-")[0];
+    }
+    return label.replace(/^\s+|\s+$/g, "");
+  }
+
+  function buildDisplayName(firstName, lastName, nickname, trackId) {
+    var fullName = String(firstName || "") + " " + String(lastName || "");
+    var nick = trackId === "street" || trackId === "pro" ? sanitizeNicknameWord(nickname) : "";
+    if (nick) {
+      return String(firstName || "") + ' "' + nick + '" ' + String(lastName || "");
+    }
+    return fullName.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+  }
+
+  function trainerIdsForGym(countryId, gymId) {
+    var trainers = typeof ContentLoader !== "undefined" && ContentLoader.listTrainersByCountry ? ContentLoader.listTrainersByCountry(countryId) : [];
+    var result = [];
+    var i;
+    for (i = 0; i < trainers.length; i += 1) {
+      if (trainers[i] && trainers[i].currentGymId === gymId) {
+        result.push(trainers[i].id);
+      }
+    }
+    return result;
+  }
+
   function dataRoot() {
     return typeof AMATEUR_ECOSYSTEM_DATA !== "undefined" && AMATEUR_ECOSYSTEM_DATA ? AMATEUR_ECOSYSTEM_DATA : {
       organizationTypes: [],
@@ -213,11 +248,10 @@ var AmateurEcosystem = (function () {
     var pool = typeof ContentLoader !== "undefined" && ContentLoader.getCountryPool ? ContentLoader.getCountryPool(countryId) : null;
     var firstNames = pool && pool.firstNames instanceof Array ? pool.firstNames : ["Fighter"];
     var lastNames = pool && pool.lastNames instanceof Array ? pool.lastNames : ["One"];
-    var nicknames = pool && pool.nicknames instanceof Array ? pool.nicknames : ["No Name"];
     return {
       firstName: firstNames[(slotIndex * 5) % firstNames.length],
       lastName: lastNames[(slotIndex * 7 + 1) % lastNames.length],
-      nickname: nicknames[(slotIndex * 3 + 2) % nicknames.length]
+      nickname: ""
     };
   }
 
@@ -229,16 +263,17 @@ var AmateurEcosystem = (function () {
     var age = isJuniorSeed ? (16 + (slotIndex % 2)) : (18 + ((slotIndex - 4) % 9));
     var rankId = isJuniorSeed ? juniorRankPool[slotIndex % juniorRankPool.length] : adultRankPool[slotIndex % adultRankPool.length];
     var gymId = countryId + "_gym_" + ((slotIndex % 5) + 1);
-    var trainerId = countryId + "_trainer_" + ((slotIndex % 5) + 1);
+    var trainerPool = trainerIdsForGym(countryId, gymId);
+    var trainerId = trainerPool.length ? trainerPool[slotIndex % trainerPool.length] : "";
     var normalizedSlot = slotIndex >= 100 ? 2 + (slotIndex - 100) : slotIndex;
     var base = 3 + normalizedSlot;
     return {
       id: stableId("fighter_amateur_generated", [countryId, slotIndex]),
       firstName: identity.firstName,
       lastName: identity.lastName,
-      nickname: identity.nickname,
+      nickname: "",
       name: identity.firstName + " " + identity.lastName,
-      fullName: identity.firstName + ' "' + identity.nickname + '" ' + identity.lastName,
+      fullName: buildDisplayName(identity.firstName, identity.lastName, "", "amateur"),
       country: countryId,
       age: age,
       birthWeek: (slotIndex * 5) + 1,
@@ -263,7 +298,7 @@ var AmateurEcosystem = (function () {
         vit: base
       },
       growthProfile: {
-        focusId: ["technique", "endurance", "power", "defense", "sparring"][slotIndex % 5],
+        focusId: ["technique", "endurance", "power", "defense", "recovery"][slotIndex % 5],
         ceiling: 62 + slotIndex,
         volatility: 4 + (slotIndex % 3),
         nextTrack: "pro"

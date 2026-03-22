@@ -1,9 +1,9 @@
-var AMATEUR_SEED_ROSTER = [
+﻿var AMATEUR_SEED_ROSTER = [
   {
     id: "amateur_mexico_hugo_salazar",
     firstName: "Hugo",
     lastName: "Salazar",
-    nickname: "Jardin",
+    nickname: "",
     country: "mexico",
     age: 24,
     birthWeek: 6,
@@ -29,7 +29,7 @@ var AMATEUR_SEED_ROSTER = [
     id: "amateur_usa_devin_carter",
     firstName: "Devin",
     lastName: "Carter",
-    nickname: "Quiet Tape",
+    nickname: "",
     country: "usa",
     age: 23,
     birthWeek: 14,
@@ -55,7 +55,7 @@ var AMATEUR_SEED_ROSTER = [
     id: "amateur_russia_anton_sokolov",
     firstName: "Антон",
     lastName: "Соколов",
-    nickname: "Шаг",
+    nickname: "",
     country: "russia",
     age: 24,
     birthWeek: 21,
@@ -81,7 +81,7 @@ var AMATEUR_SEED_ROSTER = [
     id: "amateur_cuba_ernesto_vega",
     firstName: "Ernesto",
     lastName: "Vega",
-    nickname: "Compas",
+    nickname: "",
     country: "cuba",
     age: 22,
     birthWeek: 33,
@@ -107,7 +107,7 @@ var AMATEUR_SEED_ROSTER = [
     id: "amateur_japan_ren_okada",
     firstName: "Ren",
     lastName: "Okada",
-    nickname: "Chime",
+    nickname: "",
     country: "japan",
     age: 23,
     birthWeek: 9,
@@ -133,7 +133,7 @@ var AMATEUR_SEED_ROSTER = [
     id: "amateur_china_wei_jian",
     firstName: "Wei",
     lastName: "Jian",
-    nickname: "Meter",
+    nickname: "",
     country: "china",
     age: 24,
     birthWeek: 26,
@@ -159,7 +159,7 @@ var AMATEUR_SEED_ROSTER = [
     id: "amateur_uk_callum_price",
     firstName: "Callum",
     lastName: "Price",
-    nickname: "Ledger",
+    nickname: "",
     country: "uk",
     age: 25,
     birthWeek: 17,
@@ -185,7 +185,7 @@ var AMATEUR_SEED_ROSTER = [
     id: "amateur_philippines_nico_ramos",
     firstName: "Nico",
     lastName: "Ramos",
-    nickname: "South Lamp",
+    nickname: "",
     country: "philippines",
     age: 22,
     birthWeek: 30,
@@ -193,7 +193,7 @@ var AMATEUR_SEED_ROSTER = [
     style: "tempo",
     archetypeId: "knockout",
     attributes: { str: 6, tec: 5, spd: 6, end: 7, vit: 5 },
-    growthProfile: { focusId: "sparring", ceiling: 69, volatility: 7, nextTrack: "pro" },
+    growthProfile: { focusId: "technique", ceiling: 69, volatility: 7, nextTrack: "pro" },
     health: 100,
     wear: 10,
     morale: 62,
@@ -208,3 +208,4 @@ var AMATEUR_SEED_ROSTER = [
     biographyLogIds: []
   }
 ];
+

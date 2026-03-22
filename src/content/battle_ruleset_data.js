@@ -94,6 +94,53 @@
       }
     },
     {
+      id: "ruleset_sparring",
+      trackType: "sparring",
+      label: "Спарринг",
+      numberOfRounds: 1,
+      roundLengthAbstract: 8,
+      scoringBias: {
+        pressureWeight: 0.7,
+        cleanWeight: 1.1,
+        powerWeight: 0.55,
+        tempoWeight: 0.8,
+        defenseWeight: 0.55,
+        gritWeight: 0.2,
+        knockdownSwing: 12
+      },
+      damageModelModifiers: {
+        accuracy: 1,
+        damage: -0.5,
+        dodge: 1,
+        incomingDamage: -0.15,
+        roundHealthPercent: 8,
+        turnStaminaRecovery: 1
+      },
+      KOThresholdModifiers: {
+        riseChanceModifier: 10,
+        overkillScale: 0.75
+      },
+      wearAccumulation: 0.35,
+      fameImpact: 0,
+      moneyImpact: 0,
+      dirtyConsequenceRisk: 0,
+      summaryPoints: [
+        "Один короткий раунд.",
+        "Урон сильно снижен.",
+        "Это подготовка, а не официальный бой."
+      ],
+      whatMatters: "Чистая работа, чтение стиля соперника и полезные раунды без лишнего износа.",
+      commentary: {
+        intro: "Спарринг нужен для подготовки, а не для рекорда.",
+        roundPlayer: "Раунд в твою пользу: ты лучше читал соперника и держал темп.",
+        roundOpponent: "Раунд ушёл партнёру: он собрал больше чистой работы.",
+        roundEven: "Раунд вышел ровным и полезным для обоих.",
+        resultWin: "Спарринг сложился в твою пользу и дал хороший материал для подготовки.",
+        resultLoss: "Даже неудачный спарринг дал полезные подсказки по работе.",
+        resultDraw: "Ровный спарринг: оба взяли рабочий материал без лишней рубки."
+      }
+    },
+    {
       id: "ruleset_pro",
       trackType: "pro",
       label: "Профессиональный формат",

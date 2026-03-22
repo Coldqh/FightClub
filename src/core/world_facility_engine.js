@@ -71,6 +71,22 @@ var WorldFacilityEngine = (function () {
     list.push(value);
   }
 
+  function listOverlap(left, right) {
+    var result = [];
+    var seen = {};
+    var i;
+    if (!(left instanceof Array) || !(right instanceof Array)) {
+      return result;
+    }
+    for (i = 0; i < left.length; i += 1) {
+      if (typeof left[i] === "string" && left[i] && right.indexOf(left[i]) !== -1 && !seen[left[i]]) {
+        seen[left[i]] = true;
+        result.push(left[i]);
+      }
+    }
+    return result;
+  }
+
   function normalizeGym(gym) {
     var target = gym || {};
     target.id = target.id || "";
@@ -189,6 +205,84 @@ var WorldFacilityEngine = (function () {
     return result;
   }
 
+  function listTrainersByGym(gameState, gymId, options) {
+    var roster = rosterRoot(gameState);
+    var result = [];
+    var i;
+    var trainer;
+    var opts = options || {};
+    for (i = 0; i < roster.trainerIds.length; i += 1) {
+      trainer = roster.trainersById[roster.trainerIds[i]];
+      if (trainer && trainer.currentGymId === gymId) {
+        result.push(trainer);
+      }
+    }
+    if (opts.trackId) {
+      result = filterTrack(result, opts.trackId);
+    }
+    result.sort(function (left, right) {
+      return ((left.salary || left.monthlyFee || 0) - (right.salary || right.monthlyFee || 0));
+    });
+    return result;
+  }
+
+  function bindTrainerToCompatibleGym(gameState, trainer, preferredGymId) {
+    var roster = rosterRoot(gameState);
+    var gyms;
+    var i;
+    var gym;
+    if (!trainer) {
+      return "";
+    }
+    if (preferredGymId && roster.gymsById[preferredGymId]) {
+      trainer.currentGymId = preferredGymId;
+      trainer.gymId = preferredGymId;
+      return preferredGymId;
+    }
+    gyms = listGymsByCountry(gameState, trainer.country || "", {
+      trackId: trainer.allowedTracks instanceof Array && trainer.allowedTracks.length ? trainer.allowedTracks[0] : ""
+    });
+    if (!gyms.length) {
+      gyms = listGymsByCountry(gameState, trainer.country || "", {});
+    }
+    for (i = 0; i < gyms.length; i += 1) {
+      gym = gyms[i];
+      if (!gym) {
+        continue;
+      }
+      if (!(trainer.allowedTracks instanceof Array) || !trainer.allowedTracks.length || !(gym.allowedTracks instanceof Array) || !gym.allowedTracks.length || listOverlap(trainer.allowedTracks, gym.allowedTracks).length) {
+        trainer.currentGymId = gym.id;
+        trainer.gymId = gym.id;
+        return gym.id;
+      }
+    }
+    trainer.currentGymId = "";
+    trainer.gymId = "";
+    return "";
+  }
+
+  function reconcileFighterFacilityPair(gameState, fighter) {
+    var roster = rosterRoot(gameState);
+    var trainer;
+    if (!fighter) {
+      return;
+    }
+    if (fighter.currentTrainerId && roster.trainersById[fighter.currentTrainerId]) {
+      trainer = roster.trainersById[fighter.currentTrainerId];
+      if (!trainer.currentGymId || !roster.gymsById[trainer.currentGymId]) {
+        bindTrainerToCompatibleGym(gameState, trainer, fighter.currentGymId || fighter.gymId || "");
+      }
+      if (!fighter.currentGymId && trainer.currentGymId) {
+        fighter.currentGymId = trainer.currentGymId;
+        fighter.gymId = trainer.currentGymId;
+      } else if (fighter.currentGymId && trainer.currentGymId && fighter.currentGymId !== trainer.currentGymId) {
+        fighter.currentTrainerId = "";
+        fighter.currentCoachId = "";
+        fighter.trainerId = "";
+      }
+    }
+  }
+
   function syncFacilityLinks(gameState) {
     var roster = rosterRoot(gameState);
     var i;
@@ -238,6 +332,12 @@ var WorldFacilityEngine = (function () {
     for (i = 0; i < roster.trainerIds.length; i += 1) {
       trainerId = roster.trainerIds[i];
       roster.trainersById[trainerId] = normalizeTrainer(roster.trainersById[trainerId]);
+      if (!roster.trainersById[trainerId].currentGymId || !roster.gymsById[roster.trainersById[trainerId].currentGymId]) {
+        bindTrainerToCompatibleGym(gameState, roster.trainersById[trainerId], "");
+      }
+    }
+    for (i = 0; i < roster.fighterIds.length; i += 1) {
+      reconcileFighterFacilityPair(gameState, roster.fightersById[roster.fighterIds[i]]);
     }
     return syncFacilityLinks(gameState);
   }
@@ -285,6 +385,12 @@ var WorldFacilityEngine = (function () {
     if (trackId !== "pro" && trainer.minRankId && compareRanks(fighter.amateurRank || fighter.amateurClass || "", trainer.minRankId) < 0) {
       return { ok: false, reason: "Нужен более высокий разряд." };
     }
+    if (!fighter.currentGymId) {
+      return { ok: false, reason: "Сначала выбери зал." };
+    }
+    if (trainer.currentGymId && fighter.currentGymId !== trainer.currentGymId) {
+      return { ok: false, reason: "Тренер работает в другом зале." };
+    }
     if (trainer.currentGymId) {
       gymInfo = gymAccessInfo(gameState, fighterId, trainer.currentGymId);
       if (!gymInfo.ok) {
@@ -309,10 +415,17 @@ var WorldFacilityEngine = (function () {
 
   function leaveGym(gameState, fighterId, weekValue, reason) {
     var fighter = getFighterById(gameState, fighterId);
+    var previousGymId;
+    var trainer;
     if (!fighter) {
       return { ok: false, reason: "Боец не найден." };
     }
+    previousGymId = fighter.currentGymId || fighter.gymId || "";
+    trainer = fighter.currentTrainerId ? getTrainerById(gameState, fighter.currentTrainerId) : null;
     setFighterGym(fighter, "", weekValue);
+    if (trainer && (!trainer.currentGymId || trainer.currentGymId === previousGymId)) {
+      setFighterTrainer(fighter, "", weekValue);
+    }
     if (fighter.currentOrganizationId && typeof AmateurEcosystem !== "undefined" && AmateurEcosystem.getOrganizationById) {
       fighter.currentOrganizationId = "";
     }
@@ -324,11 +437,15 @@ var WorldFacilityEngine = (function () {
     var fighter = getFighterById(gameState, fighterId);
     var gym = getGymById(gameState, gymId);
     var info = gymAccessInfo(gameState, fighterId, gymId);
+    var previousTrainer = fighter && fighter.currentTrainerId ? getTrainerById(gameState, fighter.currentTrainerId) : null;
     var org;
     if (!fighter || !gym || !info.ok) {
       return { ok: false, reason: info.reason || "Зал недоступен." };
     }
     setFighterGym(fighter, gym.id, weekValue);
+    if (previousTrainer && previousTrainer.currentGymId && previousTrainer.currentGymId !== gym.id) {
+      setFighterTrainer(fighter, "", weekValue);
+    }
     if (typeof AmateurEcosystem !== "undefined" && AmateurEcosystem.getOrganizationForGym) {
       org = AmateurEcosystem.getOrganizationForGym(gameState, gym.id);
       if (org && org.id) {
@@ -336,7 +453,7 @@ var WorldFacilityEngine = (function () {
       }
     }
     syncFacilityLinks(gameState);
-    return { ok: true, gym: gym };
+    return { ok: true, gym: gym, trainerReset: !!(previousTrainer && previousTrainer.currentGymId && previousTrainer.currentGymId !== gym.id), previousTrainerId: previousTrainer ? previousTrainer.id : "" };
   }
 
   function followTrainer(gameState, fighterId, trainerId, weekValue) {
@@ -393,6 +510,7 @@ var WorldFacilityEngine = (function () {
     getTrainerById: getTrainerById,
     listGymsByCountry: listGymsByCountry,
     listTrainersByCountry: listTrainersByCountry,
+    listTrainersByGym: listTrainersByGym,
     gymAccessInfo: gymAccessInfo,
     trainerAccessInfo: trainerAccessInfo,
     leaveGym: leaveGym,
