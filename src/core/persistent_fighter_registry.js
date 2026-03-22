@@ -29,6 +29,7 @@ var PersistentFighterRegistry = (function () {
       currentGymId: "",
       currentTrainerId: "",
       currentCoachId: "",
+      currentPromoterId: "",
       currentManagerId: "",
       currentOrganizationId: "",
       gymId: "",
@@ -54,6 +55,13 @@ var PersistentFighterRegistry = (function () {
       encounterHooks: [],
       proRecord: { wins: 0, losses: 0, draws: 0, kos: 0 },
       proRankingData: {},
+      contenderStatus: "",
+      titleHistory: [],
+      rankingSeed: 0,
+      proReputationTags: [],
+      formerAmateurStatus: "",
+      formerNationalTeamStatus: "none",
+      olympicBackground: "",
       fame: 0,
       reputationTags: [],
       relationshipHooks: [],
@@ -161,12 +169,29 @@ var PersistentFighterRegistry = (function () {
     return "pressure";
   }
 
-  function resolveSlotId(countryId, prefix, slot) {
+  function mappedSlotForTrack(prefix, slot, trackId) {
+    var number = typeof slot === "number" ? slot : parseInt(slot, 10);
+    if (isNaN(number) || number <= 0) {
+      return 0;
+    }
+    if (trackId === "street") {
+      if (number <= 2) { return 6; }
+      if (number <= 4) { return 7; }
+      return 6;
+    }
+    if (trackId === "pro") {
+      if (number >= 5) { return 8; }
+      return 7;
+    }
+    return number;
+  }
+
+  function resolveSlotId(countryId, prefix, slot, trackId) {
     var number = typeof slot === "number" ? slot : parseInt(slot, 10);
     if (isNaN(number) || number <= 0) {
       return "";
     }
-    return countryId + "_" + prefix + "_" + number;
+    return countryId + "_" + prefix + "_" + mappedSlotForTrack(prefix, number, trackId || "street");
   }
 
   function buildSeedEntity(seed, trackId) {
@@ -192,9 +217,10 @@ var PersistentFighterRegistry = (function () {
     entity.healthState = { health: typeof seed.health === "number" ? seed.health : 100, injuries: clone(seed.injuries || []) };
     entity.wearState = { wear: typeof seed.wear === "number" ? seed.wear : 0, fatigue: typeof seed.fatigue === "number" ? seed.fatigue : 0 };
     entity.moraleState = { morale: typeof seed.morale === "number" ? seed.morale : 55 };
-    entity.currentGymId = seed.currentGymId || resolveSlotId(seed.country, "gym", seed.gymSlot);
-    entity.currentTrainerId = seed.currentTrainerId || resolveSlotId(seed.country, "trainer", seed.trainerSlot);
+    entity.currentGymId = seed.currentGymId || resolveSlotId(seed.country, "gym", seed.gymSlot, trackId);
+    entity.currentTrainerId = seed.currentTrainerId || resolveSlotId(seed.country, "trainer", seed.trainerSlot, trackId);
     entity.currentCoachId = seed.currentCoachId || entity.currentTrainerId;
+    entity.currentPromoterId = seed.currentPromoterId || "";
     entity.currentManagerId = seed.currentManagerId || "";
     entity.currentOrganizationId = seed.currentOrganizationId || "";
     entity.gymId = entity.currentGymId;
@@ -211,6 +237,13 @@ var PersistentFighterRegistry = (function () {
     entity.encounterHooks = clone(seed.encounterHooks || []);
     entity.proRecord = clone(seed.proRecord || entity.proRecord);
     entity.proRankingData = clone(seed.proRankingData || {});
+    entity.contenderStatus = seed.contenderStatus || "";
+    entity.titleHistory = clone(seed.titleHistory || []);
+    entity.rankingSeed = typeof seed.rankingSeed === "number" ? seed.rankingSeed : 0;
+    entity.proReputationTags = clone(seed.proReputationTags || []);
+    entity.formerAmateurStatus = seed.formerAmateurStatus || "";
+    entity.formerNationalTeamStatus = seed.formerNationalTeamStatus || "none";
+    entity.olympicBackground = seed.olympicBackground || "";
     entity.fame = typeof seed.fame === "number" ? seed.fame : 0;
     entity.reputationTags = clone(seed.reputationTags || []);
     entity.relationshipHooks = clone(seed.relationshipHooks || []);
@@ -310,9 +343,10 @@ var PersistentFighterRegistry = (function () {
     entity.wearState = { wear: gameState && gameState.player && gameState.player.conditions ? gameState.player.conditions.wear || 0 : 0, fatigue: gameState && gameState.player && gameState.player.conditions ? gameState.player.conditions.fatigue || 0 : 0 };
     entity.moraleState = { morale: gameState && gameState.player && gameState.player.conditions ? gameState.player.conditions.morale || 55 : 55 };
     entity.currentGymId = gameState && gameState.world && gameState.world.gymMembership ? gameState.world.gymMembership.gymId || "" : "";
-    entity.currentTrainerId = gameState && gameState.world && gameState.world.trainerAssignment ? (gameState.world.trainerAssignment.npcId || gameState.world.trainerAssignment.trainerTypeId || "") : "";
+    entity.currentTrainerId = gameState && gameState.world && gameState.world.trainerAssignment ? (gameState.world.trainerAssignment.trainerId || gameState.world.trainerAssignment.trainerTypeId || gameState.world.trainerAssignment.npcId || "") : "";
     entity.currentCoachId = gameState && gameState.world && gameState.world.trainerAssignment ? (gameState.world.trainerAssignment.npcId || "") : "";
-    entity.currentManagerId = gameState && gameState.world && gameState.world.activeContract ? gameState.world.activeContract.promoterId || "" : "";
+    entity.currentPromoterId = gameState && gameState.player && gameState.player.pro ? gameState.player.pro.currentPromoterId || "" : "";
+    entity.currentManagerId = gameState && gameState.player && gameState.player.pro ? gameState.player.pro.currentManagerId || "" : "";
     entity.currentOrganizationId = gameState && gameState.player && gameState.player.amateur ? gameState.player.amateur.currentOrganizationId || "" : "";
     entity.gymId = entity.currentGymId;
     entity.trainerId = entity.currentTrainerId;
@@ -326,8 +360,15 @@ var PersistentFighterRegistry = (function () {
     entity.goalProfileId = gameState && gameState.player && gameState.player.profile ? (gameState.player.profile.styleId || "") : "";
     entity.worldHistoryHooks = [];
     entity.encounterHooks = [];
-    entity.proRecord = { wins: 0, losses: 0, draws: 0, kos: 0 };
-    entity.proRankingData = {};
+    entity.proRecord = gameState && gameState.player && gameState.player.pro && gameState.player.pro.proRecord ? clone(gameState.player.pro.proRecord) : { wins: 0, losses: 0, draws: 0, kos: 0 };
+    entity.proRankingData = { rankingSeed: gameState && gameState.player && gameState.player.pro ? gameState.player.pro.rankingSeed || 0 : 0 };
+    entity.contenderStatus = gameState && gameState.player && gameState.player.pro ? gameState.player.pro.contenderStatus || "" : "";
+    entity.titleHistory = gameState && gameState.player && gameState.player.pro && gameState.player.pro.titleHistory instanceof Array ? clone(gameState.player.pro.titleHistory) : [];
+    entity.rankingSeed = gameState && gameState.player && gameState.player.pro ? gameState.player.pro.rankingSeed || 0 : 0;
+    entity.proReputationTags = gameState && gameState.player && gameState.player.pro && gameState.player.pro.proReputationTags instanceof Array ? clone(gameState.player.pro.proReputationTags) : [];
+    entity.formerAmateurStatus = gameState && gameState.player && gameState.player.pro ? gameState.player.pro.formerAmateurStatus || "" : "";
+    entity.formerNationalTeamStatus = gameState && gameState.player && gameState.player.pro ? gameState.player.pro.formerNationalTeamStatus || "none" : "none";
+    entity.olympicBackground = gameState && gameState.player && gameState.player.pro ? gameState.player.pro.olympicBackground || "" : "";
     entity.fame = gameState && gameState.player && gameState.player.resources ? gameState.player.resources.fame || 0 : 0;
     entity.reputationTags = clone(gameState && gameState.player && gameState.player.biography ? gameState.player.biography.reputationTags || [] : []);
     entity.relationshipHooks = [];
@@ -338,10 +379,17 @@ var PersistentFighterRegistry = (function () {
     entity.lastGymChangeWeek = 0;
     entity.lastCoachChangeWeek = 0;
     entity.lastUpdatedWeek = gameState && gameState.career ? gameState.career.week || 1 : 1;
-    entity.record.wins = gameState && gameState.player && gameState.player.record ? gameState.player.record.wins || 0 : 0;
-    entity.record.losses = gameState && gameState.player && gameState.player.record ? gameState.player.record.losses || 0 : 0;
-    entity.record.draws = gameState && gameState.player && gameState.player.record ? gameState.player.record.draws || 0 : 0;
-    entity.record.kos = gameState && gameState.player && gameState.player.record ? gameState.player.record.kos || 0 : 0;
+    if (entity.currentTrack === "pro") {
+      entity.record.wins = entity.proRecord.wins || 0;
+      entity.record.losses = entity.proRecord.losses || 0;
+      entity.record.draws = entity.proRecord.draws || 0;
+      entity.record.kos = entity.proRecord.kos || 0;
+    } else {
+      entity.record.wins = gameState && gameState.player && gameState.player.record ? gameState.player.record.wins || 0 : 0;
+      entity.record.losses = gameState && gameState.player && gameState.player.record ? gameState.player.record.losses || 0 : 0;
+      entity.record.draws = gameState && gameState.player && gameState.player.record ? gameState.player.record.draws || 0 : 0;
+      entity.record.kos = gameState && gameState.player && gameState.player.record ? gameState.player.record.kos || 0 : 0;
+    }
     entity.tags = clone(entity.reputationTags);
     return entity;
   }
@@ -400,6 +448,7 @@ var PersistentFighterRegistry = (function () {
     entity.currentGymId = snapshot.gymId || "";
     entity.currentTrainerId = snapshot.trainerTypeId || snapshot.trainerId || "";
     entity.currentCoachId = snapshot.trainerId || snapshot.trainerTypeId || "";
+    entity.currentPromoterId = snapshot.currentPromoterId || "";
     entity.currentManagerId = "";
     entity.currentOrganizationId = snapshot.currentOrganizationId || "";
     entity.gymId = entity.currentGymId;
@@ -412,6 +461,14 @@ var PersistentFighterRegistry = (function () {
     entity.goalProfileId = snapshot.goalProfileId || "";
     entity.worldHistoryHooks = snapshot.worldHistoryHooks instanceof Array ? clone(snapshot.worldHistoryHooks) : [];
     entity.encounterHooks = snapshot.encounterHooks instanceof Array ? clone(snapshot.encounterHooks) : [];
+    entity.proRecord = snapshot.proRecord ? clone(snapshot.proRecord) : clone(entity.proRecord);
+    entity.contenderStatus = snapshot.contenderStatus || "";
+    entity.titleHistory = snapshot.titleHistory instanceof Array ? clone(snapshot.titleHistory) : [];
+    entity.rankingSeed = typeof snapshot.rankingSeed === "number" ? snapshot.rankingSeed : 0;
+    entity.proReputationTags = snapshot.proReputationTags instanceof Array ? clone(snapshot.proReputationTags) : [];
+    entity.formerAmateurStatus = snapshot.formerAmateurStatus || "";
+    entity.formerNationalTeamStatus = snapshot.formerNationalTeamStatus || "none";
+    entity.olympicBackground = snapshot.olympicBackground || "";
     entity.fame = typeof snapshot.fame === "number" ? snapshot.fame : 0;
     entity.reputationTags = [];
     entity.relationshipHooks = ["migrated_save"];
@@ -557,6 +614,10 @@ var PersistentFighterRegistry = (function () {
     snapshot.currentTrack = entity.currentTrack || entity.trackId || "";
     snapshot.goalProfileId = entity.goalProfileId || "";
     snapshot.nationalTeamStatus = entity.nationalTeamStatus || "none";
+    snapshot.currentPromoterId = entity.currentPromoterId || "";
+    snapshot.contenderStatus = entity.contenderStatus || "";
+    snapshot.rankingSeed = typeof entity.rankingSeed === "number" ? entity.rankingSeed : 0;
+    snapshot.proReputationTags = clone(entity.proReputationTags || []);
     snapshot.streetRating = typeof entity.streetRating === "number" ? entity.streetRating : 0;
     snapshot.streetData = clone(entity.streetData || {});
     snapshot.worldHistoryHooks = clone(entity.worldHistoryHooks || []);

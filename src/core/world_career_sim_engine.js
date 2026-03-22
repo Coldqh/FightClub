@@ -60,6 +60,9 @@ var WorldCareerSimEngine = (function () {
         processedTournamentIds: [],
         processedResultIds: [],
         encounterMemoryByFighterId: {},
+        encounterHistoryIds: [],
+        encounterHistoriesById: {},
+        encounterPairIndex: {},
         pendingNotices: [],
         worldHistory: []
       };
@@ -71,6 +74,9 @@ var WorldCareerSimEngine = (function () {
     if (!(root.worldCareer.processedTournamentIds instanceof Array)) { root.worldCareer.processedTournamentIds = []; }
     if (!(root.worldCareer.processedResultIds instanceof Array)) { root.worldCareer.processedResultIds = []; }
     if (!root.worldCareer.encounterMemoryByFighterId || typeof root.worldCareer.encounterMemoryByFighterId !== "object") { root.worldCareer.encounterMemoryByFighterId = {}; }
+    if (!(root.worldCareer.encounterHistoryIds instanceof Array)) { root.worldCareer.encounterHistoryIds = []; }
+    if (!root.worldCareer.encounterHistoriesById || typeof root.worldCareer.encounterHistoriesById !== "object") { root.worldCareer.encounterHistoriesById = {}; }
+    if (!root.worldCareer.encounterPairIndex || typeof root.worldCareer.encounterPairIndex !== "object") { root.worldCareer.encounterPairIndex = {}; }
     if (!(root.worldCareer.pendingNotices instanceof Array)) { root.worldCareer.pendingNotices = []; }
     if (!(root.worldCareer.worldHistory instanceof Array)) { root.worldCareer.worldHistory = []; }
     if (typeof root.worldCareer.lastProcessedWeek !== "number") { root.worldCareer.lastProcessedWeek = 0; }
@@ -102,11 +108,17 @@ var WorldCareerSimEngine = (function () {
     return typeof ContentLoader !== "undefined" && ContentLoader.listCountries ? ContentLoader.listCountries() : [];
   }
 
-  function listGymsByCountry(countryId) {
+  function listGymsByCountry(gameState, countryId, trackId) {
+    if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listGymsByCountry) {
+      return WorldFacilityEngine.listGymsByCountry(gameState, countryId, { trackId: trackId || "street" });
+    }
     return typeof ContentLoader !== "undefined" && ContentLoader.listGymsByCountry ? ContentLoader.listGymsByCountry(countryId) : [];
   }
 
-  function listTrainerTypesByCountry(countryId) {
+  function listTrainerTypesByCountry(gameState, countryId, trackId) {
+    if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.listTrainersByCountry) {
+      return WorldFacilityEngine.listTrainersByCountry(gameState, countryId, { trackId: trackId || "street" });
+    }
     return typeof ContentLoader !== "undefined" && ContentLoader.listTrainerTypesByCountry ? ContentLoader.listTrainerTypesByCountry(countryId) : [];
   }
 
@@ -416,7 +428,7 @@ var WorldCareerSimEngine = (function () {
   function maybeTransferGym(fighter, weekValue, gameState) {
     var rules = transitionRules();
     var goal = getGoalProfile(fighter.goalProfileId) || {};
-    var gyms = eligibleItemByRank(listGymsByCountry(fighter.country), fighter.amateurRank);
+    var gyms = eligibleItemByRank(listGymsByCountry(gameState, fighter.country, fighterTrack(fighter)), fighter.amateurRank);
     var ambition = goal.gymAmbition || 1;
     var targetIndex;
     var target;
@@ -448,10 +460,11 @@ var WorldCareerSimEngine = (function () {
   function maybeTransferCoach(fighter, weekValue, gameState) {
     var rules = transitionRules();
     var goal = getGoalProfile(fighter.goalProfileId) || {};
-    var trainers = eligibleItemByRank(listTrainerTypesByCountry(fighter.country), fighter.amateurRank);
+    var trainers = eligibleItemByRank(listTrainerTypesByCountry(gameState, fighter.country, fighterTrack(fighter)), fighter.amateurRank);
     var loyalty = goal.coachLoyalty || 1;
     var targetIndex;
     var target;
+    var shouldFollow;
     if (!trainers.length) {
       fighter.currentTrainerId = "";
       fighter.currentCoachId = "";
@@ -477,6 +490,12 @@ var WorldCareerSimEngine = (function () {
       fighter.currentCoachId = target.id;
       fighter.trainerId = target.id;
       fighter.lastCoachChangeWeek = weekValue;
+      shouldFollow = target.currentGymId && deterministicIndex(fighter.id + "_follow_" + weekValue, 100) < clamp(20 + (loyalty * 12), 15, 85);
+      if (shouldFollow) {
+        fighter.currentGymId = target.currentGymId;
+        fighter.gymId = target.currentGymId;
+        fighter.lastGymChangeWeek = weekValue;
+      }
     }
   }
 
@@ -521,8 +540,22 @@ var WorldCareerSimEngine = (function () {
     var total = fighterTotal(fighter);
     var progressScore = latestSeasonPoints(gameState, fighter) + getNationalRankingScore(gameState, fighter) + (fighter.fame || 0) + total;
     var badScore = (fighter.wearState ? fighter.wearState.wear || 0 : 0) + (100 - (fighter.healthState ? fighter.healthState.health || 100 : 100)) + (60 - (fighter.moraleState ? fighter.moraleState.morale || 55 : 55));
+    var npcTransition = null;
     if (weekValue - (fighter.lastTrackTransitionWeek || 0) < (rules.trackMoveCooldownWeeks || 8)) {
       return;
+    }
+    if (typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.chooseNpcTransition) {
+      npcTransition = CareerTransitionEngine.chooseNpcTransition(gameState, fighter, weekValue);
+      if (npcTransition && npcTransition.toTrackId) {
+        transitionTrack(fighter, npcTransition.toTrackId, weekValue, root, (fighter.fullName || fighter.name) + " меняет путь карьеры.", npcTransition.toTrackId === "street" ? "left_amateur_path_for_streets" : "");
+        if (npcTransition.toTrackId === "street" && compareRanks(rankId, "adult_class_1") >= 0) {
+          addHistoryHook(fighter, "failed_prospect");
+        }
+        if (npcTransition.toTrackId === "pro") {
+          fighter.nationalTeamStatus = "alumni";
+        }
+        return;
+      }
     }
     if (currentTrackId === "amateur" &&
         fighter.age >= (rules.proTransitionMinAge || 19) &&
@@ -612,14 +645,14 @@ var WorldCareerSimEngine = (function () {
     };
   }
 
-  function createNewgenFighter(countryId, serial, weekValue, yearValue) {
+  function createNewgenFighter(gameState, countryId, serial, weekValue, yearValue) {
     var goalId = pickWeightedGoalId(countryId + "_" + serial + "_" + weekValue);
     var goal = getGoalProfile(goalId) || {};
     var identity = buildNewgenIdentity(countryId, serial);
     var age = 14 + deterministicIndex(countryId + "_age_" + serial + "_" + weekValue, 4);
     var currentTrackId = (goal.trackBias && goal.trackBias.street > goal.trackBias.amateur) ? "street" : "amateur";
-    var gyms = listGymsByCountry(countryId);
-    var trainers = listTrainerTypesByCountry(countryId);
+    var gyms = listGymsByCountry(gameState, countryId, currentTrackId);
+    var trainers = listTrainerTypesByCountry(gameState, countryId, currentTrackId);
     var gymId = currentTrackId === "amateur" && gyms.length ? gyms[deterministicIndex(countryId + "_gym_new_" + serial, gyms.length)].id : "";
     var trainerId = currentTrackId === "amateur" && trainers.length ? trainers[deterministicIndex(countryId + "_trainer_new_" + serial, trainers.length)].id : "";
     var styleId = styleFromGoalProfile(goalId);
@@ -710,7 +743,7 @@ var WorldCareerSimEngine = (function () {
       serial = (root.nextNewgenSerialByCountry[country.id] || 0) + 1;
       root.nextNewgenSerialByCountry[country.id] = serial;
       root.yearlyNewgenCountByCountry[country.id] = (root.yearlyNewgenCountByCountry[country.id] || 0) + 1;
-      fighter = createNewgenFighter(country.id, serial, weekValue, yearValue);
+      fighter = createNewgenFighter(gameState, country.id, serial, weekValue, yearValue);
       if (!roster.fightersById[fighter.id]) {
         roster.fighterIds.push(fighter.id);
         roster.fightersById[fighter.id] = fighter;
@@ -724,6 +757,7 @@ var WorldCareerSimEngine = (function () {
     var entry;
     var tournament;
     var winner;
+    var loser;
     if (!seasonState || !(seasonState.resultHistory instanceof Array)) {
       return;
     }
@@ -738,6 +772,17 @@ var WorldCareerSimEngine = (function () {
       root.processedResultIds.push(entry.id);
       tournament = seasonState.tournamentsById ? seasonState.tournamentsById[entry.tournamentId] : null;
       winner = rosterRoot(gameState) && rosterRoot(gameState).fightersById ? rosterRoot(gameState).fightersById[entry.winnerId] || null : null;
+      loser = rosterRoot(gameState) && rosterRoot(gameState).fightersById ? rosterRoot(gameState).fightersById[entry.loserId] || null : null;
+      if (winner && loser && typeof EncounterHistoryEngine !== "undefined" && EncounterHistoryEngine.noteFightEncounter) {
+        EncounterHistoryEngine.noteFightEncounter(gameState, winner.id, loser.id, {
+          week: entry.week || currentWeek(gameState),
+          trackId: "amateur",
+          fightId: entry.id,
+          label: tournament && tournament.label ? tournament.label : "Турнирный бой",
+          result: "resolved",
+          method: entry.method || ""
+        });
+      }
       if (winner && tournament) {
         if (tournament.tournamentTypeId === "national_championship") {
           addHistoryHook(winner, "national_champion");
@@ -893,6 +938,9 @@ var WorldCareerSimEngine = (function () {
       root.trackStatusByFighterId[fighters[i].id] = fighterTrack(fighters[i]);
       ensureEncounterMemory(root, fighters[i].id);
     }
+    if (typeof EncounterHistoryEngine !== "undefined" && EncounterHistoryEngine.ensureState) {
+      EncounterHistoryEngine.ensureState(gameState);
+    }
     if (typeof root.lastProcessedYear !== "number") { root.lastProcessedYear = yearValue; }
     return gameState;
   }
@@ -928,6 +976,9 @@ var WorldCareerSimEngine = (function () {
     if (typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.runWeeklyPass) {
       StreetCareerEngine.runWeeklyPass(gameState, { absoluteWeek: weekValue, action: opts.action || "" });
     }
+    if (typeof ProCareerEngine !== "undefined" && ProCareerEngine.runWeeklyPass) {
+      ProCareerEngine.runWeeklyPass(gameState, { absoluteWeek: weekValue, action: opts.action || "" });
+    }
     fighters = listRosterFighters(gameState);
     for (i = 0; i < fighters.length; i += 1) {
       fighter = fighters[i];
@@ -941,6 +992,9 @@ var WorldCareerSimEngine = (function () {
     syncTeamStatusChanges(gameState, root, weekValue);
     syncTrackChanges(gameState, root, weekValue);
     syncPlayerEncounterMemory(gameState, root, weekValue);
+    if (typeof EncounterHistoryEngine !== "undefined" && EncounterHistoryEngine.syncWorldLinks) {
+      EncounterHistoryEngine.syncWorldLinks(gameState, { week: weekValue });
+    }
     emitRelevantWorldNotices(gameState, root, weekValue);
     root.lastProcessedWeek = weekValue;
     root.lastProcessedYear = yearValue;

@@ -136,6 +136,59 @@ function validateState(gameState) {
       pushError("player.street.undergroundPressureTags must be an array.");
     }
   }
+  if (!gameState.player || !isObject(gameState.player.pro)) {
+    pushError("player.pro is missing.");
+  } else {
+    if (!isObject(gameState.player.pro.proRecord)) {
+      pushError("player.pro.proRecord is missing.");
+    }
+    if (typeof gameState.player.pro.currentPromoterId !== "string") {
+      pushError("player.pro.currentPromoterId must be a string.");
+    }
+    if (typeof gameState.player.pro.currentManagerId !== "string") {
+      pushError("player.pro.currentManagerId must be a string.");
+    }
+    if (typeof gameState.player.pro.contenderStatus !== "string") {
+      pushError("player.pro.contenderStatus must be a string.");
+    }
+    if (!(gameState.player.pro.titleHistory instanceof Array)) {
+      pushError("player.pro.titleHistory must be an array.");
+    }
+    if (typeof gameState.player.pro.rankingSeed !== "number") {
+      pushError("player.pro.rankingSeed must be a number.");
+    }
+    if (typeof gameState.player.pro.proValue !== "number") {
+      pushError("player.pro.proValue must be a number.");
+    }
+    if (!isObject(gameState.player.pro.organizationRanks)) {
+      pushError("player.pro.organizationRanks must be an object.");
+    }
+    if (!(gameState.player.pro.championOrganizations instanceof Array)) {
+      pushError("player.pro.championOrganizations must be an array.");
+    }
+    if (!(gameState.player.pro.proReputationTags instanceof Array)) {
+      pushError("player.pro.proReputationTags must be an array.");
+    }
+  }
+  if (!gameState.player || !isObject(gameState.player.preparation)) {
+    pushError("player.preparation is missing.");
+  } else {
+    if (typeof gameState.player.preparation.currentTargetFighterId !== "string") {
+      pushError("player.preparation.currentTargetFighterId must be a string.");
+    }
+    if (!(gameState.player.preparation.campHistory instanceof Array)) {
+      pushError("player.preparation.campHistory must be an array.");
+    }
+    if (!isObject(gameState.player.preparation.scoutingByFighterId)) {
+      pushError("player.preparation.scoutingByFighterId is missing.");
+    }
+    if (!isObject(gameState.player.preparation.partnerHistoryByFighterId)) {
+      pushError("player.preparation.partnerHistoryByFighterId is missing.");
+    }
+    if (typeof gameState.player.preparation.activeCampId !== "string") {
+      pushError("player.preparation.activeCampId must be a string.");
+    }
+  }
   if (!gameState.player || !isObject(gameState.player.development)) {
     pushError("player.development is missing.");
   } else {
@@ -197,6 +250,14 @@ function validateState(gameState) {
   if (!gameState.ui || typeof gameState.ui.screen !== "string" || typeof gameState.ui.panel !== "string") {
     pushError("ui.screen and ui.panel must be strings.");
   }
+  if (gameState.battle && gameState.battle.current) {
+    if (typeof gameState.battle.current.rulesetId !== "undefined" && typeof gameState.battle.current.rulesetId !== "string") {
+      pushError("battle.current.rulesetId must be a string when present.");
+    }
+    if (typeof gameState.battle.current.roundLimit !== "undefined" && typeof gameState.battle.current.roundLimit !== "number") {
+      pushError("battle.current.roundLimit must be a number when present.");
+    }
+  }
 
   if (isObject(gameState.playerState)) {
     validateId(gameState.playerState.id, "playerState.id");
@@ -227,6 +288,15 @@ function validateState(gameState) {
       if (typeof gameState.worldState.worldCareer.lastProcessedWeek !== "number") {
         pushError("worldState.worldCareer.lastProcessedWeek must be a number.");
       }
+      if (!(gameState.worldState.worldCareer.encounterHistoryIds instanceof Array)) {
+        pushError("worldState.worldCareer.encounterHistoryIds must be an array.");
+      }
+      if (!isObject(gameState.worldState.worldCareer.encounterHistoriesById)) {
+        pushError("worldState.worldCareer.encounterHistoriesById is missing.");
+      }
+      if (!isObject(gameState.worldState.worldCareer.encounterPairIndex)) {
+        pushError("worldState.worldCareer.encounterPairIndex is missing.");
+      }
       if (!(gameState.worldState.worldCareer.pendingNotices instanceof Array)) {
         pushError("worldState.worldCareer.pendingNotices must be an array.");
       }
@@ -256,6 +326,55 @@ function validateState(gameState) {
     if (!isObject(gameState.rosterState.trainersById)) {
       pushError("rosterState.trainersById is missing.");
     }
+    if (gameState.rosterState.gymIds instanceof Array && isObject(gameState.rosterState.gymsById)) {
+      for (i = 0; i < gameState.rosterState.gymIds.length; i += 1) {
+        if (!isObject(gameState.rosterState.gymsById[gameState.rosterState.gymIds[i]])) {
+          pushError("rosterState.gymsById has a missing gym entity.");
+          continue;
+        }
+        if (typeof gameState.rosterState.gymsById[gameState.rosterState.gymIds[i]].gymType !== "string") {
+          pushError("GymEntity.gymType must be a string.");
+        }
+        if (!(gameState.rosterState.gymsById[gameState.rosterState.gymIds[i]].rosterIds instanceof Array)) {
+          pushError("GymEntity.rosterIds must be an array.");
+        }
+        if (!(gameState.rosterState.gymsById[gameState.rosterState.gymIds[i]].coachIds instanceof Array)) {
+          pushError("GymEntity.coachIds must be an array.");
+        }
+      }
+    }
+    if (gameState.rosterState.trainerIds instanceof Array && isObject(gameState.rosterState.trainersById)) {
+      for (i = 0; i < gameState.rosterState.trainerIds.length; i += 1) {
+        if (!isObject(gameState.rosterState.trainersById[gameState.rosterState.trainerIds[i]])) {
+          pushError("rosterState.trainersById has a missing trainer entity.");
+          continue;
+        }
+        if (typeof gameState.rosterState.trainersById[gameState.rosterState.trainerIds[i]].fullName !== "string") {
+          pushError("TrainerEntity.fullName must be a string.");
+        }
+        if (typeof gameState.rosterState.trainersById[gameState.rosterState.trainerIds[i]].trainerType !== "string") {
+          pushError("TrainerEntity.trainerType must be a string.");
+        }
+        if (!(gameState.rosterState.trainersById[gameState.rosterState.trainerIds[i]].boxerIds instanceof Array)) {
+          pushError("TrainerEntity.boxerIds must be an array.");
+        }
+      }
+    }
+  }
+
+  if (isObject(gameState.organizationState)) {
+    if (!(gameState.organizationState.organizationIds instanceof Array)) {
+      pushError("organizationState.organizationIds must be an array.");
+    }
+    if (!isObject(gameState.organizationState.organizationsById)) {
+      pushError("organizationState.organizationsById is missing.");
+    }
+    if (!(gameState.organizationState.rankingTableIds instanceof Array)) {
+      pushError("organizationState.rankingTableIds must be an array.");
+    }
+    if (!isObject(gameState.organizationState.rankingTablesById)) {
+      pushError("organizationState.rankingTablesById is missing.");
+    }
   }
 
   if (isObject(gameState.organizationState)) {
@@ -271,6 +390,18 @@ function validateState(gameState) {
     }
     if (!isObject(gameState.organizationState.rankingTablesById)) {
       pushError("organizationState.rankingTablesById is missing.");
+    }
+    if (!(gameState.organizationState.promoterIds instanceof Array)) {
+      pushError("organizationState.promoterIds must be an array.");
+    }
+    if (!isObject(gameState.organizationState.promotersById)) {
+      pushError("organizationState.promotersById is missing.");
+    }
+    if (!(gameState.organizationState.managerIds instanceof Array)) {
+      pushError("organizationState.managerIds must be an array.");
+    }
+    if (!isObject(gameState.organizationState.managersById)) {
+      pushError("organizationState.managersById is missing.");
     }
     if (!(gameState.organizationState.teamIds instanceof Array)) {
       pushError("organizationState.teamIds must be an array.");
@@ -293,6 +424,24 @@ function validateState(gameState) {
     }
     if (!isObject(gameState.competitionState.bracketsById)) {
       pushError("competitionState.bracketsById is missing.");
+    }
+    if (!(gameState.competitionState.proOfferIds instanceof Array)) {
+      pushError("competitionState.proOfferIds must be an array.");
+    }
+    if (!isObject(gameState.competitionState.proOffersById)) {
+      pushError("competitionState.proOffersById is missing.");
+    }
+    if (!(gameState.competitionState.sparringOfferIds instanceof Array)) {
+      pushError("competitionState.sparringOfferIds must be an array.");
+    }
+    if (!isObject(gameState.competitionState.sparringOffersById)) {
+      pushError("competitionState.sparringOffersById is missing.");
+    }
+    if (!(gameState.competitionState.trainingCampIds instanceof Array)) {
+      pushError("competitionState.trainingCampIds must be an array.");
+    }
+    if (!isObject(gameState.competitionState.trainingCampsById)) {
+      pushError("competitionState.trainingCampsById is missing.");
     }
     if (!isObject(gameState.competitionState.amateurHooks)) {
       pushError("competitionState.amateurHooks is missing.");
@@ -333,6 +482,9 @@ function validateState(gameState) {
       if (!(gameState.competitionState.amateurSeason.resultHistory instanceof Array)) {
         pushError("competitionState.amateurSeason.resultHistory must be an array.");
       }
+      if (!(gameState.competitionState.amateurSeason.teamSelectionHistory instanceof Array)) {
+        pushError("competitionState.amateurSeason.teamSelectionHistory must be an array.");
+      }
     }
   }
 
@@ -346,6 +498,60 @@ function validateState(gameState) {
     }
     if (!(gameState.narrativeState.rivalryIds instanceof Array)) {
       pushError("narrativeState.rivalryIds must be an array.");
+    }
+    if (!(gameState.narrativeState.worldMediaIds instanceof Array)) {
+      pushError("narrativeState.worldMediaIds must be an array.");
+    }
+    if (!isObject(gameState.narrativeState.worldMediaById)) {
+      pushError("narrativeState.worldMediaById is missing.");
+    }
+    if (!(gameState.narrativeState.worldLegendIds instanceof Array)) {
+      pushError("narrativeState.worldLegendIds must be an array.");
+    }
+    if (!isObject(gameState.narrativeState.worldLegendsById)) {
+      pushError("narrativeState.worldLegendsById is missing.");
+    }
+    if (!isObject(gameState.narrativeState.teamHistoryByCountryId)) {
+      pushError("narrativeState.teamHistoryByCountryId is missing.");
+    }
+    if (!isObject(gameState.narrativeState.titleHistoryByOrganizationId)) {
+      pushError("narrativeState.titleHistoryByOrganizationId is missing.");
+    }
+    if (!isObject(gameState.narrativeState.tournamentHistoryById)) {
+      pushError("narrativeState.tournamentHistoryById is missing.");
+    }
+    if (!isObject(gameState.narrativeState.streetHistoryByCountryId)) {
+      pushError("narrativeState.streetHistoryByCountryId is missing.");
+    }
+    if (!(gameState.narrativeState.availableTransitionIds instanceof Array)) {
+      pushError("narrativeState.availableTransitionIds must be an array.");
+    }
+    if (!isObject(gameState.narrativeState.availableTransitionsById)) {
+      pushError("narrativeState.availableTransitionsById is missing.");
+    }
+    if (!(gameState.narrativeState.transitionEventIds instanceof Array)) {
+      pushError("narrativeState.transitionEventIds must be an array.");
+    }
+    if (!isObject(gameState.narrativeState.transitionEventsById)) {
+      pushError("narrativeState.transitionEventsById is missing.");
+    }
+    if (!(gameState.narrativeState.transitionHistory instanceof Array)) {
+      pushError("narrativeState.transitionHistory must be an array.");
+    }
+    if (!(gameState.narrativeState.transitionNoticeQueue instanceof Array)) {
+      pushError("narrativeState.transitionNoticeQueue must be an array.");
+    }
+    if (!isObject(gameState.narrativeState.transitionEventStateById)) {
+      pushError("narrativeState.transitionEventStateById is missing.");
+    }
+    if (typeof gameState.narrativeState.lastKnownTrackId !== "string") {
+      pushError("narrativeState.lastKnownTrackId must be a string.");
+    }
+    if (typeof gameState.narrativeState.lastKnownNationalTeamStatus !== "string") {
+      pushError("narrativeState.lastKnownNationalTeamStatus must be a string.");
+    }
+    if (typeof gameState.narrativeState.lastTransitionSyncWeek !== "number") {
+      pushError("narrativeState.lastTransitionSyncWeek must be a number.");
     }
   }
 

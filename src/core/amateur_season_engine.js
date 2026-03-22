@@ -853,6 +853,22 @@ var AmateurSeasonEngine = (function () {
     }
   }
 
+  function registerTeamSelectionHistory(seasonState, entry) {
+    var i;
+    if (!entry || !entry.id) {
+      return;
+    }
+    for (i = 0; i < seasonState.teamSelectionHistory.length; i += 1) {
+      if (seasonState.teamSelectionHistory[i] && seasonState.teamSelectionHistory[i].id === entry.id) {
+        return;
+      }
+    }
+    seasonState.teamSelectionHistory.unshift(clone(entry));
+    if (seasonState.teamSelectionHistory.length > 180) {
+      seasonState.teamSelectionHistory = seasonState.teamSelectionHistory.slice(0, 180);
+    }
+  }
+
   function applyRoundOutcome(gameState, seasonState, tournament, winnerId, loserId, method, sourceTag) {
     var winnerStats = seasonStatsFor(seasonState, winnerId);
     var loserStats = loserId ? seasonStatsFor(seasonState, loserId) : null;
@@ -1109,6 +1125,17 @@ var AmateurSeasonEngine = (function () {
         }
         if (newStatus !== "none" && hooks.teamEligibilityByFighterId[fighter.id].levels.indexOf(newStatus) === -1) {
           hooks.teamEligibilityByFighterId[fighter.id].levels.push(newStatus);
+        }
+        if (previousStatus !== newStatus) {
+          registerTeamSelectionHistory(seasonState, {
+            id: stableId("team_history", [team.id, fighter.id, currentAbsoluteWeek(gameState), previousStatus || "none", newStatus || "none"]),
+            week: currentAbsoluteWeek(gameState),
+            countryId: countryId,
+            teamId: team.id,
+            fighterId: fighter.id,
+            previousStatus: previousStatus || "none",
+            newStatus: newStatus || "none"
+          });
         }
         if (fighter.id === playerId && previousStatus !== newStatus) {
           if (newStatus === "active") {

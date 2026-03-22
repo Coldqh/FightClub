@@ -1,4 +1,4 @@
-var SAVE_VERSION = 20;
+var SAVE_VERSION = 28;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -83,6 +83,52 @@ function basePlayerStreetSchema(countryId, city) {
   };
 }
 
+function basePlayerProSchema() {
+  if (typeof ProCareerEngine !== "undefined" && ProCareerEngine.createProState) {
+    return ProCareerEngine.createProState();
+  }
+  return {
+    id: "player_pro_main",
+    currentStageId: "unsigned",
+    proRecord: {
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      kos: 0
+    },
+    currentPromoterId: "",
+    currentManagerId: "",
+    contenderStatus: "unsigned",
+    titleHistory: [],
+    rankingSeed: 0,
+    proValue: 0,
+    organizationRanks: {},
+    championOrganizations: [],
+    proReputationTags: [],
+    formerAmateurStatus: "",
+    formerNationalTeamStatus: "none",
+    olympicBackground: "",
+    history: [],
+    lastOfferWeek: 0
+  };
+}
+
+function basePlayerPreparationSchema() {
+  if (typeof SparringCampEngine !== "undefined" && SparringCampEngine.createPreparationState) {
+    return SparringCampEngine.createPreparationState();
+  }
+  return {
+    currentTargetFighterId: "",
+    lastSparringWeek: 0,
+    scoutingByFighterId: {},
+    partnerHistoryByFighterId: {},
+    activeCampId: "",
+    lastCampCompletedWeek: 0,
+    lastCampSummary: null,
+    campHistory: []
+  };
+}
+
 function basePlayerDevelopmentSchema() {
   return {
     focusId: "technique",
@@ -143,6 +189,8 @@ function baseGymMembershipSchema() {
     joinedWeek: 0,
     country: "",
     city: "",
+    gymType: "",
+    cost: 0,
     weeklyCost: 0,
     reputation: 0,
     bonuses: {}
@@ -152,8 +200,11 @@ function baseGymMembershipSchema() {
 function baseTrainerAssignmentSchema() {
   return {
     npcId: "",
+    trainerId: "",
     trainerTypeId: "",
     gymId: "",
+    trainerType: "",
+    salary: 0,
     hiredWeek: 0,
     weeklyFee: 0,
     status: "active"
@@ -303,9 +354,97 @@ function ensureWorldCareerSections(gameState) {
   return gameState;
 }
 
+function ensureEncounterHistorySections(gameState) {
+  if (typeof EncounterHistoryEngine !== "undefined" && EncounterHistoryEngine.ensureState) {
+    EncounterHistoryEngine.ensureState(gameState);
+  } else {
+    if (!gameState.worldState) { gameState.worldState = {}; }
+    if (!gameState.worldState.worldCareer || typeof gameState.worldState.worldCareer !== "object") {
+      gameState.worldState.worldCareer = {};
+    }
+    if (!(gameState.worldState.worldCareer.encounterHistoryIds instanceof Array)) { gameState.worldState.worldCareer.encounterHistoryIds = []; }
+    if (!gameState.worldState.worldCareer.encounterHistoriesById || typeof gameState.worldState.worldCareer.encounterHistoriesById !== "object") { gameState.worldState.worldCareer.encounterHistoriesById = {}; }
+    if (!gameState.worldState.worldCareer.encounterPairIndex || typeof gameState.worldState.worldCareer.encounterPairIndex !== "object") { gameState.worldState.worldCareer.encounterPairIndex = {}; }
+  }
+  return gameState;
+}
+
+function ensureWorldStorySections(gameState) {
+  if (typeof WorldStoryEngine !== "undefined" && WorldStoryEngine.ensureState) {
+    WorldStoryEngine.ensureState(gameState);
+  } else {
+    if (!gameState.narrativeState) { gameState.narrativeState = {}; }
+    if (!(gameState.narrativeState.worldMediaIds instanceof Array)) { gameState.narrativeState.worldMediaIds = []; }
+    if (!gameState.narrativeState.worldMediaById || typeof gameState.narrativeState.worldMediaById !== "object") { gameState.narrativeState.worldMediaById = {}; }
+    if (!(gameState.narrativeState.worldLegendIds instanceof Array)) { gameState.narrativeState.worldLegendIds = []; }
+    if (!gameState.narrativeState.worldLegendsById || typeof gameState.narrativeState.worldLegendsById !== "object") { gameState.narrativeState.worldLegendsById = {}; }
+    if (!gameState.narrativeState.teamHistoryByCountryId || typeof gameState.narrativeState.teamHistoryByCountryId !== "object") { gameState.narrativeState.teamHistoryByCountryId = {}; }
+    if (!gameState.narrativeState.titleHistoryByOrganizationId || typeof gameState.narrativeState.titleHistoryByOrganizationId !== "object") { gameState.narrativeState.titleHistoryByOrganizationId = {}; }
+    if (!gameState.narrativeState.tournamentHistoryById || typeof gameState.narrativeState.tournamentHistoryById !== "object") { gameState.narrativeState.tournamentHistoryById = {}; }
+    if (!gameState.narrativeState.streetHistoryByCountryId || typeof gameState.narrativeState.streetHistoryByCountryId !== "object") { gameState.narrativeState.streetHistoryByCountryId = {}; }
+  }
+  return gameState;
+}
+
+function ensureCareerTransitionSections(gameState) {
+  if (typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.ensureState) {
+    CareerTransitionEngine.ensureState(gameState);
+  } else {
+    if (!gameState.narrativeState) { gameState.narrativeState = {}; }
+    if (!(gameState.narrativeState.availableTransitionIds instanceof Array)) { gameState.narrativeState.availableTransitionIds = []; }
+    if (!gameState.narrativeState.availableTransitionsById || typeof gameState.narrativeState.availableTransitionsById !== "object") { gameState.narrativeState.availableTransitionsById = {}; }
+    if (!(gameState.narrativeState.transitionEventIds instanceof Array)) { gameState.narrativeState.transitionEventIds = []; }
+    if (!gameState.narrativeState.transitionEventsById || typeof gameState.narrativeState.transitionEventsById !== "object") { gameState.narrativeState.transitionEventsById = {}; }
+    if (!(gameState.narrativeState.transitionHistory instanceof Array)) { gameState.narrativeState.transitionHistory = []; }
+    if (!(gameState.narrativeState.transitionNoticeQueue instanceof Array)) { gameState.narrativeState.transitionNoticeQueue = []; }
+    if (!gameState.narrativeState.transitionEventStateById || typeof gameState.narrativeState.transitionEventStateById !== "object") { gameState.narrativeState.transitionEventStateById = {}; }
+    if (typeof gameState.narrativeState.lastKnownTrackId !== "string") { gameState.narrativeState.lastKnownTrackId = ""; }
+    if (typeof gameState.narrativeState.lastKnownNationalTeamStatus !== "string") { gameState.narrativeState.lastKnownNationalTeamStatus = "none"; }
+    if (typeof gameState.narrativeState.lastTransitionSyncWeek !== "number") { gameState.narrativeState.lastTransitionSyncWeek = 0; }
+  }
+  return gameState;
+}
+
 function ensureStreetCareerSections(gameState) {
   if (typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.ensureState) {
     StreetCareerEngine.ensureState(gameState);
+  }
+  return gameState;
+}
+
+function ensureProCareerSections(gameState) {
+  if (typeof ProCareerEngine !== "undefined" && ProCareerEngine.ensureState) {
+    ProCareerEngine.ensureState(gameState);
+  } else {
+    if (!gameState.player) { gameState.player = {}; }
+    if (!gameState.player.pro || typeof gameState.player.pro !== "object") {
+      gameState.player.pro = basePlayerProSchema();
+    }
+    if (!gameState.organizationState) { gameState.organizationState = {}; }
+    if (!(gameState.organizationState.promoterIds instanceof Array)) { gameState.organizationState.promoterIds = []; }
+    if (!gameState.organizationState.promotersById || typeof gameState.organizationState.promotersById !== "object") { gameState.organizationState.promotersById = {}; }
+    if (!(gameState.organizationState.managerIds instanceof Array)) { gameState.organizationState.managerIds = []; }
+    if (!gameState.organizationState.managersById || typeof gameState.organizationState.managersById !== "object") { gameState.organizationState.managersById = {}; }
+    if (!gameState.competitionState) { gameState.competitionState = {}; }
+    if (!(gameState.competitionState.proOfferIds instanceof Array)) { gameState.competitionState.proOfferIds = []; }
+    if (!gameState.competitionState.proOffersById || typeof gameState.competitionState.proOffersById !== "object") { gameState.competitionState.proOffersById = {}; }
+  }
+  return gameState;
+}
+
+function ensureSparringCampSections(gameState) {
+  if (typeof SparringCampEngine !== "undefined" && SparringCampEngine.ensureState) {
+    SparringCampEngine.ensureState(gameState);
+  } else {
+    if (!gameState.player) { gameState.player = {}; }
+    if (!gameState.player.preparation || typeof gameState.player.preparation !== "object") {
+      gameState.player.preparation = basePlayerPreparationSchema();
+    }
+    if (!gameState.competitionState) { gameState.competitionState = {}; }
+    if (!(gameState.competitionState.sparringOfferIds instanceof Array)) { gameState.competitionState.sparringOfferIds = []; }
+    if (!gameState.competitionState.sparringOffersById || typeof gameState.competitionState.sparringOffersById !== "object") { gameState.competitionState.sparringOffersById = {}; }
+    if (!(gameState.competitionState.trainingCampIds instanceof Array)) { gameState.competitionState.trainingCampIds = []; }
+    if (!gameState.competitionState.trainingCampsById || typeof gameState.competitionState.trainingCampsById !== "object") { gameState.competitionState.trainingCampsById = {}; }
   }
   return gameState;
 }
@@ -509,6 +648,8 @@ function createGameState(options) {
       life: basePlayerLifeSchema(),
       amateur: basePlayerAmateurSchema(basePlayerConditionsSchema().startingAge),
       street: basePlayerStreetSchema("", ""),
+      pro: basePlayerProSchema(),
+      preparation: basePlayerPreparationSchema(),
       development: basePlayerDevelopmentSchema(),
       biography: basePlayerBiographySchema(),
       record: {
@@ -544,7 +685,12 @@ function createGameState(options) {
       log: []
     }
   };
-  return ensureWorldCareerSections(
+  return ensureEncounterHistorySections(
+    ensureWorldCareerSections(
+    ensureWorldStorySections(
+    ensureCareerTransitionSections(
+    ensureSparringCampSections(
+    ensureProCareerSections(
     ensureStreetCareerSections(
       ensureAmateurSeasonSections(
         ensureAmateurEcosystemSections(
@@ -553,6 +699,11 @@ function createGameState(options) {
           )
         )
       )
+    )
+    )
+    )
+    )
+    )
     )
   );
 }
@@ -602,6 +753,8 @@ function normalizeWorldState(sourceWorld) {
     if (typeof sourceWorld.gymMembership.joinedWeek === "number") { normalized.gymMembership.joinedWeek = sourceWorld.gymMembership.joinedWeek; }
     normalized.gymMembership.country = sourceWorld.gymMembership.country || "";
     normalized.gymMembership.city = sourceWorld.gymMembership.city || "";
+    normalized.gymMembership.gymType = sourceWorld.gymMembership.gymType || "";
+    if (typeof sourceWorld.gymMembership.cost === "number") { normalized.gymMembership.cost = sourceWorld.gymMembership.cost; }
     if (typeof sourceWorld.gymMembership.weeklyCost === "number") { normalized.gymMembership.weeklyCost = sourceWorld.gymMembership.weeklyCost; }
     if (typeof sourceWorld.gymMembership.reputation === "number") { normalized.gymMembership.reputation = sourceWorld.gymMembership.reputation; }
     normalized.gymMembership.bonuses = sourceWorld.gymMembership.bonuses ? clonePlainData(sourceWorld.gymMembership.bonuses) : {};
@@ -609,8 +762,11 @@ function normalizeWorldState(sourceWorld) {
   if (sourceWorld.trainerAssignment && typeof sourceWorld.trainerAssignment === "object") {
     normalized.trainerAssignment = clonePlainData(baseTrainerAssignmentSchema());
     if (sourceWorld.trainerAssignment.npcId) { normalized.trainerAssignment.npcId = sourceWorld.trainerAssignment.npcId; }
+    if (sourceWorld.trainerAssignment.trainerId) { normalized.trainerAssignment.trainerId = sourceWorld.trainerAssignment.trainerId; }
     if (sourceWorld.trainerAssignment.trainerTypeId) { normalized.trainerAssignment.trainerTypeId = sourceWorld.trainerAssignment.trainerTypeId; }
     if (sourceWorld.trainerAssignment.gymId) { normalized.trainerAssignment.gymId = sourceWorld.trainerAssignment.gymId; }
+    normalized.trainerAssignment.trainerType = sourceWorld.trainerAssignment.trainerType || "";
+    if (typeof sourceWorld.trainerAssignment.salary === "number") { normalized.trainerAssignment.salary = sourceWorld.trainerAssignment.salary; }
     if (typeof sourceWorld.trainerAssignment.hiredWeek === "number") { normalized.trainerAssignment.hiredWeek = sourceWorld.trainerAssignment.hiredWeek; }
     if (typeof sourceWorld.trainerAssignment.weeklyFee === "number") { normalized.trainerAssignment.weeklyFee = sourceWorld.trainerAssignment.weeklyFee; }
     normalized.trainerAssignment.status = sourceWorld.trainerAssignment.status || "active";
@@ -716,6 +872,16 @@ function normalizeGameState(gameState, options) {
         StreetCareerEngine.normalizeStreetState(source.player.street, normalized.player.profile.currentCountry || normalized.player.profile.homeCountry || "", "") :
         clonePlainData(source.player.street);
     }
+    if (source.player.pro) {
+      normalized.player.pro = typeof ProCareerEngine !== "undefined" && ProCareerEngine.normalizeProState ?
+        ProCareerEngine.normalizeProState(source.player.pro) :
+        clonePlainData(source.player.pro);
+    }
+    if (source.player.preparation) {
+      normalized.player.preparation = typeof SparringCampEngine !== "undefined" && SparringCampEngine.normalizePreparationState ?
+        SparringCampEngine.normalizePreparationState(source.player.preparation) :
+        clonePlainData(source.player.preparation);
+    }
     if (source.player.development) {
       normalized.player.development.focusId = source.player.development.focusId || normalized.player.development.focusId;
       if (typeof source.player.development.totalXp === "number") { normalized.player.development.totalXp = source.player.development.totalXp; }
@@ -789,9 +955,23 @@ function normalizeGameState(gameState, options) {
   normalized = ensureAmateurEcosystemSections(normalized);
   normalized = ensureAmateurSeasonSections(normalized);
   normalized = ensureStreetCareerSections(normalized);
+  normalized = ensureProCareerSections(normalized);
+  normalized = ensureSparringCampSections(normalized);
   normalized = ensureWorldCareerSections(normalized);
+  normalized = ensureEncounterHistorySections(normalized);
+  normalized = ensureWorldStorySections(normalized);
+  normalized = ensureCareerTransitionSections(normalized);
+  if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.normalizeGameStateFacilities) {
+    normalized = WorldFacilityEngine.normalizeGameStateFacilities(normalized);
+  }
   if (!normalized.player.amateur || typeof normalized.player.amateur !== "object") {
     normalized.player.amateur = basePlayerAmateurSchema(normalized.player.conditions.startingAge);
+  }
+  if (!normalized.player.pro || typeof normalized.player.pro !== "object") {
+    normalized.player.pro = basePlayerProSchema();
+  }
+  if (!normalized.player.preparation || typeof normalized.player.preparation !== "object") {
+    normalized.player.preparation = basePlayerPreparationSchema();
   }
   normalized.career.week = TimeSystem.getCalendarView(normalized.career.calendar).weekNumber;
   normalized.meta.saveVersion = SAVE_VERSION;
@@ -857,6 +1037,16 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
       gameState.player.street = typeof StreetCareerEngine !== "undefined" && StreetCareerEngine.normalizeStreetState ?
         StreetCareerEngine.normalizeStreetState(fighter.street, gameState.player.profile.currentCountry || gameState.player.profile.homeCountry || "", "") :
         clonePlainData(fighter.street);
+    }
+    if (fighter.pro && typeof fighter.pro === "object") {
+      gameState.player.pro = typeof ProCareerEngine !== "undefined" && ProCareerEngine.normalizeProState ?
+        ProCareerEngine.normalizeProState(fighter.pro) :
+        clonePlainData(fighter.pro);
+    }
+    if (fighter.preparation && typeof fighter.preparation === "object") {
+      gameState.player.preparation = typeof SparringCampEngine !== "undefined" && SparringCampEngine.normalizePreparationState ?
+        SparringCampEngine.normalizePreparationState(fighter.preparation) :
+        clonePlainData(fighter.preparation);
     }
     if (fighter.amateur && typeof fighter.amateur === "object") {
       gameState.player.amateur = typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.normalizeAmateurState ?
@@ -993,6 +1183,8 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
     debtWeeks: normalized.player.life.debtWeeks,
     street: clonePlainData(normalized.player.street),
     amateur: clonePlainData(normalized.player.amateur),
+    pro: clonePlainData(normalized.player.pro),
+    preparation: clonePlainData(normalized.player.preparation),
     development: clonePlainData(normalized.player.development),
     startingAge: normalized.player.conditions.startingAge,
     bioFlags: clonePlainData(normalized.player.biography.flags),

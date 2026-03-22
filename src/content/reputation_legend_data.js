@@ -122,7 +122,7 @@ var REPUTATION_LEGEND_DATA = {
       requiresPayloadTag: "continental_title",
       tone: "good",
       titles: [
-        "{name} берёт континентальный титул.",
+        "{name} берёт титул континента.",
         "{event}: {name} становится чемпионом континента."
       ]
     },
@@ -221,14 +221,13 @@ var REPUTATION_LEGEND_DATA = {
       methodContains: "KO",
       tone: "good",
       titles: [
-        "{name} вырубает {opponent}.",
-        "{name} закрывает бой досрочно."
+        "{name} жёстко останавливает {opponent}.",
+        "{name} закрывает бой с {opponent} досрочно."
       ]
     },
     {
       id: "fight_upset",
       type: "fight_result",
-      result: "win",
       requiresPayloadTag: "upset",
       tone: "good",
       titles: [
@@ -376,6 +375,80 @@ var REPUTATION_LEGEND_DATA = {
     }
   ],
   endingArchetypes: [
+    {
+      id: "olympic_hero",
+      label: "Олимпийский герой",
+      conditions: {
+        minOlympicTitles: 1
+      },
+      summary: "Его путь навсегда связали с олимпийским золотом."
+    },
+    {
+      id: "team_to_world_champion",
+      label: "Бывший сборник, ставший чемпионом мира",
+      conditions: {
+        minNationalTeamSelections: 1,
+        minProTitles: 1
+      },
+      summary: "Он прошёл через сборную и довёл этот путь до мирового пояса."
+    },
+    {
+      id: "national_team_captain",
+      label: "Капитан национальной команды",
+      conditions: {
+        minNationalTeamSelections: 4,
+        minAmateurNationalTitles: 1
+      },
+      summary: "На долгом отрезке он стал лицом сборной и опорой команды."
+    },
+    {
+      id: "failed_team_talent",
+      label: "Несбывшийся талант сборной",
+      conditions: {
+        minNationalTeamSelections: 1,
+        maxFame: 45,
+        endingReasonIn: ["body", "stress"]
+      },
+      summary: "Система видела в нём большое будущее, но дорога оборвалась раньше времени."
+    },
+    {
+      id: "lost_after_team_drop",
+      label: "Потерянный талант после вылета из сборной",
+      conditions: {
+        requiresNationalTeamStatus: "dropped",
+        endingReasonIn: ["body", "stress", "debt"]
+      },
+      summary: "После вылета из сборной карьера так и не вернулась на прежний ход."
+    },
+    {
+      id: "street_local_legend",
+      label: "Местная легенда улиц",
+      conditions: {
+        requireCurrentTrack: "street",
+        minStreetRating: 110,
+        minStreetWins: 6
+      },
+      summary: "Для своей сцены он так и остался человеком, которого будут вспоминать ещё долго."
+    },
+    {
+      id: "street_outsider",
+      label: "Уличный боец вне системы",
+      conditions: {
+        requireCurrentTrack: "street",
+        minStreetWins: 4,
+        maxFame: 35
+      },
+      summary: "Он так и не вошёл в большую систему, но прожил свою честную уличную историю."
+    },
+    {
+      id: "dockyard_champion",
+      label: "Чемпион, поднятый с доков",
+      conditions: {
+        minProTitles: 1,
+        minStreetWins: 3
+      },
+      summary: "Он дошёл до пояса из самой жёсткой среды и этим запомнился всем."
+    },
     {
       id: "champion",
       label: "Чемпион",

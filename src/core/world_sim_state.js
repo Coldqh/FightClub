@@ -78,6 +78,9 @@ var WorldSimState = (function () {
       processedTournamentIds: [],
       processedResultIds: [],
       encounterMemoryByFighterId: {},
+      encounterHistoryIds: [],
+      encounterHistoriesById: {},
+      encounterPairIndex: {},
       pendingNotices: [],
       worldHistory: []
     };
@@ -139,6 +142,7 @@ var WorldSimState = (function () {
       gymId: "",
       trainerId: "",
       currentCoachId: "",
+      currentPromoterId: "",
       currentOrganizationId: "",
       streetRating: 0,
       streetData: {
@@ -156,6 +160,20 @@ var WorldSimState = (function () {
       amateurRank: "",
       nationalTeamStatus: "none",
       amateurGoals: [],
+      proRecord: {
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        kos: 0
+      },
+      proRankingData: {},
+      contenderStatus: "",
+      titleHistory: [],
+      rankingSeed: 0,
+      proReputationTags: [],
+      formerAmateurStatus: "",
+      formerNationalTeamStatus: "none",
+      olympicBackground: "",
       goalProfileId: "",
       worldHistoryHooks: [],
       encounterHooks: [],
@@ -174,9 +192,16 @@ var WorldSimState = (function () {
       name: "",
       country: "",
       city: "",
+      gymType: "",
+      cost: 0,
       monthlyCost: 0,
       weeklyCost: 0,
       reputation: 0,
+      trainingBonuses: {},
+      rosterIds: [],
+      coachIds: [],
+      allowedTracks: [],
+      allowedAgeRange: null,
       trainerIds: [],
       bonuses: {},
       specialization: [],
@@ -189,13 +214,21 @@ var WorldSimState = (function () {
   function baseTrainerEntitySchema() {
     return {
       id: "",
+      fullName: "",
       name: "",
       country: "",
       city: "",
+      trainerType: "",
+      salary: 0,
+      preferredStyles: [],
+      currentGymId: "",
+      boxerIds: [],
+      allowedTracks: [],
       gymId: "",
       monthlyFee: 0,
       weeklyFee: 0,
       reputation: 0,
+      trainingBonuses: {},
       bonuses: {},
       specialization: [],
       coachRoleId: "",
@@ -230,7 +263,53 @@ var WorldSimState = (function () {
       type: "promotion",
       trackId: "street",
       reputation: 0,
-      tags: []
+      tags: [],
+      rankingList: [],
+      championId: "",
+      contenderIds: [],
+      titleFightRules: {},
+      prestigeModifier: 1,
+      titleHistory: [],
+      titleDefensesByChampionId: {},
+      lastUpdatedWeek: 0
+    };
+  }
+
+  function basePromoterEntitySchema() {
+    return {
+      id: "",
+      name: "",
+      label: "",
+      countryId: "",
+      city: "",
+      templateId: "",
+      purseBonus: 0,
+      fameBonus: 0,
+      travelBias: 0,
+      pressure: 0,
+      badContractShift: 0,
+      explanation: "",
+      reputation: 0,
+      npcId: ""
+    };
+  }
+
+  function baseManagerEntitySchema() {
+    return {
+      id: "",
+      name: "",
+      label: "",
+      countryId: "",
+      city: "",
+      templateId: "",
+      purseBonus: 0,
+      winBonus: 0,
+      koBonus: 0,
+      rankingBoost: 0,
+      travelGuard: 0,
+      pressureGuard: 0,
+      explanation: "",
+      reputation: 0
     };
   }
 
@@ -239,7 +318,9 @@ var WorldSimState = (function () {
       id: "",
       trackId: "street",
       organizationId: "",
-      entries: []
+      entries: [],
+      entryLimit: 15,
+      updatedWeek: 0
     };
   }
 
@@ -252,6 +333,28 @@ var WorldSimState = (function () {
       round: 0,
       status: "planned",
       competitionIds: []
+    };
+  }
+
+  function baseProOfferEntitySchema() {
+    return {
+      id: "",
+      templateId: "",
+      label: "",
+      pipelineStage: "",
+      promoterId: "",
+      managerId: "",
+      opponentFighterId: "",
+      guaranteedPurse: 0,
+      winBonus: 0,
+      koBonus: 0,
+      promoterPressure: 0,
+      travelRisk: 0,
+      badContractRisk: 0,
+      explanation: "",
+      weekStamp: 0,
+      countryKey: "",
+      venue: ""
     };
   }
 
@@ -294,6 +397,10 @@ var WorldSimState = (function () {
         organizationsById: {},
         rankingTableIds: [],
         rankingTablesById: {},
+        promoterIds: [],
+        promotersById: {},
+        managerIds: [],
+        managersById: {},
         teamIds: [],
         teamsById: {}
       },
@@ -303,6 +410,12 @@ var WorldSimState = (function () {
         competitionsById: {},
         bracketIds: [],
         bracketsById: {},
+        proOfferIds: [],
+        proOffersById: {},
+        sparringOfferIds: [],
+        sparringOffersById: {},
+        trainingCampIds: [],
+        trainingCampsById: {},
         activeCompetitionId: "",
         amateurHooks: {
           seasonEligibilityByFighterId: {},
@@ -319,7 +432,25 @@ var WorldSimState = (function () {
         rivalryIds: [],
         knownNpcIds: [],
         mediaCount: 0,
-        historyCount: 0
+        historyCount: 0,
+        worldMediaIds: [],
+        worldMediaById: {},
+        worldLegendIds: [],
+        worldLegendsById: {},
+        teamHistoryByCountryId: {},
+        titleHistoryByOrganizationId: {},
+        tournamentHistoryById: {},
+        streetHistoryByCountryId: {},
+        availableTransitionIds: [],
+        availableTransitionsById: {},
+        transitionEventIds: [],
+        transitionEventsById: {},
+        transitionHistory: [],
+        transitionNoticeQueue: [],
+        transitionEventStateById: {},
+        lastKnownTrackId: "",
+        lastKnownNationalTeamStatus: "none",
+        lastTransitionSyncWeek: 0
       }
     };
   }
@@ -477,14 +608,63 @@ var WorldSimState = (function () {
     return entity;
   }
 
+  function normalizeGymEntity(sourceGym, fallbackCountry) {
+    var entity = clone(baseGymEntitySchema());
+    var source = sourceGym || {};
+    entity.id = source.id || entity.id;
+    entity.name = source.name || entity.name;
+    entity.country = source.country || fallbackCountry || entity.country;
+    entity.city = source.city || entity.city;
+    entity.gymType = source.gymType || source.type || entity.gymType;
+    entity.cost = clampNumber(source.cost, clampNumber(source.monthlyCost, entity.cost));
+    entity.monthlyCost = entity.cost;
+    entity.weeklyCost = clampNumber(source.weeklyCost, entity.weeklyCost);
+    entity.reputation = clampNumber(source.reputation, entity.reputation);
+    entity.trainingBonuses = clone(source.trainingBonuses || source.bonuses || {});
+    entity.bonuses = clone(entity.trainingBonuses);
+    entity.rosterIds = source.rosterIds instanceof Array ? clone(source.rosterIds) : [];
+    entity.coachIds = source.coachIds instanceof Array ? clone(source.coachIds) : (source.trainerIds instanceof Array ? clone(source.trainerIds) : []);
+    entity.trainerIds = clone(entity.coachIds);
+    entity.allowedTracks = source.allowedTracks instanceof Array ? clone(source.allowedTracks) : [];
+    entity.allowedAgeRange = source.allowedAgeRange && typeof source.allowedAgeRange === "object" ? clone(source.allowedAgeRange) : null;
+    entity.specialization = source.specialization instanceof Array ? clone(source.specialization) : [];
+    entity.orgType = source.orgType || entity.orgType;
+    entity.minRankId = source.minRankId || entity.minRankId;
+    entity.trainingFocus = source.trainingFocus instanceof Array ? clone(source.trainingFocus) : [];
+    return entity;
+  }
+
+  function normalizeTrainerEntity(sourceTrainer, fallbackCountry) {
+    var entity = clone(baseTrainerEntitySchema());
+    var source = sourceTrainer || {};
+    entity.id = source.id || entity.id;
+    entity.fullName = source.fullName || source.name || source.label || entity.fullName;
+    entity.name = entity.fullName;
+    entity.country = source.country || fallbackCountry || entity.country;
+    entity.city = source.city || entity.city;
+    entity.trainerType = source.trainerType || source.coachRoleId || entity.trainerType;
+    entity.salary = clampNumber(source.salary, clampNumber(source.monthlyFee, entity.salary));
+    entity.monthlyFee = entity.salary;
+    entity.weeklyFee = clampNumber(source.weeklyFee, entity.weeklyFee);
+    entity.preferredStyles = source.preferredStyles instanceof Array ? clone(source.preferredStyles) : [];
+    entity.currentGymId = source.currentGymId || source.gymId || entity.currentGymId;
+    entity.gymId = entity.currentGymId;
+    entity.boxerIds = source.boxerIds instanceof Array ? clone(source.boxerIds) : [];
+    entity.allowedTracks = source.allowedTracks instanceof Array ? clone(source.allowedTracks) : [];
+    entity.reputation = clampNumber(source.reputation, entity.reputation);
+    entity.trainingBonuses = clone(source.trainingBonuses || source.bonuses || {});
+    entity.bonuses = clone(entity.trainingBonuses);
+    entity.specialization = source.specialization instanceof Array ? clone(source.specialization) : [];
+    entity.coachRoleId = source.coachRoleId || entity.trainerType || entity.coachRoleId;
+    entity.minRankId = source.minRankId || entity.minRankId;
+    return entity;
+  }
+
   function buildRosterStateSection(gameState, existingRosterState) {
     var section = clone(defaultSections().rosterState);
-    var countries;
     var i;
-    var j;
-    var country;
-    var gyms;
-    var trainers;
+    var seedGyms;
+    var seedTrainers;
     var gym;
     var trainer;
     var fighterEntity;
@@ -506,48 +686,97 @@ var WorldSimState = (function () {
         section.fightersById[existingId] = clone(existingRosterState.fightersById[existingId]);
       }
     }
-    if (typeof ContentLoader !== "undefined" && ContentLoader.listCountries) {
-      countries = ContentLoader.listCountries();
-      for (i = 0; i < countries.length; i += 1) {
-        country = countries[i];
-        gyms = ContentLoader.listGymsByCountry ? ContentLoader.listGymsByCountry(country.id) : [];
-        for (j = 0; j < gyms.length; j += 1) {
-          gym = clone(gyms[j]);
-          section.gymIds.push(gym.id);
-          section.gymsById[gym.id] = {
-            id: gym.id,
-            name: gym.name || "",
-            country: gym.country || country.id,
-            city: gym.city || "",
-            monthlyCost: clampNumber(gym.cost, 0),
-            weeklyCost: clampNumber(gym.weeklyCost, 0),
-            reputation: clampNumber(gym.reputation, 0),
-            trainerIds: gym.trainerTypeIds instanceof Array ? clone(gym.trainerTypeIds) : [],
-            bonuses: clone(gym.bonuses || {}),
-            specialization: [],
-            orgType: gym.orgType || "",
-            minRankId: gym.minRankId || "",
-            trainingFocus: gym.trainingFocus instanceof Array ? clone(gym.trainingFocus) : []
-          };
+    if (existingRosterState && existingRosterState.gymIds instanceof Array && existingRosterState.gymsById) {
+      for (i = 0; i < existingRosterState.gymIds.length; i += 1) {
+        existingId = existingRosterState.gymIds[i];
+        if (!existingId || !existingRosterState.gymsById[existingId]) {
+          continue;
         }
-        trainers = ContentLoader.listTrainerTypesByCountry ? ContentLoader.listTrainerTypesByCountry(country.id) : [];
-        for (j = 0; j < trainers.length; j += 1) {
-          trainer = clone(trainers[j]);
+        if (!section.gymIds.length || section.gymIds.indexOf(existingId) === -1) {
+          section.gymIds.push(existingId);
+        }
+        section.gymsById[existingId] = normalizeGymEntity(existingRosterState.gymsById[existingId], "");
+      }
+    }
+    if (existingRosterState && existingRosterState.trainerIds instanceof Array && existingRosterState.trainersById) {
+      for (i = 0; i < existingRosterState.trainerIds.length; i += 1) {
+        existingId = existingRosterState.trainerIds[i];
+        if (!existingId || !existingRosterState.trainersById[existingId]) {
+          continue;
+        }
+        if (!section.trainerIds.length || section.trainerIds.indexOf(existingId) === -1) {
+          section.trainerIds.push(existingId);
+        }
+        section.trainersById[existingId] = normalizeTrainerEntity(existingRosterState.trainersById[existingId], "");
+      }
+    }
+    if (typeof ContentLoader !== "undefined") {
+      seedGyms = ContentLoader.listGyms ? ContentLoader.listGyms() : [];
+      for (i = 0; i < seedGyms.length; i += 1) {
+        gym = normalizeGymEntity(seedGyms[i], seedGyms[i] ? seedGyms[i].country : "");
+        if (!gym.id) {
+          continue;
+        }
+        if (section.gymIds.indexOf(gym.id) === -1) {
+          section.gymIds.push(gym.id);
+        }
+        if (!section.gymsById[gym.id]) {
+          section.gymsById[gym.id] = gym;
+        } else {
+          section.gymsById[gym.id] = normalizeGymEntity({
+            id: section.gymsById[gym.id].id,
+            name: section.gymsById[gym.id].name || gym.name,
+            country: section.gymsById[gym.id].country || gym.country,
+            city: section.gymsById[gym.id].city || gym.city,
+            gymType: section.gymsById[gym.id].gymType || gym.gymType,
+            cost: section.gymsById[gym.id].cost || gym.cost,
+            monthlyCost: section.gymsById[gym.id].monthlyCost || gym.monthlyCost,
+            weeklyCost: section.gymsById[gym.id].weeklyCost || gym.weeklyCost,
+            reputation: section.gymsById[gym.id].reputation || gym.reputation,
+            trainingBonuses: section.gymsById[gym.id].trainingBonuses && JSON.stringify(section.gymsById[gym.id].trainingBonuses) !== "{}" ? section.gymsById[gym.id].trainingBonuses : gym.trainingBonuses,
+            rosterIds: section.gymsById[gym.id].rosterIds,
+            coachIds: section.gymsById[gym.id].coachIds && section.gymsById[gym.id].coachIds.length ? section.gymsById[gym.id].coachIds : gym.coachIds,
+            allowedTracks: section.gymsById[gym.id].allowedTracks && section.gymsById[gym.id].allowedTracks.length ? section.gymsById[gym.id].allowedTracks : gym.allowedTracks,
+            allowedAgeRange: section.gymsById[gym.id].allowedAgeRange || gym.allowedAgeRange,
+            specialization: section.gymsById[gym.id].specialization && section.gymsById[gym.id].specialization.length ? section.gymsById[gym.id].specialization : gym.specialization,
+            orgType: section.gymsById[gym.id].orgType || gym.orgType,
+            minRankId: section.gymsById[gym.id].minRankId || gym.minRankId,
+            trainingFocus: section.gymsById[gym.id].trainingFocus && section.gymsById[gym.id].trainingFocus.length ? section.gymsById[gym.id].trainingFocus : gym.trainingFocus
+          }, gym.country);
+        }
+      }
+      seedTrainers = ContentLoader.listTrainers ? ContentLoader.listTrainers() : (ContentLoader.listTrainerTypes ? ContentLoader.listTrainerTypes() : []);
+      for (i = 0; i < seedTrainers.length; i += 1) {
+        trainer = normalizeTrainerEntity(seedTrainers[i], seedTrainers[i] ? seedTrainers[i].country : "");
+        if (!trainer.id) {
+          continue;
+        }
+        if (section.trainerIds.indexOf(trainer.id) === -1) {
           section.trainerIds.push(trainer.id);
-          section.trainersById[trainer.id] = {
-            id: trainer.id,
-            name: trainer.label || "",
-            country: trainer.country || country.id,
-            city: trainer.city || "",
-            gymId: trainer.gymId || "",
-            monthlyFee: clampNumber(trainer.monthlyFee, 0),
-            weeklyFee: clampNumber(trainer.weeklyFee, 0),
-            reputation: clampNumber(trainer.reputation, 0),
-            bonuses: clone(trainer.bonuses || {}),
-            specialization: [],
-            coachRoleId: trainer.coachRoleId || "",
-            minRankId: trainer.minRankId || ""
-          };
+        }
+        if (!section.trainersById[trainer.id]) {
+          section.trainersById[trainer.id] = trainer;
+        } else {
+          section.trainersById[trainer.id] = normalizeTrainerEntity({
+            id: section.trainersById[trainer.id].id,
+            fullName: section.trainersById[trainer.id].fullName || trainer.fullName,
+            name: section.trainersById[trainer.id].name || trainer.name,
+            country: section.trainersById[trainer.id].country || trainer.country,
+            city: section.trainersById[trainer.id].city || trainer.city,
+            trainerType: section.trainersById[trainer.id].trainerType || trainer.trainerType,
+            salary: section.trainersById[trainer.id].salary || trainer.salary,
+            monthlyFee: section.trainersById[trainer.id].monthlyFee || trainer.monthlyFee,
+            weeklyFee: section.trainersById[trainer.id].weeklyFee || trainer.weeklyFee,
+            preferredStyles: section.trainersById[trainer.id].preferredStyles && section.trainersById[trainer.id].preferredStyles.length ? section.trainersById[trainer.id].preferredStyles : trainer.preferredStyles,
+            currentGymId: section.trainersById[trainer.id].currentGymId || trainer.currentGymId,
+            boxerIds: section.trainersById[trainer.id].boxerIds,
+            allowedTracks: section.trainersById[trainer.id].allowedTracks && section.trainersById[trainer.id].allowedTracks.length ? section.trainersById[trainer.id].allowedTracks : trainer.allowedTracks,
+            reputation: section.trainersById[trainer.id].reputation || trainer.reputation,
+            trainingBonuses: section.trainersById[trainer.id].trainingBonuses && JSON.stringify(section.trainersById[trainer.id].trainingBonuses) !== "{}" ? section.trainersById[trainer.id].trainingBonuses : trainer.trainingBonuses,
+            specialization: section.trainersById[trainer.id].specialization && section.trainersById[trainer.id].specialization.length ? section.trainersById[trainer.id].specialization : trainer.specialization,
+            coachRoleId: section.trainersById[trainer.id].coachRoleId || trainer.coachRoleId,
+            minRankId: section.trainersById[trainer.id].minRankId || trainer.minRankId
+          }, trainer.country);
         }
       }
     }
@@ -588,7 +817,33 @@ var WorldSimState = (function () {
     var organization;
     var ranking;
     var playerEntry;
+    function ensureOrganizationEntity(entity) {
+      if (!entity || !entity.id) {
+        return;
+      }
+      if (section.organizationIds.indexOf(entity.id) === -1) {
+        section.organizationIds.push(entity.id);
+      }
+      section.organizationsById[entity.id] = clone(entity);
+    }
+    function ensureRankingEntity(entity) {
+      if (!entity || !entity.id) {
+        return;
+      }
+      if (section.rankingTableIds.indexOf(entity.id) === -1) {
+        section.rankingTableIds.push(entity.id);
+      }
+      section.rankingTablesById[entity.id] = clone(entity);
+    }
     section.id = existingOrganizationState && existingOrganizationState.id ? existingOrganizationState.id : section.id;
+    section.organizationIds = existingOrganizationState && existingOrganizationState.organizationIds instanceof Array ? clone(existingOrganizationState.organizationIds) : [];
+    section.organizationsById = existingOrganizationState && existingOrganizationState.organizationsById ? clone(existingOrganizationState.organizationsById) : {};
+    section.rankingTableIds = existingOrganizationState && existingOrganizationState.rankingTableIds instanceof Array ? clone(existingOrganizationState.rankingTableIds) : [];
+    section.rankingTablesById = existingOrganizationState && existingOrganizationState.rankingTablesById ? clone(existingOrganizationState.rankingTablesById) : {};
+    section.promoterIds = existingOrganizationState && existingOrganizationState.promoterIds instanceof Array ? clone(existingOrganizationState.promoterIds) : [];
+    section.promotersById = existingOrganizationState && existingOrganizationState.promotersById ? clone(existingOrganizationState.promotersById) : {};
+    section.managerIds = existingOrganizationState && existingOrganizationState.managerIds instanceof Array ? clone(existingOrganizationState.managerIds) : [];
+    section.managersById = existingOrganizationState && existingOrganizationState.managersById ? clone(existingOrganizationState.managersById) : {};
     section.teamIds = existingOrganizationState && existingOrganizationState.teamIds instanceof Array ? clone(existingOrganizationState.teamIds) : [];
     section.teamsById = existingOrganizationState && existingOrganizationState.teamsById ? clone(existingOrganizationState.teamsById) : {};
     if (typeof ContentLoader !== "undefined" && ContentLoader.listCountries) {
@@ -605,11 +860,10 @@ var WorldSimState = (function () {
           reputation: 25 + i * 3,
           tags: ["street"]
         };
-        section.organizationIds.push(organization.id);
-        section.organizationsById[organization.id] = organization;
+        ensureOrganizationEntity(organization);
       }
     }
-    section.organizationsById.org_street_world = {
+    ensureOrganizationEntity({
       id: "org_street_world",
       name: "Street World Network",
       country: "",
@@ -618,17 +872,8 @@ var WorldSimState = (function () {
       trackId: "street",
       reputation: 35,
       tags: ["street", "world"]
-    };
-    for (i = 0; i < section.organizationIds.length; i += 1) {
-      if (section.organizationIds[i] === "org_street_world") {
-        break;
-      }
-    }
-    if (i >= section.organizationIds.length) {
-      section.organizationIds.push("org_street_world");
-    }
-    section.organizationIds.push("org_amateur_world");
-    section.organizationsById.org_amateur_world = {
+    });
+    ensureOrganizationEntity({
       id: "org_amateur_world",
       name: "Amateur Circuit",
       country: "",
@@ -637,9 +882,8 @@ var WorldSimState = (function () {
       trackId: "amateur",
       reputation: 55,
       tags: ["amateur"]
-    };
-    section.organizationIds.push("org_pro_world");
-    section.organizationsById.org_pro_world = {
+    });
+    ensureOrganizationEntity({
       id: "org_pro_world",
       name: "Pro Circuit",
       country: "",
@@ -648,7 +892,7 @@ var WorldSimState = (function () {
       trackId: "pro",
       reputation: 80,
       tags: ["pro"]
-    };
+    });
     ranking = baseRankingTableSchema();
     ranking.id = "ranking_street_global";
     ranking.trackId = "street";
@@ -661,20 +905,20 @@ var WorldSimState = (function () {
       losses: gameState && gameState.player && gameState.player.record ? gameState.player.record.losses || 0 : 0
     };
     ranking.entries.push(playerEntry);
-    section.rankingTableIds.push(ranking.id);
-    section.rankingTablesById[ranking.id] = ranking;
+    ensureRankingEntity(ranking);
     return section;
   }
 
   function buildCompetitionFromOffer(offer, week) {
     var entity = baseCompetitionEntitySchema();
     var countryKey = offer && (offer.countryKey || offer.country || (offer.opponent && (offer.opponent.countryKey || offer.opponent.country))) ? (offer.countryKey || offer.country || (offer.opponent && (offer.opponent.countryKey || offer.opponent.country))) : "";
+    var trackId = offer && offer.trackId ? offer.trackId : "street";
     entity.id = offer && offer.id ? offer.id : stableId("competition", [countryKey || "world", offer && offer.label ? offer.label : "offer", week || 1]);
     entity.label = offer && (offer.title || offer.label) ? (offer.title || offer.label) : "Fight offer";
     entity.type = offer && offer.type ? offer.type : "fight_offer";
     entity.status = offer && offer.status ? offer.status : "available";
-    entity.organizationId = stableId("org_street", [countryKey || "world"]);
-    entity.trackId = "street";
+    entity.organizationId = offer && offer.organizationId ? offer.organizationId : (trackId === "pro" ? "org_pro_world" : stableId("org_street", [countryKey || "world"]));
+    entity.trackId = trackId;
     entity.country = countryKey;
     entity.city = offer && (offer.city || (offer.arena && offer.arena.city)) ? (offer.city || offer.arena.city) : "";
     entity.opponentFighterId = offer && offer.opponent ? stableId("fighter_opponent", [offer.opponent.key || offer.opponent.id || offer.opponent.name || "unknown"]) : "";
@@ -693,6 +937,12 @@ var WorldSimState = (function () {
     section.id = existingCompetitionState && existingCompetitionState.id ? existingCompetitionState.id : section.id;
     section.amateurHooks = existingCompetitionState && existingCompetitionState.amateurHooks ? clone(existingCompetitionState.amateurHooks) : clone(defaultSections().competitionState.amateurHooks);
     section.amateurSeason = existingCompetitionState && existingCompetitionState.amateurSeason ? clone(existingCompetitionState.amateurSeason) : null;
+    section.proOfferIds = existingCompetitionState && existingCompetitionState.proOfferIds instanceof Array ? clone(existingCompetitionState.proOfferIds) : [];
+    section.proOffersById = existingCompetitionState && existingCompetitionState.proOffersById ? clone(existingCompetitionState.proOffersById) : {};
+    section.sparringOfferIds = existingCompetitionState && existingCompetitionState.sparringOfferIds instanceof Array ? clone(existingCompetitionState.sparringOfferIds) : [];
+    section.sparringOffersById = existingCompetitionState && existingCompetitionState.sparringOffersById ? clone(existingCompetitionState.sparringOffersById) : {};
+    section.trainingCampIds = existingCompetitionState && existingCompetitionState.trainingCampIds instanceof Array ? clone(existingCompetitionState.trainingCampIds) : [];
+    section.trainingCampsById = existingCompetitionState && existingCompetitionState.trainingCampsById ? clone(existingCompetitionState.trainingCampsById) : {};
     for (i = 0; i < offers.length; i += 1) {
       competition = buildCompetitionFromOffer(offers[i], gameState && gameState.career ? gameState.career.week : 1);
       section.competitionIds.push(competition.id);
@@ -728,6 +978,24 @@ var WorldSimState = (function () {
     }
     section.mediaCount = gameState && gameState.player && gameState.player.biography && gameState.player.biography.mediaFeed instanceof Array ? gameState.player.biography.mediaFeed.length : 0;
     section.historyCount = gameState && gameState.player && gameState.player.biography && gameState.player.biography.history instanceof Array ? gameState.player.biography.history.length : 0;
+    section.worldMediaIds = existingNarrativeState && existingNarrativeState.worldMediaIds instanceof Array ? clone(existingNarrativeState.worldMediaIds) : [];
+    section.worldMediaById = existingNarrativeState && existingNarrativeState.worldMediaById ? clone(existingNarrativeState.worldMediaById) : {};
+    section.worldLegendIds = existingNarrativeState && existingNarrativeState.worldLegendIds instanceof Array ? clone(existingNarrativeState.worldLegendIds) : [];
+    section.worldLegendsById = existingNarrativeState && existingNarrativeState.worldLegendsById ? clone(existingNarrativeState.worldLegendsById) : {};
+    section.teamHistoryByCountryId = existingNarrativeState && existingNarrativeState.teamHistoryByCountryId ? clone(existingNarrativeState.teamHistoryByCountryId) : {};
+    section.titleHistoryByOrganizationId = existingNarrativeState && existingNarrativeState.titleHistoryByOrganizationId ? clone(existingNarrativeState.titleHistoryByOrganizationId) : {};
+    section.tournamentHistoryById = existingNarrativeState && existingNarrativeState.tournamentHistoryById ? clone(existingNarrativeState.tournamentHistoryById) : {};
+    section.streetHistoryByCountryId = existingNarrativeState && existingNarrativeState.streetHistoryByCountryId ? clone(existingNarrativeState.streetHistoryByCountryId) : {};
+    section.availableTransitionIds = existingNarrativeState && existingNarrativeState.availableTransitionIds instanceof Array ? clone(existingNarrativeState.availableTransitionIds) : [];
+    section.availableTransitionsById = existingNarrativeState && existingNarrativeState.availableTransitionsById ? clone(existingNarrativeState.availableTransitionsById) : {};
+    section.transitionEventIds = existingNarrativeState && existingNarrativeState.transitionEventIds instanceof Array ? clone(existingNarrativeState.transitionEventIds) : [];
+    section.transitionEventsById = existingNarrativeState && existingNarrativeState.transitionEventsById ? clone(existingNarrativeState.transitionEventsById) : {};
+    section.transitionHistory = existingNarrativeState && existingNarrativeState.transitionHistory instanceof Array ? clone(existingNarrativeState.transitionHistory) : [];
+    section.transitionNoticeQueue = existingNarrativeState && existingNarrativeState.transitionNoticeQueue instanceof Array ? clone(existingNarrativeState.transitionNoticeQueue) : [];
+    section.transitionEventStateById = existingNarrativeState && existingNarrativeState.transitionEventStateById ? clone(existingNarrativeState.transitionEventStateById) : {};
+    section.lastKnownTrackId = existingNarrativeState && typeof existingNarrativeState.lastKnownTrackId === "string" ? existingNarrativeState.lastKnownTrackId : "";
+    section.lastKnownNationalTeamStatus = existingNarrativeState && typeof existingNarrativeState.lastKnownNationalTeamStatus === "string" ? existingNarrativeState.lastKnownNationalTeamStatus : "none";
+    section.lastTransitionSyncWeek = existingNarrativeState && typeof existingNarrativeState.lastTransitionSyncWeek === "number" ? existingNarrativeState.lastTransitionSyncWeek : 0;
     section.knownNpcIds = [];
     for (i = 0; i < npcs.length; i += 1) {
       if (npcs[i] && npcs[i].knownToPlayer && npcs[i].id) {

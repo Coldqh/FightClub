@@ -113,6 +113,9 @@ var EventEngine = (function () {
     var bioFlags = biography.flags instanceof Array ? uniqueStrings(biography.flags) : [];
     var recentEvents = eventState.recentEvents instanceof Array ? eventState.recentEvents : [];
     var recentEventIds = [];
+    var encounterContext = typeof EncounterHistoryEngine !== "undefined" && EncounterHistoryEngine.buildPlayerEncounterContext ?
+      EncounterHistoryEngine.buildPlayerEncounterContext(gameState) :
+      { knownOpponentOffers: [], knownOpponentOfferCount: 0, sharedPastOfferCount: 0, encounterTags: [], recentEncounterSummaries: [] };
     var i;
 
     for (i = 0; i < npcs.length; i += 1) {
@@ -158,6 +161,11 @@ var EventEngine = (function () {
       lastFightMethod: lastFight && lastFight.meta ? lastFight.meta.method : "",
       actionHistory: actionHistory,
       recentEventIds: uniqueStrings(recentEventIds),
+      encounterTags: encounterContext.encounterTags instanceof Array ? uniqueStrings(encounterContext.encounterTags) : [],
+      knownOpponentOffers: encounterContext.knownOpponentOffers instanceof Array ? encounterContext.knownOpponentOffers : [],
+      knownOpponentOfferCount: typeof encounterContext.knownOpponentOfferCount === "number" ? encounterContext.knownOpponentOfferCount : 0,
+      sharedPastOfferCount: typeof encounterContext.sharedPastOfferCount === "number" ? encounterContext.sharedPastOfferCount : 0,
+      recentEncounterSummaries: encounterContext.recentEncounterSummaries instanceof Array ? encounterContext.recentEncounterSummaries : [],
       eventState: eventState
     };
   }
@@ -299,6 +307,10 @@ var EventEngine = (function () {
     if (typeof conditions.lastFightMethodContains === "string" && String(context.lastFightMethod || "").indexOf(conditions.lastFightMethodContains) === -1) { return false; }
     if (conditions.recentEventsNot instanceof Array && hasAny(context.recentEventIds, conditions.recentEventsNot)) { return false; }
     if (conditions.recentEventsAny instanceof Array && !hasAny(context.recentEventIds, conditions.recentEventsAny)) { return false; }
+    if (conditions.encounterTagsAny instanceof Array && !hasAny(context.encounterTags, conditions.encounterTagsAny)) { return false; }
+    if (conditions.encounterTagsAll instanceof Array && !hasAll(context.encounterTags, conditions.encounterTagsAll)) { return false; }
+    if (typeof conditions.minKnownOpponentOffers === "number" && context.knownOpponentOfferCount < conditions.minKnownOpponentOffers) { return false; }
+    if (typeof conditions.minSharedPastOffers === "number" && context.sharedPastOfferCount < conditions.minSharedPastOffers) { return false; }
     relationChecks = conditions.relationAtLeast instanceof Array ? conditions.relationAtLeast : [];
     for (i = 0; i < relationChecks.length; i += 1) {
       if (!relationMeets(context.world, relationChecks[i])) {

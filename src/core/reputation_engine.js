@@ -16,6 +16,19 @@ var ReputationEngine = (function () {
     return false;
   }
 
+  function matchList(value, allowed) {
+    var i;
+    if (!(allowed instanceof Array) || !allowed.length) {
+      return true;
+    }
+    for (i = 0; i < allowed.length; i += 1) {
+      if (allowed[i] === value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function summaryFromGameState(gameState) {
     var player = gameState && gameState.player ? gameState.player : {};
     var record = player.record || {};
@@ -23,6 +36,8 @@ var ReputationEngine = (function () {
     var conditions = player.conditions || {};
     var life = player.life || {};
     var street = player.street || {};
+    var pro = player.pro || {};
+    var amateur = player.amateur || {};
     var development = player.development || {};
     var profile = player.profile || {};
     var biography = player.biography || {};
@@ -30,11 +45,27 @@ var ReputationEngine = (function () {
     var countriesVisited = facts.countriesVisited instanceof Array ? facts.countriesVisited : [];
     var styleProgress = development.styleProgress || {};
     var streetHistory = street.history instanceof Array ? street.history : [];
+    var season = gameState && gameState.competitionState ? gameState.competitionState.amateurSeason || null : null;
+    var fighterId = gameState && gameState.playerState ? gameState.playerState.fighterEntityId || "fighter_player_main" : "fighter_player_main";
+    var teamHistory = season && season.teamSelectionHistory instanceof Array ? season.teamSelectionHistory : [];
+    var tournamentsById = season && season.tournamentsById ? season.tournamentsById : {};
+    var tournamentIds = season && season.tournamentIds instanceof Array ? season.tournamentIds : [];
+    var titleHistory = pro.titleHistory instanceof Array ? pro.titleHistory : [];
     var streetWins = 0;
     var topStyleId = "outboxer";
     var topStyleValue = -1;
+    var teamSelections = 0;
+    var olympicEntries = 0;
+    var olympicMedals = 0;
+    var olympicTitles = 0;
+    var amateurNationalTitles = 0;
+    var amateurContinentalTitles = 0;
+    var amateurWorldTitles = 0;
+    var proTitles = 0;
     var styleKey;
+    var tournament;
     var i;
+
     for (i = 0; i < streetHistory.length; i += 1) {
       if (streetHistory[i] && streetHistory[i].result === "win") {
         streetWins += 1;
@@ -46,6 +77,41 @@ var ReputationEngine = (function () {
         topStyleId = styleKey;
       }
     }
+    for (i = 0; i < teamHistory.length; i += 1) {
+      if (teamHistory[i] && teamHistory[i].fighterId === fighterId && (teamHistory[i].newStatus === "active" || teamHistory[i].newStatus === "reserve")) {
+        teamSelections += 1;
+      }
+    }
+    for (i = 0; i < tournamentIds.length; i += 1) {
+      tournament = tournamentsById[tournamentIds[i]];
+      if (!tournament || !(tournament.participantIds instanceof Array) || !hasValue(tournament.participantIds, fighterId)) {
+        continue;
+      }
+      if (tournament.tournamentTypeId === "olympics") {
+        olympicEntries += 1;
+        if (tournament.medals && tournament.medals.gold === fighterId) {
+          olympicMedals += 1;
+          olympicTitles += 1;
+        } else if (tournament.medals && (tournament.medals.silver === fighterId || hasValue(tournament.medals.bronze || [], fighterId))) {
+          olympicMedals += 1;
+        }
+      }
+      if (tournament.tournamentTypeId === "national_championship" && tournament.winnerId === fighterId) {
+        amateurNationalTitles += 1;
+      }
+      if (tournament.tournamentTypeId === "continental_championship" && tournament.winnerId === fighterId) {
+        amateurContinentalTitles += 1;
+      }
+      if (tournament.tournamentTypeId === "world_championship" && tournament.winnerId === fighterId) {
+        amateurWorldTitles += 1;
+      }
+    }
+    for (i = 0; i < titleHistory.length; i += 1) {
+      if (titleHistory[i] && titleHistory[i].status === "champion") {
+        proTitles += 1;
+      }
+    }
+
     return {
       name: profile.name || "",
       homeCountry: profile.homeCountry || "",
@@ -89,21 +155,22 @@ var ReputationEngine = (function () {
       fights: (typeof record.wins === "number" ? record.wins : 0) + (typeof record.losses === "number" ? record.losses : 0),
       chronicInjuries: typeof facts.chronicInjuries === "number" ? facts.chronicInjuries : 0,
       bioFlags: biography.flags instanceof Array ? biography.flags : [],
-      styleId: topStyleId
+      styleId: topStyleId,
+      amateurRankId: amateur.rankId || "",
+      amateurScore: typeof amateur.score === "number" ? amateur.score : 0,
+      nationalTeamStatus: amateur.nationalTeamStatus || "none",
+      nationalTeamSelections: teamSelections,
+      olympicEntries: olympicEntries,
+      olympicMedals: olympicMedals,
+      olympicTitles: olympicTitles,
+      amateurNationalTitles: amateurNationalTitles,
+      amateurContinentalTitles: amateurContinentalTitles,
+      amateurWorldTitles: amateurWorldTitles,
+      proTitles: proTitles,
+      proChampionOrganizations: pro.championOrganizations instanceof Array ? pro.championOrganizations.length : 0,
+      gymId: gameState && gameState.world && gameState.world.gymMembership ? gameState.world.gymMembership.gymId || "" : "",
+      gymName: gameState && gameState.world && gameState.world.gymMembership ? gameState.world.gymMembership.name || "" : ""
     };
-  }
-
-  function matchList(value, allowed) {
-    var i;
-    if (!(allowed instanceof Array) || !allowed.length) {
-      return true;
-    }
-    for (i = 0; i < allowed.length; i += 1) {
-      if (allowed[i] === value) {
-        return true;
-      }
-    }
-    return false;
   }
 
   function templateMatches(template, summary, payload) {
@@ -139,6 +206,7 @@ var ReputationEngine = (function () {
     var conditions = tagDefinition && tagDefinition.conditions ? tagDefinition.conditions : {};
     var winsOverLosses = summary.wins - summary.losses;
     var flags = summary.bioFlags || [];
+
     if (typeof conditions.minFame === "number" && summary.fame < conditions.minFame) { return false; }
     if (typeof conditions.maxFame === "number" && summary.fame > conditions.maxFame) { return false; }
     if (typeof conditions.minSupport === "number" && summary.support < conditions.minSupport) { return false; }
@@ -157,11 +225,21 @@ var ReputationEngine = (function () {
     if (typeof conditions.minStreetWins === "number" && summary.streetWins < conditions.minStreetWins) { return false; }
     if (typeof conditions.minUndergroundTitles === "number" && summary.undergroundTitlesCount < conditions.minUndergroundTitles) { return false; }
     if (typeof conditions.minFights === "number" && summary.fights < conditions.minFights) { return false; }
+    if (typeof conditions.minNationalTeamSelections === "number" && summary.nationalTeamSelections < conditions.minNationalTeamSelections) { return false; }
+    if (typeof conditions.minOlympicEntries === "number" && summary.olympicEntries < conditions.minOlympicEntries) { return false; }
+    if (typeof conditions.minOlympicMedals === "number" && summary.olympicMedals < conditions.minOlympicMedals) { return false; }
+    if (typeof conditions.minOlympicTitles === "number" && summary.olympicTitles < conditions.minOlympicTitles) { return false; }
+    if (typeof conditions.minAmateurNationalTitles === "number" && summary.amateurNationalTitles < conditions.minAmateurNationalTitles) { return false; }
+    if (typeof conditions.minAmateurContinentalTitles === "number" && summary.amateurContinentalTitles < conditions.minAmateurContinentalTitles) { return false; }
+    if (typeof conditions.minAmateurWorldTitles === "number" && summary.amateurWorldTitles < conditions.minAmateurWorldTitles) { return false; }
+    if (typeof conditions.minProTitles === "number" && summary.proTitles < conditions.minProTitles) { return false; }
     if (typeof conditions.maxWinsOverLosses === "number" && winsOverLosses > conditions.maxWinsOverLosses) { return false; }
     if (typeof conditions.minComebackWins === "number" && summary.comebackWins < conditions.minComebackWins) { return false; }
     if (conditions.requireCurrentTrack && summary.currentTrack !== conditions.requireCurrentTrack) { return false; }
+    if (conditions.excludeCurrentTrack && summary.currentTrack === conditions.excludeCurrentTrack) { return false; }
     if (conditions.endingReasonIn && !matchList(extra && extra.endingReason, conditions.endingReasonIn)) { return false; }
     if (conditions.requiresFlag && !hasValue(flags, conditions.requiresFlag)) { return false; }
+    if (conditions.requiresNationalTeamStatus && summary.nationalTeamStatus !== conditions.requiresNationalTeamStatus) { return false; }
     return true;
   }
 
@@ -170,7 +248,7 @@ var ReputationEngine = (function () {
     var key;
     for (key in tokens) {
       if (tokens.hasOwnProperty(key)) {
-        output = output.split("{" + key + "}").join(tokens[key] == null ? "" : String(tokens[key]));
+        output = output.replace(new RegExp("\\{" + key + "\\}", "g"), tokens[key] || "");
       }
     }
     return output;
@@ -201,9 +279,9 @@ var ReputationEngine = (function () {
   function createMediaEntry(gameState, mediaType, payload, templates, rngState) {
     var summary = summaryFromGameState(gameState);
     var matching = [];
-    var i;
     var template;
     var tokens;
+    var i;
     if (!(templates instanceof Array)) {
       return null;
     }
@@ -251,6 +329,17 @@ var ReputationEngine = (function () {
     return endingDefinitions.length ? endingDefinitions[endingDefinitions.length - 1] : null;
   }
 
+  function mapIds(items) {
+    var result = [];
+    var i;
+    for (i = 0; i < items.length; i += 1) {
+      if (items[i] && items[i].id) {
+        result.push(items[i].id);
+      }
+    }
+    return result;
+  }
+
   function buildLegend(gameState, options) {
     var opts = options || {};
     var summary = summaryFromGameState(gameState);
@@ -264,20 +353,22 @@ var ReputationEngine = (function () {
     var npcs = gameState && gameState.world && gameState.world.npcs instanceof Array ? gameState.world.npcs.slice(0) : [];
     var allies = [];
     var enemies = [];
-    var i;
-    var relation;
-    var npc;
     var countries = facts.countriesVisited instanceof Array ? facts.countriesVisited.slice(0) : [];
     var styleLabel = opts.styleLabel || "";
     var riseReason = [];
     var fallReason = [];
+    var relation;
+    var npc;
+    var i;
+    var j;
+
     for (i = 0; i < relationships.length; i += 1) {
       relation = relationships[i];
       npc = null;
       if (!relation || typeof relation.score !== "number") {
         continue;
       }
-      for (var j = 0; j < npcs.length; j += 1) {
+      for (j = 0; j < npcs.length; j += 1) {
         if (npcs[j] && npcs[j].id === relation.npcId) {
           npc = npcs[j];
           break;
@@ -293,6 +384,7 @@ var ReputationEngine = (function () {
         enemies.push(npc.name);
       }
     }
+
     if (hasValue(mapIds(tags), "ko_machine")) {
       riseReason.push("его начали бояться за тяжёлый удар");
     }
@@ -305,11 +397,26 @@ var ReputationEngine = (function () {
     if (summary.homeWins >= 4) {
       riseReason.push("дома он собрал свою публику");
     }
+    if (summary.nationalTeamSelections >= 2) {
+      riseReason.push("сборная долго держала его рядом");
+    }
+    if (summary.olympicEntries >= 1) {
+      riseReason.push("олимпийский путь сделал его большим именем");
+    }
+    if (summary.proTitles >= 1) {
+      riseReason.push("профи-путь привёл его к поясам");
+    }
+    if (summary.streetRating >= 110) {
+      riseReason.push("улица сделала его жёстким и узнаваемым");
+    }
+    if (summary.gymName) {
+      riseReason.push("часть пути он связал с залом " + summary.gymName);
+    }
     if (summary.chronicInjuries >= 2) {
       fallReason.push("тело начало сдавать раньше, чем хотелось");
     }
     if (summary.scandals >= 2) {
-      fallReason.push("шум вокруг имени мешал карьере не меньше боёв");
+      fallReason.push("шум вокруг имени мешал не меньше самих боёв");
     }
     if (opts.endingReason === "stress") {
       fallReason.push("давление съедало его изнутри");
@@ -320,6 +427,10 @@ var ReputationEngine = (function () {
     if (opts.endingReason === "body") {
       fallReason.push("накопленный износ всё-таки догнал его");
     }
+    if (summary.nationalTeamStatus === "dropped") {
+      fallReason.push("вылет из сборной сломал прежний ход карьеры");
+    }
+
     return {
       id: opts.id || "",
       runId: opts.runId || "",
@@ -344,22 +455,18 @@ var ReputationEngine = (function () {
       enemies: enemies,
       styleLabel: styleLabel,
       riseReason: riseReason.length ? riseReason.join(". ") + "." : "Он просто продолжал идти от недели к неделе.",
-      fallReason: fallReason.length ? fallReason.join(". ") + "." : "Конец карьеры пришёл без одной большой причины, а из долгой суммы решений.",
+      fallReason: fallReason.length ? fallReason.join(". ") + "." : "Конец карьеры пришёл не из-за одного момента, а из-за длинной цепочки решений.",
       endingText: opts.endingText || "",
+      amateurRankLabel: summary.amateurRankId || "",
+      nationalTeamSelections: summary.nationalTeamSelections,
+      olympicEntries: summary.olympicEntries,
+      olympicMedals: summary.olympicMedals,
+      proTitles: summary.proTitles,
+      streetRating: summary.streetRating,
+      gymName: summary.gymName || "",
       history: history.slice(0, 8),
       mediaHighlights: biography.mediaFeed instanceof Array ? clone(biography.mediaFeed.slice(0, 6)) : []
     };
-  }
-
-  function mapIds(items) {
-    var result = [];
-    var i;
-    for (i = 0; i < items.length; i += 1) {
-      if (items[i] && items[i].id) {
-        result.push(items[i].id);
-      }
-    }
-    return result;
   }
 
   return {
