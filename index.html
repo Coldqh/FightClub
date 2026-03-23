@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.23.10";
+    var APP_VERSION = "2026.03.23.12";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -8177,7 +8177,7 @@
 
     function currentStreetRankingView() {
       var directory = currentDirectoryState();
-      return memoizeGameProjection("streetRankingView", (directory.streetCountryId || "world") + "|" + String(directory.streetPage || 0), function (gameState) {
+      return memoizeGameProjection("streetRankingView", (directory.streetCountryId || "world") + "|" + String(directory.streetPage || 0) + "|" + String(currentProjectionVersion("ranking")), function (gameState) {
         var view;
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildStreetRankingView) {
           return { entries: [], total: 0, page: 0, totalPages: 1 };
@@ -8209,7 +8209,7 @@
 
     function currentAmateurRankingView() {
       var directory = currentDirectoryState();
-      return memoizeGameProjection("amateurRankingView", (directory.amateurCountryId || "world") + "|" + String(directory.amateurPage || 0), function (gameState) {
+      return memoizeGameProjection("amateurRankingView", (directory.amateurCountryId || "world") + "|" + String(directory.amateurPage || 0) + "|" + String(currentProjectionVersion("ranking")), function (gameState) {
         var view;
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildAmateurRankingView) {
           return { entries: [], total: 0, page: 0, totalPages: 1 };
@@ -8241,7 +8241,7 @@
 
     function currentProRankingView() {
       var directory = currentDirectoryState();
-      return memoizeGameProjection("proRankingView", (directory.proTabId || "ring") + "|" + String(directory.proPage || 0), function (gameState) {
+      return memoizeGameProjection("proRankingView", (directory.proTabId || "ring") + "|" + String(directory.proPage || 0) + "|" + String(currentProjectionVersion("ranking")), function (gameState) {
         var view;
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildProRankingView) {
           return { entries: [], champions: [], page: 0, totalPages: 1, tabs: ["champions", "ring"], tabId: "ring", playerRingPosition: 0 };

@@ -62,7 +62,6 @@ var WorldRankingsEngine = (function () {
         trainerRosterPreview: 18
       }
     };
-    });
   }
 
   function rosterRoot(gameState) {
