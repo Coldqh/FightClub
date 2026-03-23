@@ -249,6 +249,10 @@ var WorldRankingsEngine = (function () {
 
   function rankingFightersForView(gameState, trackId, countryId, options) {
     var fighters = activeFightersForView(gameState, trackId, countryId, options);
+    if (!fighters.length && typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.enrichGameState) {
+      PersistentFighterRegistry.enrichGameState(gameState);
+      fighters = activeFightersForView(gameState, trackId, countryId, null);
+    }
     if (!fighters.length) {
       ensureMinimumRoster(gameState);
       fighters = activeFightersForView(gameState, trackId, countryId, null);
