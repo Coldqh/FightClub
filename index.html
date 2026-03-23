@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.23.14";
+    var APP_VERSION = "2026.03.23.15";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -7824,6 +7824,17 @@
       if (typeof AmateurSeasonEngine !== "undefined" && AmateurSeasonEngine.ensureState) {
         AmateurSeasonEngine.ensureState(gameState);
       }
+      if (canonicalRosterNeedsHydration(gameState) && typeof forcePopulateFallbackRosterState === "function") {
+        if (forcePopulateFallbackRosterState(gameState)) {
+          if (typeof WorldFacilityEngine !== "undefined") {
+            if (WorldFacilityEngine.normalizeGameStateFacilities) {
+              gameState = WorldFacilityEngine.normalizeGameStateFacilities(gameState) || gameState;
+            } else if (WorldFacilityEngine.syncFacilityLinks) {
+              WorldFacilityEngine.syncFacilityLinks(gameState);
+            }
+          }
+        }
+      }
       return {
         gameState: gameState,
         changed: beforeTotal !== rosterFighterTotal(gameState) ||
@@ -7875,12 +7886,12 @@
 
     function currentRankingsSectionId() {
       var sectionId = currentDirectoryState().sectionId || "street";
-      return sectionId === "roster" ? "street" : sectionId;
+      return sectionId;
     }
 
     function openRankingsSection(sectionId) {
       var directory = currentDirectoryState();
-      directory.sectionId = sectionId === "roster" ? "street" : (sectionId || "street");
+      directory.sectionId = sectionId || "street";
       if (state.panel !== "rankings") {
         openPanel("rankings");
         return;
@@ -8175,6 +8186,74 @@
       };
     }
 
+    function buildFallbackRosterDirectoryView(gameState, options) {
+      var opts = options || {};
+      var roster = gameState && gameState.rosterState ? gameState.rosterState : null;
+      var list = [];
+      var entries = [];
+      var paging;
+      var i;
+      var fighter;
+      var currentTrack;
+      if (!roster || !(roster.fighterIds instanceof Array) || !roster.fightersById) {
+        return { sectionId: "roster", trackId: opts.trackId || "all", countryId: opts.countryId || "", total: 0, page: 0, pageSize: 20, totalPages: 1, entries: [] };
+      }
+      for (i = 0; i < roster.fighterIds.length; i += 1) {
+        fighter = roster.fightersById[roster.fighterIds[i]];
+        if (!fighter || fighter.status === "retired") {
+          continue;
+        }
+        currentTrack = fighter.currentTrack || fighter.trackId || "street";
+        if ((opts.trackId || "all") !== "all" && currentTrack !== opts.trackId) {
+          continue;
+        }
+        if (opts.countryId && fighter.country !== opts.countryId) {
+          continue;
+        }
+        list.push(fighter);
+      }
+      list.sort(function (left, right) {
+        var leftTrack = left.currentTrack || left.trackId || "street";
+        var rightTrack = right.currentTrack || right.trackId || "street";
+        var leftScore = leftTrack === "street" ? (left.streetRating || 0) : (leftTrack === "amateur" ? (((left.amateurRecord && left.amateurRecord.wins) || 0) * 5) : (((left.proRecord && left.proRecord.wins) || 0) * 4 + (left.rankingSeed || 0)));
+        var rightScore = rightTrack === "street" ? (right.streetRating || 0) : (rightTrack === "amateur" ? (((right.amateurRecord && right.amateurRecord.wins) || 0) * 5) : (((right.proRecord && right.proRecord.wins) || 0) * 4 + (right.rankingSeed || 0)));
+        if (!!left.isPlayer !== !!right.isPlayer) {
+          return left.isPlayer ? -1 : 1;
+        }
+        if (leftTrack !== rightTrack) {
+          return leftTrack.localeCompare(rightTrack);
+        }
+        return rightScore - leftScore;
+      });
+      for (i = 0; i < list.length; i += 1) {
+        fighter = list[i];
+        currentTrack = fighter.currentTrack || fighter.trackId || "street";
+        entries.push({
+          fighterId: fighter.id,
+          label: fallbackRankingFighterLabel(fighter),
+          countryId: fighter.country,
+          countryLabel: fallbackRankingCountryLabel(fighter.country),
+          trackId: currentTrack,
+          trackLabel: currentTrack === "amateur" ? "Любители" : (currentTrack === "pro" ? "Профи" : "Улица"),
+          age: fighter.age || 16,
+          statusLabel: currentTrack === "amateur" ? localizedAmateurRankLabel(fighter.amateurRank || fighter.amateurClass || "", fighter.country) : (currentTrack === "pro" ? (fighter.contenderStatus || "Профи") : ((fighter.streetData && fighter.streetData.currentStatusId) || "Улица")),
+          score: 0,
+          isPlayer: !!fighter.isPlayer
+        });
+      }
+      paging = fallbackPaginateEntries(entries, opts.page, opts.pageSize || 20);
+      return {
+        sectionId: "roster",
+        trackId: opts.trackId || "all",
+        countryId: opts.countryId || "",
+        total: paging.total,
+        page: paging.page,
+        pageSize: paging.pageSize,
+        totalPages: paging.totalPages,
+        entries: paging.entries
+      };
+    }
+
     function currentStreetRankingView() {
       var directory = currentDirectoryState();
       return memoizeGameProjection("streetRankingView", (directory.streetCountryId || "world") + "|" + String(directory.streetPage || 0) + "|" + String(currentProjectionVersion("ranking")), function (gameState) {
@@ -8273,16 +8352,41 @@
 
     function currentRosterDirectoryView() {
       var directory = currentDirectoryState();
-      return memoizeGameProjection("rosterDirectoryView", (directory.rosterTrackId || "all") + "|" + (directory.rosterCountryId || "world") + "|" + String(directory.rosterPage || 0), function (gameState) {
+      return memoizeGameProjection("rosterDirectoryView", (directory.rosterTrackId || "all") + "|" + (directory.rosterCountryId || "world") + "|" + String(directory.rosterPage || 0) + "|" + String(currentProjectionVersion("ranking")), function (gameState) {
+        var view;
+        gameState = ensureRankingRosterReady();
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildRosterDirectoryView) {
-          return { entries: [], total: 0, page: 0, totalPages: 1 };
+          return buildFallbackRosterDirectoryView(gameState, {
+            trackId: directory.rosterTrackId || "all",
+            countryId: directory.rosterCountryId || "",
+            page: directory.rosterPage || 0,
+            pageSize: 20
+          });
         }
-        return WorldRankingsEngine.buildRosterDirectoryView(gameState, {
+        view = WorldRankingsEngine.buildRosterDirectoryView(gameState, {
           trackId: directory.rosterTrackId || "all",
           countryId: directory.rosterCountryId || "",
           page: directory.rosterPage || 0,
           versionToken: currentProjectionVersion("ranking")
         });
+        if (!view || !view.total) {
+          gameState = forceRankingRosterRebuild();
+          view = WorldRankingsEngine.buildRosterDirectoryView(gameState, {
+            trackId: directory.rosterTrackId || "all",
+            countryId: directory.rosterCountryId || "",
+            page: directory.rosterPage || 0,
+            versionToken: currentProjectionVersion("ranking")
+          });
+        }
+        if (!view || !view.total) {
+          view = buildFallbackRosterDirectoryView(gameState, {
+            trackId: directory.rosterTrackId || "all",
+            countryId: directory.rosterCountryId || "",
+            page: directory.rosterPage || 0,
+            pageSize: 20
+          });
+        }
+        return view;
       });
     }
 
@@ -14034,11 +14138,13 @@
       return measurePerf("rankingsOpenMs", function () {
         var sectionId = currentRankingsSectionId();
         var html = [];
-        html.push("<div class='panel fill-panel'><div class='filter-row'><button class='" + (sectionId === "street" ? "button" : "ghost") + "' onclick='openRankingsSection(\"street\")'>Улица</button><button class='" + (sectionId === "amateur" ? "button" : "ghost") + "' onclick='openRankingsSection(\"amateur\")'>Любители</button><button class='" + (sectionId === "pro" ? "button" : "ghost") + "' onclick='openRankingsSection(\"pro\")'>Профи</button></div>");
+        html.push("<div class='panel fill-panel'><div class='filter-row'><button class='" + (sectionId === "street" ? "button" : "ghost") + "' onclick='openRankingsSection(\"street\")'>Улица</button><button class='" + (sectionId === "amateur" ? "button" : "ghost") + "' onclick='openRankingsSection(\"amateur\")'>Любители</button><button class='" + (sectionId === "pro" ? "button" : "ghost") + "' onclick='openRankingsSection(\"pro\")'>Профи</button><button class='" + (sectionId === "roster" ? "button" : "ghost") + "' onclick='openRankingsSection(\"roster\")'>Реестр</button></div>");
         if (sectionId === "amateur") {
           html.push(renderAmateurRankingSection());
         } else if (sectionId === "pro") {
           html.push(renderProRankingSection());
+        } else if (sectionId === "roster") {
+          html.push(renderRosterDirectorySection());
         } else {
           html.push(renderStreetRankingSection());
         }

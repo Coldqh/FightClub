@@ -522,7 +522,420 @@ function repairSparseRosterState(gameState) {
   if (typeof AmateurSeasonEngine !== "undefined" && AmateurSeasonEngine.ensureState) {
     AmateurSeasonEngine.ensureState(repaired);
   }
+  if (sparseRosterNeedsRepair(repaired)) {
+    forcePopulateFallbackRosterState(repaired);
+    if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.normalizeGameStateFacilities) {
+      repaired = WorldFacilityEngine.normalizeGameStateFacilities(repaired) || repaired;
+    }
+    normalizeRosterIdentityState(repaired);
+  }
   return repaired;
+}
+
+function fallbackRosterRoot(gameState) {
+  if (!gameState.rosterState || typeof gameState.rosterState !== "object") {
+    gameState.rosterState = {
+      id: "roster_state_main",
+      fighterIds: [],
+      fightersById: {},
+      gymIds: [],
+      gymsById: {},
+      trainerIds: [],
+      trainersById: {}
+    };
+  }
+  if (!(gameState.rosterState.fighterIds instanceof Array)) {
+    gameState.rosterState.fighterIds = [];
+  }
+  if (!gameState.rosterState.fightersById || typeof gameState.rosterState.fightersById !== "object") {
+    gameState.rosterState.fightersById = {};
+  }
+  if (!(gameState.rosterState.gymIds instanceof Array)) {
+    gameState.rosterState.gymIds = [];
+  }
+  if (!gameState.rosterState.gymsById || typeof gameState.rosterState.gymsById !== "object") {
+    gameState.rosterState.gymsById = {};
+  }
+  if (!(gameState.rosterState.trainerIds instanceof Array)) {
+    gameState.rosterState.trainerIds = [];
+  }
+  if (!gameState.rosterState.trainersById || typeof gameState.rosterState.trainersById !== "object") {
+    gameState.rosterState.trainersById = {};
+  }
+  return gameState.rosterState;
+}
+
+function fallbackStableId(prefix, parts) {
+  if (typeof WorldSimState !== "undefined" && WorldSimState.stableId) {
+    return WorldSimState.stableId(prefix, parts);
+  }
+  return prefix + "_" + String(parts instanceof Array ? parts.join("_") : parts);
+}
+
+function fallbackTrackAllowsNickname(trackId) {
+  return trackId === "street" || trackId === "pro";
+}
+
+function fallbackDisplayName(firstName, lastName, nickname, trackId) {
+  var first = String(firstName || "").replace(/^\s+|\s+$/g, "");
+  var last = String(lastName || "").replace(/^\s+|\s+$/g, "");
+  var nick = fallbackTrackAllowsNickname(trackId) ? sanitizeNicknameWord(nickname) : "";
+  if (nick) {
+    return first + ' "' + nick + '" ' + last;
+  }
+  return first + (last ? (" " + last) : "");
+}
+
+function fallbackDeterministicHash(value) {
+  var text = String(value || "");
+  var hash = 0;
+  var i;
+  for (i = 0; i < text.length; i += 1) {
+    hash = ((hash * 33) + text.charCodeAt(i)) % 2147483647;
+  }
+  return Math.abs(hash);
+}
+
+function fallbackDeterministicRange(seed, minValue, maxValue) {
+  var min = typeof minValue === "number" ? minValue : 0;
+  var max = typeof maxValue === "number" ? maxValue : min;
+  if (max <= min) {
+    return min;
+  }
+  return min + (fallbackDeterministicHash(seed) % ((max - min) + 1));
+}
+
+function fallbackCountryIds() {
+  var ids = [];
+  var i;
+  var key;
+  if (typeof CONTENT_DATA !== "undefined" && CONTENT_DATA && CONTENT_DATA.countries instanceof Array) {
+    for (i = 0; i < CONTENT_DATA.countries.length; i += 1) {
+      if (CONTENT_DATA.countries[i] && CONTENT_DATA.countries[i].id) {
+        ids.push(CONTENT_DATA.countries[i].id);
+      }
+    }
+  }
+  if (!ids.length && typeof COUNTRY_DATA !== "undefined" && COUNTRY_DATA && COUNTRY_DATA.pools) {
+    for (key in COUNTRY_DATA.pools) {
+      if (COUNTRY_DATA.pools.hasOwnProperty(key)) {
+        ids.push(key);
+      }
+    }
+  }
+  return ids;
+}
+
+function fallbackCountryPool(countryId) {
+  if (typeof COUNTRY_DATA !== "undefined" && COUNTRY_DATA && COUNTRY_DATA.pools && COUNTRY_DATA.pools[countryId]) {
+    return COUNTRY_DATA.pools[countryId];
+  }
+  return {
+    firstNames: ["Alex"],
+    lastNames: ["Stone"],
+    nicknames: ["Rook"]
+  };
+}
+
+function fallbackCountTrackCountry(roster, trackId, countryId) {
+  var total = 0;
+  var i;
+  var fighter;
+  for (i = 0; i < roster.fighterIds.length; i += 1) {
+    fighter = roster.fightersById[roster.fighterIds[i]];
+    if (!fighter || fighter.status === "retired") {
+      continue;
+    }
+    if ((fighter.currentTrack || fighter.trackId || "street") !== trackId) {
+      continue;
+    }
+    if (countryId && fighter.country !== countryId) {
+      continue;
+    }
+    total += 1;
+  }
+  return total;
+}
+
+function fallbackInsertRosterFighter(roster, fighter) {
+  if (!fighter || !fighter.id) {
+    return;
+  }
+  if (!roster.fightersById[fighter.id]) {
+    roster.fighterIds.push(fighter.id);
+  }
+  roster.fightersById[fighter.id] = fighter;
+}
+
+function fallbackSeedRosterEntries() {
+  var entries = [];
+  var i;
+  var raw;
+  function append(source, trackId) {
+    var j;
+    for (j = 0; j < source.length; j += 1) {
+      raw = clonePlainData(source[j] || {});
+      raw.currentTrack = raw.currentTrack || trackId;
+      raw.trackId = raw.trackId || trackId;
+      entries.push(raw);
+    }
+  }
+  append(typeof STREET_SEED_ROSTER !== "undefined" && STREET_SEED_ROSTER instanceof Array ? STREET_SEED_ROSTER : [], "street");
+  append(typeof AMATEUR_SEED_ROSTER !== "undefined" && AMATEUR_SEED_ROSTER instanceof Array ? AMATEUR_SEED_ROSTER : [], "amateur");
+  append(typeof PRO_SEED_ROSTER !== "undefined" && PRO_SEED_ROSTER instanceof Array ? PRO_SEED_ROSTER : [], "pro");
+  for (i = entries.length - 1; i >= 0; i -= 1) {
+    if (!entries[i] || !entries[i].id) {
+      entries.splice(i, 1);
+    }
+  }
+  return entries;
+}
+
+function fallbackSeedFighterEntity(seed, trackId) {
+  var activeTrack = trackId || seed.currentTrack || seed.trackId || "street";
+  var stats = clonePlainData(seed.attributes || seed.stats || { str: 4, tec: 4, spd: 4, end: 4, vit: 4 });
+  var wins = 0;
+  var losses = 0;
+  var draws = 0;
+  var kos = 0;
+  if (activeTrack === "amateur" && seed.amateurRecord) {
+    wins = seed.amateurRecord.wins || 0;
+    losses = seed.amateurRecord.losses || 0;
+    draws = seed.amateurRecord.draws || 0;
+  } else if (activeTrack === "pro" && seed.proRecord) {
+    wins = seed.proRecord.wins || 0;
+    losses = seed.proRecord.losses || 0;
+    draws = seed.proRecord.draws || 0;
+    kos = seed.proRecord.kos || 0;
+  } else if (seed.record) {
+    wins = seed.record.wins || 0;
+    losses = seed.record.losses || 0;
+    draws = seed.record.draws || 0;
+    kos = seed.record.kos || 0;
+  } else {
+    wins = seed.wins || 0;
+    losses = seed.losses || 0;
+    draws = seed.draws || 0;
+    kos = seed.kos || 0;
+  }
+  return {
+    id: seed.id,
+    firstName: seed.firstName || "",
+    lastName: seed.lastName || "",
+    nickname: fallbackTrackAllowsNickname(activeTrack) ? sanitizeNicknameWord(seed.nickname || "") : "",
+    name: (seed.firstName || "") + ((seed.lastName || "") ? (" " + seed.lastName) : ""),
+    fullName: fallbackDisplayName(seed.firstName || "", seed.lastName || "", seed.nickname || "", activeTrack),
+    country: seed.country || "",
+    age: typeof seed.age === "number" ? seed.age : (activeTrack === "pro" ? 26 : 20),
+    birthWeek: typeof seed.birthWeek === "number" ? seed.birthWeek : 1,
+    birthYear: typeof seed.birthYear === "number" ? seed.birthYear : (2026 - (typeof seed.age === "number" ? seed.age : 20)),
+    currentTrack: activeTrack,
+    trackId: activeTrack,
+    style: seed.style || "",
+    styleId: seed.style || "",
+    archetypeId: seed.archetypeId || "",
+    attributes: stats,
+    stats: clonePlainData(stats),
+    growthProfile: clonePlainData(seed.growthProfile || {}),
+    healthState: { health: typeof seed.health === "number" ? seed.health : 100, injuries: clonePlainData(seed.injuries || []) },
+    wearState: { wear: typeof seed.wear === "number" ? seed.wear : 0, fatigue: typeof seed.fatigue === "number" ? seed.fatigue : 0 },
+    moraleState: { morale: typeof seed.morale === "number" ? seed.morale : 55 },
+    currentGymId: seed.currentGymId || "",
+    currentTrainerId: seed.currentTrainerId || "",
+    currentCoachId: seed.currentCoachId || seed.currentTrainerId || "",
+    currentPromoterId: seed.currentPromoterId || "",
+    currentManagerId: seed.currentManagerId || "",
+    currentOrganizationId: seed.currentOrganizationId || "",
+    gymId: seed.currentGymId || "",
+    trainerId: seed.currentTrainerId || "",
+    streetRating: typeof seed.streetRating === "number" ? seed.streetRating : 0,
+    streetData: clonePlainData(seed.streetData || {
+      districtId: "",
+      cityStreetStanding: 0,
+      nationalStreetStanding: 0,
+      undergroundTitles: [],
+      localPromoterIds: [],
+      undergroundPressureTags: [],
+      currentSceneId: "",
+      currentStatusId: "neighborhood_unknown"
+    }),
+    amateurClass: seed.amateurClass || "",
+    amateurRank: seed.amateurRank || seed.amateurClass || "",
+    amateurRecord: clonePlainData(seed.amateurRecord || { wins: 0, losses: 0, draws: 0 }),
+    nationalTeamStatus: seed.nationalTeamStatus || "none",
+    amateurGoals: clonePlainData(seed.amateurGoals || []),
+    goalProfileId: seed.goalProfileId || "",
+    worldHistoryHooks: clonePlainData(seed.worldHistoryHooks || []),
+    encounterHooks: clonePlainData(seed.encounterHooks || []),
+    proRecord: clonePlainData(seed.proRecord || { wins: wins, losses: losses, draws: draws, kos: kos }),
+    proRankingData: clonePlainData(seed.proRankingData || {}),
+    contenderStatus: seed.contenderStatus || "",
+    titleHistory: clonePlainData(seed.titleHistory || []),
+    rankingSeed: typeof seed.rankingSeed === "number" ? seed.rankingSeed : 0,
+    proReputationTags: clonePlainData(seed.proReputationTags || []),
+    formerAmateurStatus: seed.formerAmateurStatus || "",
+    formerNationalTeamStatus: seed.formerNationalTeamStatus || "none",
+    olympicBackground: seed.olympicBackground || "",
+    fame: typeof seed.fame === "number" ? seed.fame : 0,
+    reputationTags: clonePlainData(seed.reputationTags || []),
+    relationshipHooks: clonePlainData(seed.relationshipHooks || []),
+    biographyLogIds: clonePlainData(seed.biographyLogIds || []),
+    status: seed.status || "active",
+    lastTrackTransitionWeek: typeof seed.lastTrackTransitionWeek === "number" ? seed.lastTrackTransitionWeek : 0,
+    lastTeamStatusChangeWeek: typeof seed.lastTeamStatusChangeWeek === "number" ? seed.lastTeamStatusChangeWeek : 0,
+    lastGymChangeWeek: typeof seed.lastGymChangeWeek === "number" ? seed.lastGymChangeWeek : 0,
+    lastCoachChangeWeek: typeof seed.lastCoachChangeWeek === "number" ? seed.lastCoachChangeWeek : 0,
+    lastUpdatedWeek: typeof seed.lastUpdatedWeek === "number" ? seed.lastUpdatedWeek : 0,
+    record: { wins: wins, losses: losses, draws: draws, kos: kos },
+    tags: clonePlainData(seed.tags || [])
+  };
+}
+
+function fallbackGeneratedIdentity(countryId, trackId, slotIndex) {
+  var pool = fallbackCountryPool(countryId);
+  var firstNames = pool.firstNames && pool.firstNames.length ? pool.firstNames : ["Alex"];
+  var lastNames = pool.lastNames && pool.lastNames.length ? pool.lastNames : ["Stone"];
+  var nicknames = pool.nicknames && pool.nicknames.length ? pool.nicknames : ["Rook"];
+  var nickname = "";
+  if (trackId === "street") {
+    nickname = sanitizeNicknameWord(nicknames[(slotIndex * 3 + 1) % nicknames.length]);
+  } else if (trackId === "pro" && fallbackDeterministicRange(countryId + ":" + slotIndex + ":nick", 0, 100) >= 64) {
+    nickname = sanitizeNicknameWord(nicknames[(slotIndex * 7 + 2) % nicknames.length]);
+  }
+  return {
+    firstName: firstNames[(slotIndex * 5 + (trackId === "pro" ? 3 : 1)) % firstNames.length],
+    lastName: lastNames[(slotIndex * 7 + (trackId === "street" ? 4 : 2)) % lastNames.length],
+    nickname: nickname
+  };
+}
+
+function fallbackGeneratedFighter(countryId, trackId, slotIndex) {
+  var identity = fallbackGeneratedIdentity(countryId, trackId, slotIndex);
+  var age = trackId === "pro" ? fallbackDeterministicRange(countryId + ":pro:" + slotIndex, 21, 35) : (trackId === "amateur" ? fallbackDeterministicRange(countryId + ":am:" + slotIndex, 16, 28) : fallbackDeterministicRange(countryId + ":st:" + slotIndex, 16, 33));
+  var base = trackId === "pro" ? 7 : (trackId === "amateur" ? 5 : 4);
+  var stats = {
+    str: base + (slotIndex % 3),
+    tec: base + ((slotIndex + 1) % 3),
+    spd: base + ((slotIndex + 2) % 3),
+    end: base + (slotIndex % 2),
+    vit: base + ((slotIndex + 1) % 2)
+  };
+  var wins = trackId === "pro" ? fallbackDeterministicRange("w:" + countryId + ":" + slotIndex, 4, 28) : fallbackDeterministicRange("w:" + countryId + ":" + slotIndex, 0, 20);
+  var losses = fallbackDeterministicRange("l:" + countryId + ":" + slotIndex, 0, Math.max(2, Math.round(wins / 3)));
+  var draws = fallbackDeterministicRange("d:" + countryId + ":" + slotIndex, 0, 2);
+  var kos = trackId === "pro" ? fallbackDeterministicRange("k:" + countryId + ":" + slotIndex, 0, wins) : 0;
+  var amateurRank = trackId === "amateur" ? (age < 18 ? "junior_class_1" : (slotIndex % 5 === 0 ? "candidate_national" : "adult_class_1")) : "";
+  return {
+    id: fallbackStableId("fighter_generated", [trackId, countryId, slotIndex]),
+    firstName: identity.firstName,
+    lastName: identity.lastName,
+    nickname: identity.nickname,
+    name: identity.firstName + " " + identity.lastName,
+    fullName: fallbackDisplayName(identity.firstName, identity.lastName, identity.nickname, trackId),
+    country: countryId,
+    age: age,
+    birthWeek: (slotIndex % 52) + 1,
+    birthYear: 2026 - age,
+    currentTrack: trackId,
+    trackId: trackId,
+    style: slotIndex % 3 === 0 ? "puncher" : (slotIndex % 3 === 1 ? "counterpuncher" : "tempo"),
+    styleId: slotIndex % 3 === 0 ? "puncher" : (slotIndex % 3 === 1 ? "counterpuncher" : "tempo"),
+    archetypeId: slotIndex % 2 === 0 ? "aggressor" : "patient",
+    attributes: stats,
+    stats: clonePlainData(stats),
+    growthProfile: { focusId: trackId === "street" ? "power" : (trackId === "amateur" ? "technique" : "defense"), ceiling: trackId === "pro" ? 88 : 74, volatility: trackId === "street" ? 7 : 5, nextTrack: trackId === "street" ? "amateur" : (trackId === "amateur" ? "pro" : "") },
+    healthState: { health: 100, injuries: [] },
+    wearState: { wear: trackId === "pro" ? fallbackDeterministicRange("wear:" + countryId + ":" + slotIndex, 6, 24) : fallbackDeterministicRange("wear:" + countryId + ":" + slotIndex, 0, 14), fatigue: fallbackDeterministicRange("fat:" + countryId + ":" + slotIndex, 0, 10) },
+    moraleState: { morale: fallbackDeterministicRange("mor:" + countryId + ":" + slotIndex, 48, 72) },
+    currentGymId: "",
+    currentTrainerId: "",
+    currentCoachId: "",
+    currentPromoterId: "",
+    currentManagerId: "",
+    currentOrganizationId: "",
+    gymId: "",
+    trainerId: "",
+    streetRating: trackId === "street" ? (12 + slotIndex * 2) : 0,
+    streetData: {
+      districtId: "",
+      cityStreetStanding: trackId === "street" ? slotIndex : 0,
+      nationalStreetStanding: trackId === "street" ? slotIndex : 0,
+      undergroundTitles: [],
+      localPromoterIds: [],
+      undergroundPressureTags: [],
+      currentSceneId: "",
+      currentStatusId: trackId === "street" ? "district_contender" : "neighborhood_unknown"
+    },
+    amateurClass: trackId === "amateur" ? amateurRank : "",
+    amateurRank: trackId === "amateur" ? amateurRank : "",
+    amateurRecord: { wins: trackId === "amateur" ? wins : 0, losses: trackId === "amateur" ? losses : 0, draws: trackId === "amateur" ? draws : 0 },
+    nationalTeamStatus: trackId === "amateur" && slotIndex % 11 === 0 ? "candidate" : "none",
+    amateurGoals: [],
+    goalProfileId: "",
+    worldHistoryHooks: [],
+    encounterHooks: [],
+    proRecord: { wins: trackId === "pro" ? wins : 0, losses: trackId === "pro" ? losses : 0, draws: trackId === "pro" ? draws : 0, kos: trackId === "pro" ? kos : 0 },
+    proRankingData: {},
+    contenderStatus: trackId === "pro" && slotIndex <= 12 ? "ranking" : "",
+    titleHistory: [],
+    rankingSeed: trackId === "pro" ? (40 + slotIndex) : 0,
+    proReputationTags: [],
+    formerAmateurStatus: "",
+    formerNationalTeamStatus: "none",
+    olympicBackground: "",
+    fame: trackId === "pro" ? fallbackDeterministicRange("fame:" + countryId + ":" + slotIndex, 12, 55) : fallbackDeterministicRange("fame:" + countryId + ":" + slotIndex, 0, 18),
+    reputationTags: [],
+    relationshipHooks: [],
+    biographyLogIds: [],
+    status: "active",
+    lastTrackTransitionWeek: 0,
+    lastTeamStatusChangeWeek: 0,
+    lastGymChangeWeek: 0,
+    lastCoachChangeWeek: 0,
+    lastUpdatedWeek: 0,
+    record: { wins: wins, losses: losses, draws: draws, kos: kos },
+    tags: []
+  };
+}
+
+function forcePopulateFallbackRosterState(gameState) {
+  var roster = fallbackRosterRoot(gameState);
+  var countries = fallbackCountryIds();
+  var seedEntries = fallbackSeedRosterEntries();
+  var i;
+  var countryIndex;
+  var slotIndex;
+  var before = roster.fighterIds.length;
+  var seed;
+  if (!countries.length) {
+    countries = ["usa", "mexico", "japan", "uk", "russia", "cuba", "kazakhstan", "ukraine"];
+  }
+  for (i = 0; i < seedEntries.length; i += 1) {
+    seed = seedEntries[i];
+    fallbackInsertRosterFighter(roster, fallbackSeedFighterEntity(seed, seed.currentTrack || seed.trackId || "street"));
+  }
+  for (i = 0; i < countries.length; i += 1) {
+    slotIndex = 1;
+    while (fallbackCountTrackCountry(roster, "street", countries[i]) < 50 && slotIndex <= 200) {
+      fallbackInsertRosterFighter(roster, fallbackGeneratedFighter(countries[i], "street", slotIndex));
+      slotIndex += 1;
+    }
+    slotIndex = 1;
+    while (fallbackCountTrackCountry(roster, "amateur", countries[i]) < 50 && slotIndex <= 200) {
+      fallbackInsertRosterFighter(roster, fallbackGeneratedFighter(countries[i], "amateur", slotIndex));
+      slotIndex += 1;
+    }
+  }
+  slotIndex = 1;
+  countryIndex = 0;
+  while (fallbackCountTrackCountry(roster, "pro", "") < 100 && slotIndex <= 300) {
+    fallbackInsertRosterFighter(roster, fallbackGeneratedFighter(countries[countryIndex], "pro", slotIndex));
+    countryIndex = (countryIndex + 1) % countries.length;
+    if (countryIndex === 0) {
+      slotIndex += 1;
+    }
+  }
+  return roster.fighterIds.length !== before;
 }
 
 function ensureAmateurEcosystemSections(gameState) {
