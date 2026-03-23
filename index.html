@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.23.15";
+    var APP_VERSION = "2026.03.23.16";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1176,8 +1176,10 @@
         appVersion: APP_VERSION,
         debugMode: !!(state.debug && state.debug.enabled)
       });
-      if (canonicalRosterNeedsHydration(state.game)) {
-        state.game = hydrateCanonicalRosterState(state.game).gameState;
+      if (canonicalRosterNeedsHydration(state.game) ||
+          (typeof sparseRosterNeedsRepair === "function" && sparseRosterNeedsRepair(state.game)) ||
+          runtimeRosterNeedsHydration()) {
+        return repairLiveRosterState(state.game);
       }
       runtimeCache.gameVersion += 1;
       touchProjectionVersions();
@@ -2740,6 +2742,7 @@
       validation = validateState(saved.game);
       clearFightTimers();
       syncRuntimeStateFromGame(saved.game);
+      repairLiveRosterState(state.game);
       state.screen = state.screen === "end" ? "end" : "game";
       state.fight = normalizeLoadedFight(state.fight);
       state.savedPreview = buildSavePreview(saved);
@@ -3955,6 +3958,7 @@
         return false;
       }
       syncRuntimeStateFromGame(gameState);
+      repairLiveRosterState(state.game);
       refreshWorldState();
       if (note) {
         pushLog(note, nextTrackId === "street" ? "warn" : "good");
@@ -7800,6 +7804,13 @@
       return false;
     }
 
+    function runtimeRosterNeedsHydration() {
+      return !state.rosterState ||
+        !(state.rosterState.fighterIds instanceof Array) ||
+        !state.rosterState.fightersById ||
+        state.rosterState.fighterIds.length < 200;
+    }
+
     function hydrateCanonicalRosterState(gameState) {
       var beforeTotal = rosterFighterTotal(gameState);
       var beforeStreet = trackFighterCount(gameState, "street");
@@ -7844,42 +7855,62 @@
       };
     }
 
-    function forceRankingRosterRebuild() {
-      var gameState = syncGameStateFromRuntime();
-      var hydration = hydrateCanonicalRosterState(gameState);
-      gameState = hydration.gameState;
-      if (hydration.changed || canonicalRosterNeedsHydration(gameState)) {
-        syncRuntimeStateFromGame(gameState);
-        gameState = state.game;
-      } else {
-        state.game = gameState;
+    function repairLiveRosterState(gameState) {
+      var repaired = gameState || state.game;
+      var hydration;
+      var beforeTotal;
+      var changed = false;
+      if (!repaired) {
+        repaired = buildGameStateFromRuntime(state, {
+          appVersion: APP_VERSION,
+          debugMode: !!(state.debug && state.debug.enabled)
+        });
       }
-      syncWorldSimSectionsFromGameState(gameState);
-      touchGameProjectionState();
-      return state.game;
+      if (canonicalRosterNeedsHydration(repaired)) {
+        hydration = hydrateCanonicalRosterState(repaired);
+        repaired = hydration.gameState;
+        changed = hydration.changed || changed;
+      }
+      if (typeof repairSparseRosterState === "function") {
+        beforeTotal = rosterFighterTotal(repaired);
+        repaired = repairSparseRosterState(repaired) || repaired;
+        changed = changed || beforeTotal !== rosterFighterTotal(repaired);
+      }
+      if (typeof WorldFacilityEngine !== "undefined") {
+        if (WorldFacilityEngine.normalizeGameStateFacilities) {
+          repaired = WorldFacilityEngine.normalizeGameStateFacilities(repaired) || repaired;
+        } else if (WorldFacilityEngine.syncFacilityLinks) {
+          WorldFacilityEngine.syncFacilityLinks(repaired);
+        }
+      }
+      if (changed || runtimeRosterNeedsHydration()) {
+        syncRuntimeStateFromGame(repaired);
+        repaired = state.game;
+      } else {
+        state.game = repaired;
+        syncWorldSimSectionsFromGameState(repaired);
+        touchGameProjectionState();
+      }
+      return repaired;
+    }
+
+    function forceRankingRosterRebuild() {
+      return repairLiveRosterState(syncGameStateFromRuntime());
     }
 
     function ensureRankingRosterReady() {
       var gameState = ensurePersistentGameState(false);
       var changed = false;
-      if (canonicalRosterNeedsHydration(gameState)) {
-        var hydration = hydrateCanonicalRosterState(gameState);
-        gameState = hydration.gameState;
-        changed = hydration.changed;
-      } else if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
+      if (runtimeRosterNeedsHydration() ||
+          canonicalRosterNeedsHydration(gameState) ||
+          (typeof sparseRosterNeedsRepair === "function" && sparseRosterNeedsRepair(gameState))) {
+        return repairLiveRosterState(gameState);
+      }
+      if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
         changed = !!WorldRankingsEngine.ensureMinimumRoster(gameState);
       }
       if (changed) {
-        if (typeof WorldFacilityEngine !== "undefined") {
-          if (WorldFacilityEngine.normalizeGameStateFacilities) {
-            WorldFacilityEngine.normalizeGameStateFacilities(gameState);
-          } else if (WorldFacilityEngine.syncFacilityLinks) {
-            WorldFacilityEngine.syncFacilityLinks(gameState);
-          }
-        }
-        state.game = gameState;
-        touchGameProjectionState();
-        syncWorldSimSectionsFromGameState(gameState);
+        return repairLiveRosterState(gameState);
       }
       return gameState;
     }
