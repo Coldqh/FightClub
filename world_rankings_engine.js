@@ -874,13 +874,20 @@ var WorldRankingsEngine = (function () {
   function ensureMinimumRoster(gameState) {
     var rules = dataRoot().rosterTargets || {};
     var countries = listCountries();
+    var roster = rosterRoot(gameState);
+    var beforeCount = roster.fighterIds.length;
     var i;
     for (i = 0; i < countries.length; i += 1) {
       ensureCountryTrackMinimum(gameState, countries[i].id, "street", rules.streetPerCountry || 50);
       ensureCountryTrackMinimum(gameState, countries[i].id, "amateur", rules.amateurPerCountry || 50);
     }
     ensureGlobalProMinimum(gameState, rules.proGlobal || 100);
-    return gameState;
+    if (roster.fighterIds.length !== beforeCount) {
+      clearRankingProjectionCache();
+      clearProfileProjectionCache();
+      return true;
+    }
+    return false;
   }
 
   function countryLabel(countryId) {

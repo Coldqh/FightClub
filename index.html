@@ -580,8 +580,8 @@
     .filter-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin: 10px 0 14px 0;
+      gap: 6px;
+      margin: 0 0 8px 0;
     }
 
     .filter-row .button,
@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.23.6";
+    var APP_VERSION = "2026.03.23.7";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -3690,12 +3690,6 @@
     }
 
     function preferredAmateurToProTransitionId() {
-      if (careerTransitionCard("national_team_member_to_pro") && careerTransitionCard("national_team_member_to_pro").available) {
-        return "national_team_member_to_pro";
-      }
-      if (careerTransitionCard("dropped_team_to_pro") && careerTransitionCard("dropped_team_to_pro").available) {
-        return "dropped_team_to_pro";
-      }
       return "amateur_to_pro";
     }
 
@@ -4058,9 +4052,7 @@
 
     function canMoveAmateurTrackToPro() {
       var gameState = ensurePersistentGameState(false);
-      return (typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "amateur_to_pro")) ||
-        (typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "national_team_member_to_pro")) ||
-        (typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "dropped_team_to_pro"));
+      return typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "amateur_to_pro");
     }
 
     function canReturnStreetTrackFromPro() {
@@ -7748,6 +7740,27 @@
       return ensureDirectoryState();
     }
 
+    function ensureRankingRosterReady() {
+      var gameState = ensurePersistentGameState(false);
+      var changed = false;
+      if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
+        changed = !!WorldRankingsEngine.ensureMinimumRoster(gameState);
+      }
+      if (changed) {
+        if (typeof WorldFacilityEngine !== "undefined") {
+          if (WorldFacilityEngine.normalizeGameStateFacilities) {
+            WorldFacilityEngine.normalizeGameStateFacilities(gameState);
+          } else if (WorldFacilityEngine.syncFacilityLinks) {
+            WorldFacilityEngine.syncFacilityLinks(gameState);
+          }
+        }
+        state.game = gameState;
+        touchGameProjectionState();
+        syncWorldSimSectionsFromGameState(gameState);
+      }
+      return gameState;
+    }
+
     function currentRankingsSectionId() {
       var sectionId = currentDirectoryState().sectionId || "street";
       return sectionId === "roster" ? "street" : sectionId;
@@ -7827,42 +7840,75 @@
     function currentStreetRankingView() {
       var directory = currentDirectoryState();
       return memoizeGameProjection("streetRankingView", (directory.streetCountryId || "world") + "|" + String(directory.streetPage || 0), function (gameState) {
+        var view;
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildStreetRankingView) {
           return { entries: [], total: 0, page: 0, totalPages: 1 };
         }
-        return WorldRankingsEngine.buildStreetRankingView(gameState, {
+        gameState = ensureRankingRosterReady();
+        view = WorldRankingsEngine.buildStreetRankingView(gameState, {
           countryId: directory.streetCountryId || "",
           page: directory.streetPage || 0,
           versionToken: currentProjectionVersion("ranking")
         });
+        if ((!view || !view.total) && gameState && gameState.rosterState && gameState.rosterState.fighterIds && gameState.rosterState.fighterIds.length) {
+          touchGameProjectionState();
+          view = WorldRankingsEngine.buildStreetRankingView(gameState, {
+            countryId: directory.streetCountryId || "",
+            page: directory.streetPage || 0,
+            versionToken: currentProjectionVersion("ranking")
+          });
+        }
+        return view;
       });
     }
 
     function currentAmateurRankingView() {
       var directory = currentDirectoryState();
       return memoizeGameProjection("amateurRankingView", (directory.amateurCountryId || "world") + "|" + String(directory.amateurPage || 0), function (gameState) {
+        var view;
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildAmateurRankingView) {
           return { entries: [], total: 0, page: 0, totalPages: 1 };
         }
-        return WorldRankingsEngine.buildAmateurRankingView(gameState, {
+        gameState = ensureRankingRosterReady();
+        view = WorldRankingsEngine.buildAmateurRankingView(gameState, {
           countryId: directory.amateurCountryId || "",
           page: directory.amateurPage || 0,
           versionToken: currentProjectionVersion("ranking")
         });
+        if ((!view || !view.total) && gameState && gameState.rosterState && gameState.rosterState.fighterIds && gameState.rosterState.fighterIds.length) {
+          touchGameProjectionState();
+          view = WorldRankingsEngine.buildAmateurRankingView(gameState, {
+            countryId: directory.amateurCountryId || "",
+            page: directory.amateurPage || 0,
+            versionToken: currentProjectionVersion("ranking")
+          });
+        }
+        return view;
       });
     }
 
     function currentProRankingView() {
       var directory = currentDirectoryState();
       return memoizeGameProjection("proRankingView", (directory.proTabId || "ring") + "|" + String(directory.proPage || 0), function (gameState) {
+        var view;
         if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildProRankingView) {
           return { entries: [], champions: [], page: 0, totalPages: 1, tabs: ["champions", "ring"], tabId: "ring", playerRingPosition: 0 };
         }
-        return WorldRankingsEngine.buildProRankingView(gameState, {
+        gameState = ensureRankingRosterReady();
+        view = WorldRankingsEngine.buildProRankingView(gameState, {
           tabId: directory.proTabId || "ring",
           page: directory.proPage || 0,
           versionToken: currentProjectionVersion("ranking")
         });
+        if ((!view || (!view.total && (!view.champions || !view.champions.length))) && gameState && gameState.rosterState && gameState.rosterState.fighterIds && gameState.rosterState.fighterIds.length) {
+          touchGameProjectionState();
+          view = WorldRankingsEngine.buildProRankingView(gameState, {
+            tabId: directory.proTabId || "ring",
+            page: directory.proPage || 0,
+            versionToken: currentProjectionVersion("ranking")
+          });
+        }
+        return view;
       });
     }
 
@@ -12001,7 +12047,6 @@
 
     function renderCareerLogPage() {
       return "" +
-        "<div class='panel fill-panel'><h2 class='panel-title'>Хроника карьеры</h2></div>" +
         renderSectionCard("careerlog_media", "Медиа", renderMediaFeedList(6), true, "лента") +
         renderSectionCard("careerlog_world", "История мира", renderWorldMediaArchiveList(8), false, "мир") +
         renderSectionCard("careerlog_log", "Лента карьеры", renderLogPanelInner(), false, "журнал") +
@@ -13218,39 +13263,35 @@
     }
 
     function renderCareerTransitionsPanel() {
-      var allCards = currentCareerTransitionCards();
-      var cards = currentCareerTopTransitionCards(2);
-      var events = currentCareerTransitionEvents();
+      var trackId = currentCareerTrackId();
+      var fighter = state.fighter || {};
+      var streetToAmateurCard = careerTransitionCard("street_to_amateur");
+      var streetToProCard = careerTransitionCard("street_to_pro");
+      var amateurToStreetCard = careerTransitionCard("amateur_to_street_fallback");
+      var amateurToProCard = careerTransitionCard("amateur_to_pro");
+      var proToStreetCard = careerTransitionCard("pro_to_street_comeback");
       var html = [];
-      var i;
-      var availableCount = 0;
-      for (i = 0; i < allCards.length; i += 1) {
-        if (allCards[i] && allCards[i].available) {
-          availableCount += 1;
-        }
-      }
       html.push("<div class='panel fill-panel'><h2 class='panel-title'>Переходы</h2>");
-      if (events.length) {
-        html.push("<div class='card compact-card'><h3>Сигналы карьеры</h3>");
-        for (i = 0; i < events.length; i += 1) {
-          html.push("<div class='muted'><strong>" + events[i].title + ".</strong> " + events[i].text + "</div>");
+      html.push("<div class='card compact-card'><h3>Смена пути</h3>");
+      if (trackId === "amateur") {
+        html.push("<div class='footer-actions'><button class='button' onclick='applyCareerTransition(\"amateur_to_street_fallback\")'" + (amateurToStreetCard && amateurToStreetCard.available ? "" : " disabled='disabled'") + ">Переход в уличные бои</button><button class='button' onclick='applyCareerTransition(\"amateur_to_pro\")'" + (amateurToProCard && amateurToProCard.available ? "" : " disabled='disabled'") + ">Переход в профессиональный бокс</button></div>");
+        html.push("<div class='muted'>После начала профессиональной карьеры вернуться в любители нельзя.</div>");
+      } else if (trackId === "street") {
+        html.push("<div class='footer-actions'><button class='button' onclick='applyCareerTransition(\"street_to_amateur\")'" + (streetToAmateurCard && streetToAmateurCard.available ? "" : " disabled='disabled'") + ">Переход в любительские бои</button><button class='button' onclick='applyCareerTransition(\"street_to_pro\")'" + (streetToProCard && streetToProCard.available ? "" : " disabled='disabled'") + ">Переход в профессиональный бокс</button></div>");
+        if (fighter.age > 28) {
+          html.push("<div class='muted'>Переход в любительские бои закрыт после 28 лет.</div>");
+        } else if (streetToAmateurCard && !streetToAmateurCard.available) {
+          html.push("<div class='muted'>" + blockedTransitionReason(streetToAmateurCard) + "</div>");
+        } else {
+          html.push("<div class='muted'>После начала профессиональной карьеры путь назад в любители закрывается.</div>");
         }
-        html.push("</div>");
-      }
-      html.push("<div class='card compact-card'><h3>Сейчас стоит смотреть на</h3>");
-      html.push("<div class='muted'>Система показывает только самые уместные развилки для текущего этапа.</div>");
-      html.push("</div>");
-      if (!cards.length) {
-        html.push("<div class='card compact-card'><div class='empty-state'>Сейчас переходов нет.</div></div>");
+      } else if (trackId === "pro") {
+        html.push("<div class='footer-actions'><button class='button' disabled='disabled'>Переход в любительские бои</button><button class='button' onclick='applyCareerTransition(\"pro_to_street_comeback\")'" + (proToStreetCard && proToStreetCard.available ? "" : " disabled='disabled'") + ">Переход в уличные бои</button></div>");
+        html.push("<div class='muted'>После старта профессиональной карьеры любительский путь закрыт навсегда. Уход на улицу тоже закрывает обратный вход в профи.</div>");
       } else {
-        for (i = 0; i < cards.length; i += 1) {
-          html.push(renderCareerTransitionOpportunityCard(cards[i]));
-        }
+        html.push("<div class='empty-state'>Для этого пути переходы пока не настроены.</div>");
       }
-      if (allCards.length > cards.length) {
-        html.push("<div class='card compact-card'><div class='muted'>Остальные переходы сейчас неактуальны и появятся выше, когда станут ближе по времени и условиям.</div></div>");
-      }
-      html.push("<div class='card compact-card'><h3>Сейчас открыто</h3><div class='muted'>" + availableCount + " из " + allCards.length + " переходов доступны прямо сейчас.</div></div>");
+      html.push("</div>");
       html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
       return html.join("");
     }
@@ -13509,9 +13550,8 @@
       var view = currentStreetRankingView();
       var html = [];
       var i;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Улица</h2>");
       html.push(renderCountryFilterButtons("street", directory.streetCountryId, true));
-      html.push("<div class='record-row'><div class='chip red'>Бойцов " + view.total + "</div></div><div class='rankings-list'>");
+      html.push("<div class='rankings-list'>");
       for (i = 0; i < view.entries.length; i += 1) {
         html.push(renderCompactFighterCard(
           view.entries[i],
@@ -13525,7 +13565,6 @@
       }
       html.push("</div>");
       html.push(renderPagingControls("street", view));
-      html.push("</div>");
       return html.join("");
     }
 
@@ -13535,9 +13574,8 @@
       var html = [];
       var i;
       var entry;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Любители</h2>");
       html.push(renderCountryFilterButtons("amateur", directory.amateurCountryId, true));
-      html.push("<div class='record-row'><div class='chip gold'>Бойцов " + view.total + "</div></div><div class='rankings-list'>");
+      html.push("<div class='rankings-list'>");
       for (i = 0; i < view.entries.length; i += 1) {
         entry = view.entries[i];
         html.push(renderCompactFighterCard(
@@ -13552,7 +13590,6 @@
       }
       html.push("</div>");
       html.push(renderPagingControls("amateur", view));
-      html.push("</div>");
       return html.join("");
     }
 
@@ -13572,7 +13609,6 @@
       var html = [];
       var i;
       var entry;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Профи</h2>");
       html.push("<div class='filter-row'>");
       for (i = 0; i < view.tabs.length; i += 1) {
         html.push("<button class='" + (directory.proTabId === view.tabs[i] ? "button" : "ghost") + "' onclick='setProRankingTab(\"" + view.tabs[i] + "\")'>" + proRankingTabLabel(view.tabs[i]) + "</button>");
@@ -13591,7 +13627,6 @@
       }
       html.push("</div>");
       if (directory.proTabId === "champions") {
-        html.push("</div>");
         return html.join("");
       }
       html.push("<div class='rankings-list'>");
@@ -13609,7 +13644,6 @@
       }
       html.push("</div>");
       html.push(renderPagingControls("pro", view));
-      html.push("</div>");
       return html.join("");
     }
 
@@ -13642,7 +13676,7 @@
       return measurePerf("rankingsOpenMs", function () {
         var sectionId = currentRankingsSectionId();
         var html = [];
-        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Рейтинги</h2><div class='filter-row'><button class='" + (sectionId === "street" ? "button" : "ghost") + "' onclick='openRankingsSection(\"street\")'>Улица</button><button class='" + (sectionId === "amateur" ? "button" : "ghost") + "' onclick='openRankingsSection(\"amateur\")'>Любители</button><button class='" + (sectionId === "pro" ? "button" : "ghost") + "' onclick='openRankingsSection(\"pro\")'>Профи</button></div></div>");
+        html.push("<div class='panel fill-panel'><div class='filter-row'><button class='" + (sectionId === "street" ? "button" : "ghost") + "' onclick='openRankingsSection(\"street\")'>Улица</button><button class='" + (sectionId === "amateur" ? "button" : "ghost") + "' onclick='openRankingsSection(\"amateur\")'>Любители</button><button class='" + (sectionId === "pro" ? "button" : "ghost") + "' onclick='openRankingsSection(\"pro\")'>Профи</button></div>");
         if (sectionId === "amateur") {
           html.push(renderAmateurRankingSection());
         } else if (sectionId === "pro") {
@@ -13650,6 +13684,7 @@
         } else {
           html.push(renderStreetRankingSection());
         }
+        html.push("</div>");
         return html.join("");
       });
     }
@@ -13811,7 +13846,6 @@
         var trainerType = currentTrainerType();
         var prepSummary = currentPreparationSummary();
         var contract = currentContract();
-        var transitionCards = currentCareerTopTransitionCards(2);
         var promoter = null;
         var manager = null;
         var overviewLines = [];
@@ -13885,16 +13919,16 @@
             "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Зал</button><button class='button' onclick='openPanel(\"careerTrainer\")'>Тренер</button><button class='ghost' onclick='openPanel(\"careerSparring\")'>Подготовка</button>" + (adultSandboxUnlocked(fighter) ? "<button class='ghost' onclick='openPanel(\"careerContract\")'>Контракты</button>" : "") + "</div>";
         }, false, "база"));
         html.push(renderLazySectionCard("career_transitions", "Возможные переходы", function () {
-          var block = [];
-          if (!transitionCards.length) {
-            return "<div class='muted'>Сейчас новых развилок нет.</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Переходы</button></div>";
+          if (trackId === "amateur") {
+            return "<div class='muted'>Сейчас доступны переход в уличные бои и переход в профессиональный бокс.</div><div class='muted'>После начала профессиональной карьеры вернуться в любители нельзя.</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>";
           }
-          block.push("<div class='muted'>Показаны только два самых уместных варианта для текущего этапа.</div>");
-          for (i = 0; i < transitionCards.length; i += 1) {
-            block.push(renderCareerTransitionOpportunityCard(transitionCards[i]));
+          if (trackId === "street") {
+            return "<div class='muted'>С улицы можно перейти в любительские бои или сразу в профессиональный бокс.</div><div class='muted'>После 28 лет вход в любители закрывается.</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>";
           }
-          block.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerTransitions\")'>Все переходы</button></div>");
-          return block.join("");
+          if (trackId === "pro") {
+            return "<div class='muted'>Любительский путь закрыт. Сейчас доступен только переход в уличные бои.</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>";
+          }
+          return "<div class='muted'>Сейчас новых развилок нет.</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Переходы</button></div>";
         }, false, "развилки"));
         html.push("</div>");
         return html.join("");
