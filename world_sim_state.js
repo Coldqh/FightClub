@@ -608,6 +608,64 @@ var WorldSimState = (function () {
     return entity;
   }
 
+  function buildSeedFighterEntity(seed, week) {
+    var entity = clone(baseFighterEntitySchema());
+    var source = seed || {};
+    var stats = source.attributes || source.stats || {};
+    var trackId = source.currentTrack || source.trackId || "street";
+    entity.id = source.id || entity.id;
+    entity.name = source.fullName || source.name || (((source.firstName || "") + " " + (source.lastName || "")).replace(/^\s+|\s+$/g, ""));
+    entity.country = source.country || entity.country;
+    entity.age = clampNumber(source.age, entity.age);
+    entity.isPlayer = false;
+    entity.status = source.status || "active";
+    entity.trackId = trackId;
+    entity.currentTrack = trackId;
+    entity.stats.str = clampNumber(stats.str, entity.stats.str);
+    entity.stats.tec = clampNumber(stats.tec, entity.stats.tec);
+    entity.stats.spd = clampNumber(stats.spd, entity.stats.spd);
+    entity.stats.end = clampNumber(stats.end, entity.stats.end);
+    entity.stats.vit = clampNumber(stats.vit, entity.stats.vit);
+    entity.record.wins = clampNumber(source.record && source.record.wins, clampNumber(source.wins, 0));
+    entity.record.losses = clampNumber(source.record && source.record.losses, clampNumber(source.losses, 0));
+    entity.record.draws = clampNumber(source.record && source.record.draws, clampNumber(source.draws, 0));
+    entity.record.kos = clampNumber(source.record && source.record.kos, clampNumber(source.kos, 0));
+    if (trackId === "amateur" && source.amateurRecord) {
+      entity.record.wins = clampNumber(source.amateurRecord.wins, entity.record.wins);
+      entity.record.losses = clampNumber(source.amateurRecord.losses, entity.record.losses);
+      entity.record.draws = clampNumber(source.amateurRecord.draws, entity.record.draws);
+    }
+    if (trackId === "pro" && source.proRecord) {
+      entity.record.wins = clampNumber(source.proRecord.wins, entity.record.wins);
+      entity.record.losses = clampNumber(source.proRecord.losses, entity.record.losses);
+      entity.record.draws = clampNumber(source.proRecord.draws, entity.record.draws);
+      entity.record.kos = clampNumber(source.proRecord.kos, entity.record.kos);
+    }
+    entity.fame = clampNumber(source.fame, 0);
+    entity.gymId = source.currentGymId || source.gymId || "";
+    entity.currentGymId = entity.gymId;
+    entity.trainerId = source.currentTrainerId || source.trainerId || "";
+    entity.currentTrainerId = entity.trainerId;
+    entity.currentCoachId = source.currentCoachId || entity.trainerId;
+    entity.currentOrganizationId = source.currentOrganizationId || "";
+    entity.streetRating = clampNumber(source.streetRating, 0);
+    entity.streetData = source.streetData ? clone(source.streetData) : clone(entity.streetData);
+    entity.styleId = source.styleId || source.style || "";
+    entity.archetypeId = source.archetypeId || "";
+    entity.amateurRank = source.amateurRank || source.amateurClass || "";
+    entity.nationalTeamStatus = source.nationalTeamStatus || "none";
+    entity.amateurGoals = source.amateurGoals instanceof Array ? clone(source.amateurGoals) : [];
+    entity.proRecord = source.proRecord && typeof source.proRecord === "object" ? clone(source.proRecord) : clone(entity.proRecord);
+    entity.proRankingData = source.proRankingData && typeof source.proRankingData === "object" ? clone(source.proRankingData) : {};
+    entity.contenderStatus = source.contenderStatus || "";
+    entity.titleHistory = source.titleHistory instanceof Array ? clone(source.titleHistory) : [];
+    entity.rankingSeed = clampNumber(source.rankingSeed, 0);
+    entity.proReputationTags = source.proReputationTags instanceof Array ? clone(source.proReputationTags) : [];
+    entity.lastUpdatedWeek = clampNumber(week, 1);
+    entity.tags = source.reputationTags instanceof Array ? clone(source.reputationTags) : [];
+    return entity;
+  }
+
   function normalizeGymEntity(sourceGym, fallbackCountry) {
     var entity = clone(baseGymEntitySchema());
     var source = sourceGym || {};
@@ -663,6 +721,7 @@ var WorldSimState = (function () {
   function buildRosterStateSection(gameState, existingRosterState) {
     var section = clone(defaultSections().rosterState);
     var i;
+    var seedFighters;
     var seedGyms;
     var seedTrainers;
     var gym;
@@ -711,6 +770,17 @@ var WorldSimState = (function () {
       }
     }
     if (typeof ContentLoader !== "undefined") {
+      seedFighters = ContentLoader.listAllSeedRosterFighters ? ContentLoader.listAllSeedRosterFighters() : [];
+      for (i = 0; i < seedFighters.length; i += 1) {
+        fighterEntity = buildSeedFighterEntity(seedFighters[i], gameState && gameState.career ? gameState.career.week : 1);
+        if (!fighterEntity.id) {
+          continue;
+        }
+        if (!section.fightersById[fighterEntity.id]) {
+          section.fighterIds.push(fighterEntity.id);
+        }
+        section.fightersById[fighterEntity.id] = fighterEntity;
+      }
       seedGyms = ContentLoader.listGyms ? ContentLoader.listGyms() : [];
       for (i = 0; i < seedGyms.length; i += 1) {
         gym = normalizeGymEntity(seedGyms[i], seedGyms[i] ? seedGyms[i].country : "");
@@ -1014,6 +1084,9 @@ var WorldSimState = (function () {
     gameState.playerState = buildPlayerStateSection(gameState, source.playerState || gameState.playerState || sections.playerState);
     gameState.worldState = buildWorldStateSection(gameState, source.worldState || gameState.worldState || sections.worldState);
     gameState.rosterState = buildRosterStateSection(gameState, source.rosterState || gameState.rosterState || sections.rosterState);
+    if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
+      WorldRankingsEngine.ensureMinimumRoster(gameState);
+    }
     if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.enrichGameState) {
       gameState = PersistentFighterRegistry.enrichGameState(gameState) || gameState;
     }
