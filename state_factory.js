@@ -465,7 +465,7 @@ function ensureWorldSimSections(gameState, sourceState) {
 }
 
 function ensurePersistentRosterSections(gameState) {
-  if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.enrichGameState) {
+  if (sparseRosterNeedsRepair(gameState) && typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.enrichGameState) {
     return PersistentFighterRegistry.enrichGameState(gameState);
   }
   return gameState;
@@ -510,7 +510,7 @@ function repairSparseRosterState(gameState) {
   if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.enrichGameState) {
     repaired = PersistentFighterRegistry.enrichGameState(repaired) || repaired;
   }
-  if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
+  if (sparseRosterNeedsRepair(repaired) && typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
     WorldRankingsEngine.ensureMinimumRoster(repaired);
   }
   if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.normalizeGameStateFacilities) {
@@ -1226,6 +1226,15 @@ function normalizeRivalryEntry(sourceRivalry) {
 function createGameState(options) {
   var opts = options || {};
   var debugEnabled = !!opts.debugMode;
+  var defaultSections = typeof WorldSimState !== "undefined" && WorldSimState.defaultSections ?
+    WorldSimState.defaultSections() : {
+      playerState: {},
+      worldState: {},
+      rosterState: { fighterIds: [], fightersById: {}, gymIds: [], gymsById: {}, trainerIds: [], trainersById: {} },
+      organizationState: {},
+      competitionState: {},
+      narrativeState: {}
+    };
   var gameState = {
     meta: {
       appVersion: opts.appVersion || "",
@@ -1288,29 +1297,15 @@ function createGameState(options) {
     },
     feed: {
       log: []
-    }
+    },
+    playerState: clonePlainData(defaultSections.playerState),
+    worldState: clonePlainData(defaultSections.worldState),
+    rosterState: clonePlainData(defaultSections.rosterState),
+    organizationState: clonePlainData(defaultSections.organizationState),
+    competitionState: clonePlainData(defaultSections.competitionState),
+    narrativeState: clonePlainData(defaultSections.narrativeState)
   };
-  return ensureEncounterHistorySections(
-    ensureWorldCareerSections(
-    ensureWorldStorySections(
-    ensureCareerTransitionSections(
-    ensureSparringCampSections(
-    ensureProCareerSections(
-    ensureStreetCareerSections(
-      ensureAmateurSeasonSections(
-        ensureAmateurEcosystemSections(
-          ensurePersistentRosterSections(
-            ensureWorldSimSections(gameState, opts.sourceState || null)
-          )
-        )
-      )
-    )
-    )
-    )
-    )
-    )
-    )
-  );
+  return gameState;
 }
 
 function normalizeWorldState(sourceWorld) {
@@ -1423,6 +1418,7 @@ function normalizeWorldState(sourceWorld) {
 function normalizeGameState(gameState, options) {
   var normalized = createGameState(options);
   var source = gameState || {};
+  var lightweightWorld = !!(options && options.lightweightWorld);
   var key;
 
   if (source.meta) {
@@ -1568,14 +1564,18 @@ function normalizeGameState(gameState, options) {
   normalized = ensureWorldSimSections(normalized, source);
   normalized = ensurePersistentRosterSections(normalized);
   normalized = ensureAmateurEcosystemSections(normalized);
-  normalized = ensureAmateurSeasonSections(normalized);
+  if (!lightweightWorld) {
+    normalized = ensureAmateurSeasonSections(normalized);
+  }
   normalized = ensureStreetCareerSections(normalized);
   normalized = ensureProCareerSections(normalized);
   normalized = ensureSparringCampSections(normalized);
-  normalized = ensureWorldCareerSections(normalized);
-  normalized = ensureEncounterHistorySections(normalized);
-  normalized = ensureWorldStorySections(normalized);
-  normalized = ensureCareerTransitionSections(normalized);
+  if (!lightweightWorld) {
+    normalized = ensureWorldCareerSections(normalized);
+    normalized = ensureEncounterHistorySections(normalized);
+    normalized = ensureWorldStorySections(normalized);
+    normalized = ensureCareerTransitionSections(normalized);
+  }
   if (typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.normalizeGameStateFacilities) {
     normalized = WorldFacilityEngine.normalizeGameStateFacilities(normalized);
   }
@@ -1765,8 +1765,9 @@ function buildGameStateFromRuntime(runtimeState, options) {
 
 function applyGameStateToRuntime(runtimeState, gameState, options) {
   var target = runtimeState || {};
-  var normalized = normalizeGameState(gameState, options);
+  var normalized = options && options.skipNormalize ? (gameState || createGameState(options)) : normalizeGameState(gameState, options);
   var hasFighter = !!normalized.player.profile.name;
+  var shareWorldSections = !!(options && options.shareWorldSections);
 
   target.game = normalized;
   target.screen = normalized.ui.screen;
@@ -1786,12 +1787,12 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
   target.remoteVersion = normalized.meta.remoteVersion || "";
   target.rng = RNG.cloneState(normalized.meta.rng);
   target.debug = clonePlainData(normalized.ui.debug);
-  target.playerState = clonePlainData(normalized.playerState);
-  target.worldState = clonePlainData(normalized.worldState);
-  target.rosterState = clonePlainData(normalized.rosterState);
-  target.organizationState = clonePlainData(normalized.organizationState);
-  target.competitionState = clonePlainData(normalized.competitionState);
-  target.narrativeState = clonePlainData(normalized.narrativeState);
+  target.playerState = shareWorldSections ? normalized.playerState : clonePlainData(normalized.playerState);
+  target.worldState = shareWorldSections ? normalized.worldState : clonePlainData(normalized.worldState);
+  target.rosterState = shareWorldSections ? normalized.rosterState : clonePlainData(normalized.rosterState);
+  target.organizationState = shareWorldSections ? normalized.organizationState : clonePlainData(normalized.organizationState);
+  target.competitionState = shareWorldSections ? normalized.competitionState : clonePlainData(normalized.competitionState);
+  target.narrativeState = shareWorldSections ? normalized.narrativeState : clonePlainData(normalized.narrativeState);
 
   target.fighter = hasFighter ? {
     name: normalized.player.profile.name,

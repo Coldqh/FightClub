@@ -1082,7 +1082,8 @@
     }
   </style>
 
-  <script type="text/javascript" src="country_data.js"></script>
+<script type="text/javascript" src="src/core/json_compat.js"></script>
+<script type="text/javascript" src="country_data.js"></script>
   <script type="text/javascript" src="src/content/content_data.js"></script>
 <script type="text/javascript" src="src/content/career_ecosystem_data.js"></script>
 <script type="text/javascript" src="src/content/development_data.js"></script>
@@ -1137,7 +1138,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.23.16";
+    var APP_VERSION = "2026.03.24.4";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1170,11 +1171,12 @@
       };
     }
 
-    function syncGameStateFromRuntime() {
+    function syncGameStateFromRuntime(options) {
       var runtimeCache = ensureRuntimePerfState();
       state.game = buildGameStateFromRuntime(state, {
         appVersion: APP_VERSION,
-        debugMode: !!(state.debug && state.debug.enabled)
+        debugMode: !!(state.debug && state.debug.enabled),
+        lightweightWorld: !!(options && options.lightweightWorld)
       });
       if (canonicalRosterNeedsHydration(state.game) ||
           (typeof sparseRosterNeedsRepair === "function" && sparseRosterNeedsRepair(state.game)) ||
@@ -1188,14 +1190,22 @@
       return state.game;
     }
 
-    function syncRuntimeStateFromGame(gameState) {
+    function syncRuntimeStateFromGame(gameState, options) {
       var runtimeCache = ensureRuntimePerfState();
-      var result = applyGameStateToRuntime(state, normalizeGameState(gameState, {
+      var normalizedGameState = options && options.skipNormalize ? (gameState || state.game || createGameState({
         appVersion: APP_VERSION,
         debugMode: DEBUG_MODE
-      }), {
+      })) : normalizeGameState(gameState, {
         appVersion: APP_VERSION,
-        debugMode: DEBUG_MODE
+        debugMode: DEBUG_MODE,
+        lightweightWorld: !!(options && options.lightweightWorld)
+      });
+      var result = applyGameStateToRuntime(state, normalizedGameState, {
+        appVersion: APP_VERSION,
+        debugMode: DEBUG_MODE,
+        lightweightWorld: !!(options && options.lightweightWorld),
+        skipNormalize: true,
+        shareWorldSections: !!(options && options.shareWorldSections)
       });
       runtimeCache.gameVersion += 1;
       touchProjectionVersions();
@@ -1590,7 +1600,10 @@
         return null;
       }
       ensureBiographyState();
-      gameState = syncGameStateFromRuntime();
+      gameState = state.game || null;
+      if (!gameState || !gameState.player || !gameState.player.profile || !gameState.player.profile.name) {
+        gameState = syncGameStateFromRuntime({ lightweightWorld: true });
+      }
       entry = ReputationEngine.createMediaEntry(gameState, mediaType, payload || {}, ContentLoader.listMediaTemplates ? ContentLoader.listMediaTemplates() : [], state.rng);
       if (!entry) {
         return null;
@@ -2741,7 +2754,7 @@
       }
       validation = validateState(saved.game);
       clearFightTimers();
-      syncRuntimeStateFromGame(saved.game);
+      syncRuntimeStateFromGame(saved.game, { lightweightWorld: true });
       repairLiveRosterState(state.game);
       state.screen = state.screen === "end" ? "end" : "game";
       state.fight = normalizeLoadedFight(state.fight);
@@ -2756,18 +2769,18 @@
       if (state.screen === "game" && !state.panel) {
         state.panel = "home";
       }
-      ensureLifeState();
-      ensureNpcWorld();
-      normalizeWorldOffers();
-      if (!state.world.offers.available.length || !(state.world.offers.fightOffers instanceof Array) || !(state.world.offers.contractOffers instanceof Array) || offersNeedRosterRefresh(state.world.offers.fightOffers)) {
-        refreshWorldState();
-      }
+        ensureLifeState();
+        ensureNpcWorld();
+        normalizeWorldOffers();
+        if (!state.world.offers.available.length || !(state.world.offers.fightOffers instanceof Array) || !(state.world.offers.contractOffers instanceof Array) || offersNeedRosterRefresh(state.world.offers.fightOffers)) {
+          bootstrapWorldStateForCurrentWeek();
+        }
       if (!validation.valid) {
         state.log.unshift({ text: "Сохранение было частично восстановлено через адаптер совместимости.", tone: "warn" });
       }
-      syncGameStateFromRuntime();
-      render();
-    }
+        syncGameStateFromRuntime({ lightweightWorld: true });
+        render();
+      }
 
     function finiteNumber(value, fallback) {
       return typeof value === "number" && isFinite(value) ? value : fallback;
@@ -3959,7 +3972,7 @@
       }
       syncRuntimeStateFromGame(gameState);
       repairLiveRosterState(state.game);
-      refreshWorldState();
+          refreshWorldState(true);
       if (note) {
         pushLog(note, nextTrackId === "street" ? "warn" : "good");
         addBiographyHistory(note, "track");
@@ -7863,7 +7876,8 @@
       if (!repaired) {
         repaired = buildGameStateFromRuntime(state, {
           appVersion: APP_VERSION,
-          debugMode: !!(state.debug && state.debug.enabled)
+          debugMode: !!(state.debug && state.debug.enabled),
+          lightweightWorld: true
         });
       }
       if (canonicalRosterNeedsHydration(repaired)) {
@@ -7883,10 +7897,10 @@
           WorldFacilityEngine.syncFacilityLinks(repaired);
         }
       }
-      if (changed || runtimeRosterNeedsHydration()) {
-        syncRuntimeStateFromGame(repaired);
-        repaired = state.game;
-      } else {
+        if (changed || runtimeRosterNeedsHydration()) {
+          syncRuntimeStateFromGame(repaired, { lightweightWorld: true, skipNormalize: true, shareWorldSections: true });
+          repaired = state.game;
+        } else {
         state.game = repaired;
         syncWorldSimSectionsFromGameState(repaired);
         touchGameProjectionState();
@@ -7895,7 +7909,7 @@
     }
 
     function forceRankingRosterRebuild() {
-      return repairLiveRosterState(syncGameStateFromRuntime());
+      return repairLiveRosterState(syncGameStateFromRuntime({ lightweightWorld: true }));
     }
 
     function ensureRankingRosterReady() {
@@ -9591,11 +9605,14 @@
       spendWeek();
     }
 
-    function refreshWorldState() {
+    function refreshWorldState(lightMode) {
       var fighter = state.fighter;
       var refreshedGameState;
       var noticeCount = 0;
-      ensurePersistentGameState(true);
+      var startupMode = !!lightMode;
+      if (!startupMode) {
+        ensurePersistentGameState(true);
+      }
       ensureLifeState();
       ensureBiographyState();
       ensureNpcWorld();
@@ -9616,7 +9633,11 @@
       rememberCountryVisit(fighter.currentCountry);
       syncAllNpcRelationSnapshots();
       refreshReputationState();
-      refreshedGameState = syncGameStateFromRuntime();
+        refreshedGameState = syncGameStateFromRuntime(startupMode ? { lightweightWorld: true } : null);
+        if (startupMode) {
+          syncRuntimeStateFromGame(refreshedGameState, { lightweightWorld: true, skipNormalize: true, shareWorldSections: true });
+          return;
+        }
       ensureEncounterHistoryState(refreshedGameState);
       if (typeof SparringCampEngine !== "undefined" && SparringCampEngine.refreshWeeklyOffers) {
         SparringCampEngine.ensureState(refreshedGameState);
@@ -9629,12 +9650,51 @@
         WorldStoryEngine.ensureState(refreshedGameState);
         WorldStoryEngine.syncWorldStory(refreshedGameState);
       }
-      syncRuntimeStateFromGame(refreshedGameState);
+        syncRuntimeStateFromGame(refreshedGameState, { skipNormalize: true, shareWorldSections: true });
       noticeCount += drainAmateurSeasonNotices(refreshedGameState, true);
       noticeCount += drainWorldCareerNotices(refreshedGameState, true);
       noticeCount += drainCareerTransitionNotices(refreshedGameState, true);
       if (noticeCount > 0) {
         syncGameStateFromRuntime();
+      }
+    }
+
+    function bootstrapWorldStateForCurrentWeek() {
+      var fighter = state.fighter;
+      var offers;
+      var i;
+      ensureLifeState();
+      ensureBiographyState();
+      ensureNpcWorld();
+      offers = buildWeeklyOffers();
+      state.world.offers = offers;
+      state.opponents = [];
+      if (offers && offers.fightOffers instanceof Array) {
+        for (i = 0; i < offers.fightOffers.length; i += 1) {
+          if (offers.fightOffers[i] && offers.fightOffers[i].opponent) {
+            state.opponents.push(offers.fightOffers[i].opponent);
+          }
+        }
+      }
+      state.world.opponents = state.opponents;
+      if (!state.world.scene || typeof state.world.scene !== "object") {
+        state.world.scene = defaultWorldState().scene;
+      }
+      if (fighter) {
+        state.world.scene.updatedWeek = fighter.week;
+        state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
+        state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
+        rememberCountryVisit(fighter.currentCountry);
+      }
+      syncAllNpcRelationSnapshots();
+      if (state.game) {
+        state.game.world = normalizeWorldState(state.world);
+        if (!state.game.feed || typeof state.game.feed !== "object") {
+          state.game.feed = { log: [] };
+        }
+        state.game.feed.log = clonePlainData(state.log || []);
+        syncWorldSimSectionsFromGameState(state.game);
+        touchGameProjectionState();
       }
     }
 
@@ -11256,9 +11316,6 @@
       if (kind === "safe_resolve") {
         debugState.performance.battleSafeResolveCount = Math.max(0, finiteNumber(debugState.performance.battleSafeResolveCount, 0)) + 1;
       }
-      if (typeof console !== "undefined" && console && console.log) {
-        console.log("[battle:" + kind + "] " + message);
-      }
     }
 
     function isSparringFight(fight) {
@@ -11559,9 +11616,29 @@
       state.runId = generateRunId();
       state.archivedLegendId = "";
       state.world = defaultWorldState();
-      gameState = buildGameStateFromRuntime(state, {
+      gameState = buildGameStateFromLegacySnapshot({
         appVersion: APP_VERSION,
-        debugMode: DEBUG_MODE
+        rng: state.rng,
+        screen: "game",
+        panel: "home",
+        create: state.create,
+        fighter: state.fighter,
+        world: state.world,
+        opponents: state.opponents || [],
+        fight: null,
+        activeEvent: null,
+        log: state.log || [],
+        endingReason: "",
+        runId: state.runId,
+        archivedLegendId: state.archivedLegendId,
+        savedPreview: state.savedPreview || null,
+        updateAvailable: state.updateAvailable,
+        remoteVersion: state.remoteVersion,
+        debug: state.debug
+      }, {
+        appVersion: APP_VERSION,
+        debugMode: DEBUG_MODE,
+        lightweightWorld: true
       });
       if (gameState.playerState && gameState.playerState.careerTrack && gameState.playerState.careerTrack.tracks) {
         gameState.playerState.currentTrackId = "amateur";
@@ -11581,13 +11658,13 @@
           gameState.playerState.careerTrack.tracks.pro.active = false;
         }
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true, skipNormalize: true, shareWorldSections: true });
       resetDebugLiveBalance();
       applyBounds(state.fighter);
       ensureBiographyState();
       rememberCountryVisit(state.create.country);
       generateCareerNpcWorld();
-      refreshWorldState();
+      bootstrapWorldStateForCurrentWeek();
       state.screen = "game";
       state.panel = "home";
       countryInfo = getCountryInfo(state.fighter.homeCountry);
@@ -11596,10 +11673,6 @@
         tone: "good"
       });
       addBiographyHistory((startingAge >= 18 ? "Начинает взрослую раннюю карьеру в " : "Начинает юниорский путь в ") + countryInfo.name + ".", "origin");
-      recordCareerMedia("career_start", {
-        country: state.fighter.homeCountry,
-        countryName: countryInfo.name
-      });
       render();
     }
 
